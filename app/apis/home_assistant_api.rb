@@ -448,12 +448,7 @@ class HomeAssistantApi
     return [] unless hours.present?
 
     (-1..7).map { |i| today + i.days }.flat_map do |day|
-      [
-        (day.noon - 4.hours),
-        day.noon,
-        (day.noon + 4.hours),
-        (day.noon + 8.hours)
-      ].map do |hour|
+      (0..23).map { |h| day.beginning_of_day + h.hours }.map do |hour|
         hour_ts = hour.to_i
         weather_hour = hours.find { DateTime.parse(it[:datetime]).to_i == hour_ts }
 

@@ -10,6 +10,7 @@ class DeviceContent
     include_wind: true,
     include_weather_alerts: true,
     include_temperature: true,
+    temperature_hours: nil,
     use_day_names: false,
     include_daily_weather: true,
     weather_row: false,
@@ -135,7 +136,8 @@ class DeviceContent
             weather_events, _ = periodic_events.partition(&:weather?)
           end
           periodic_events = periodic_events.reject(&:weather?)
-          weather_events = weather_events.select { |e| e.weather_hourly? && [8, 12, 16].include?(e.starts_at.hour) }
+          weather_row_hours = temperature_hours || [8, 12, 16]
+          weather_events = weather_events.select { |e| e.weather_hourly? && weather_row_hours.include?(e.starts_at.hour) }
           weather_row_data = include_temperature ? weather_events.map { |e| e.as_json(date: date.to_date) } : []
 
           if clothing_forecast && clothing_threshold
@@ -157,6 +159,10 @@ class DeviceContent
               }
             end
           end
+        end
+
+        if temperature_hours && !weather_row
+          periodic_events = periodic_events.reject { |e| e.weather_hourly? && !temperature_hours.include?(e.starts_at.hour) }
         end
 
         {

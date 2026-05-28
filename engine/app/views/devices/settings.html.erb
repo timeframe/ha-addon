@@ -160,18 +160,21 @@
           <% if compact_template %>
             <% options << {key: "only_show_events_with_icons", on_label: "Only Show Calendar Events with Icons or Attachments", off_label: "Only Show Calendar Events with Icons or Attachments", default_on: false} %>
           <% end %>
-          <% options << {key: "show_temperature_events", on_label: "Show Hourly Temperature Events", off_label: "Show Hourly Temperature Events", default_on: true} %>
-          <% options << {key: "show_precip_events", on_label: "Show Precip Events", off_label: "Show Precip Events", default_on: true} %>
-          <% options << {key: "show_wind_events", on_label: "Show Wind Events", off_label: "Show Wind Events", default_on: true} %>
+          <% show_hourly_conditions = @device.active_template != "two_day" %>
+          <% if show_hourly_conditions %>
+            <% options << {key: "show_temperature_events", on_label: "Hourly Conditions", off_label: "Hourly Conditions", default_on: true} %>
+          <% end %>
+          <% options << {key: "show_precip_events", on_label: "Precipitation Events", off_label: "Precipitation Events", default_on: true} %>
+          <% options << {key: "show_wind_events", on_label: "Wind Events", off_label: "Wind Events", default_on: true} %>
           <% if compact_template %>
             <% options << {key: "clothing_forecast", on_label: "Clothing Forecast", off_label: "Clothing Forecast", default_on: false} %>
-            <% options << {key: "show_icons", on_label: "Show Icons", off_label: "Show Icons", default_on: true} %>
+            <% options << {key: "show_icons", on_label: "Icons", off_label: "Icons", default_on: true} %>
             <% if @device.configuration&.dig("show_icons") != "false" %>
               <% options << {key: "auto_assign_icons", on_label: "Auto Assign Icons", off_label: "Auto Assign Icons", default_on: true} %>
             <% end %>
             <% if @device.active_template == "two_day" %>
-              <% options << {key: "hide_dates", on_label: "Hide Dates", off_label: "Hide Dates", default_on: false} %>
-              <% options << {key: "show_event_times", on_label: "Show Event Times", off_label: "Show Event Times", default_on: true} %>
+              <% options << {key: "show_dates", on_label: "Dates", off_label: "Dates", default_on: true} %>
+              <% options << {key: "show_event_times", on_label: "Event Times", off_label: "Event Times", default_on: true} %>
               <% options << {key: "two_day_rollover_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: false} %>
             <% end %>
           <% end %>
@@ -191,6 +194,25 @@
                   <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" onchange="this.form.submit()">
                 <% end %>
                 <label class="form-check-label"><%= opt[:on_label] %></label>
+              </div>
+            <% end %>
+            <% if opt[:key] == "show_temperature_events" && is_on %>
+              <% selected_hours = @device.temperature_event_hours %>
+              <div class="mb-2 ms-4">
+                <div class="d-flex flex-wrap gap-1">
+                  <% (0..23).each do |hour| %>
+                    <% checked = selected_hours.include?(hour) %>
+                    <% hour_new_value = checked ? "false" : "true" %>
+                    <% label = Time.new(2000, 1, 1, hour).strftime("%-l%P") %>
+                    <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "m-0" do %>
+                      <input type="hidden" name="key" value="temperature_hour_<%= hour %>">
+                      <input type="hidden" name="value" value="<%= hour_new_value %>">
+                      <button type="submit" class="btn btn-sm <%= checked ? "btn-primary" : "btn-outline-secondary" %>" style="min-width: 2.5rem; padding: 0.15rem 0.4rem; font-size: 0.75rem;">
+                        <%= label %>
+                      </button>
+                    <% end %>
+                  <% end %>
+                </div>
               </div>
             <% end %>
           <% end %>

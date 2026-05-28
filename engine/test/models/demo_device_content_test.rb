@@ -235,6 +235,37 @@ class DemoDeviceContentTest < Minitest::Test
     end
   end
 
+  def test_fill_hourly_weather_interpolates_and_sorts_all_hours
+    travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
+      result = DemoDeviceContent.new.call(
+        timezone: "America/Chicago",
+        weather_row: true,
+        temperature_hours: [7, 9, 12, 16, 20],
+        fill_hourly_weather: true
+      )
+
+      today = result[:day_groups][0]
+      hours = today[:weather_row].map { |w| w[:start_time] }
+      assert_equal %w[7a 9a 12p 4p 8p], hours
+    end
+  end
+
+  def test_fill_hourly_weather_in_full_template_includes_all_selected_hours
+    travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
+      result = DemoDeviceContent.new.call(
+        timezone: "America/Chicago",
+        temperature_hours: [7, 9, 12, 16, 20],
+        fill_hourly_weather: true
+      )
+
+      today = result[:day_groups][0]
+      weather_hours = today[:periodic]
+        .select { |e| e[:weather] && e[:summary]&.end_with?("°") && e[:time_html] == e[:start_time] }
+        .map { |e| e[:start_time] }
+      assert_equal %w[7a 9a 12p 4p 8p], weather_hours
+    end
+  end
+
   def test_start_time_only_flag
     travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
       result = DemoDeviceContent.new.call(timezone: "America/Chicago", start_time_only: true)

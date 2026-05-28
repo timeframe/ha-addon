@@ -2,9 +2,10 @@
 
 class DemoDeviceContent
   def call(timezone: "UTC", current_time: nil, days: 5, include_precip: true, include_wind: true,
-    include_weather_alerts: true, include_temperature: true,
+    include_weather_alerts: true, include_temperature: true, temperature_hours: nil,
     use_day_names: false, include_daily_weather: true, weather_row: false, start_time_only: false,
-    always_show_today: false, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filter: nil)
+    always_show_today: false, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filter: nil,
+    fill_hourly_weather: false)
     current_time ||= Time.now.utc.in_time_zone(timezone)
 
     out = {}
@@ -59,8 +60,8 @@ class DemoDeviceContent
     out[:private_mode] = false
 
     out[:day_groups] = build_day_groups(current_time, timezone, days: days, include_wind: include_wind,
-      include_temperature: include_temperature, use_day_names: use_day_names, weather_row: weather_row,
-      start_offset: start_offset, clothing_forecast: clothing_forecast)
+      include_temperature: include_temperature, temperature_hours: temperature_hours, use_day_names: use_day_names, weather_row: weather_row,
+      start_offset: start_offset, clothing_forecast: clothing_forecast, fill_hourly_weather: fill_hourly_weather)
 
     if auto_icons
       out[:day_groups].each do |day|
@@ -82,7 +83,7 @@ class DemoDeviceContent
 
   private
 
-  def build_day_groups(current_time, timezone, days: 5, include_wind: true, include_temperature: true, use_day_names: false, weather_row: false, start_offset: 0, clothing_forecast: false)
+  def build_day_groups(current_time, timezone, days: 5, include_wind: true, include_temperature: true, temperature_hours: nil, use_day_names: false, weather_row: false, start_offset: 0, clothing_forecast: false, fill_hourly_weather: false)
     today = current_time.to_date
     tz = ActiveSupport::TimeZone[timezone]
     vacation = DeviceEvent.new(
@@ -110,13 +111,16 @@ class DemoDeviceContent
       show_daily = (day_index.zero? && current_time.hour < 20) || !day_index.zero?
       events = events_for_day(day_index, date, current_time, vacation, timezone, include_wind: include_wind)
 
-      periodic_events = events[:periodic]
+      periodic_events = fill_hourly_weather ? fill_hourly_weather_events(events[:periodic], date, timezone) : events[:periodic]
       weather_row_data = nil
       clothing_data = nil
 
       if weather_row
         weather_events, periodic_events = periodic_events.partition(&:weather?)
-        weather_events = weather_events.select { |e| e.weather_hourly? && [8, 12, 16].include?(e.starts_at.hour) }
+        weather_row_hours = temperature_hours || [8, 12, 16]
+        weather_events = weather_events
+          .select { |e| e.weather_hourly? && weather_row_hours.include?(e.starts_at.hour) }
+          .sort_by { |e| e.starts_at.hour }
         weather_row_data = include_temperature ? weather_events.map { |e| e.as_json(date: date.to_date) } : []
 
         if clothing_forecast
@@ -142,6 +146,10 @@ class DemoDeviceContent
         end
       end
 
+      if temperature_hours && !weather_row
+        periodic_events = periodic_events.reject { |e| e.weather_hourly? && !temperature_hours.include?(e.starts_at.hour) }
+      end
+
       {
         day_name: day_name,
         date: date.to_date,
@@ -152,6 +160,40 @@ class DemoDeviceContent
         clothing: clothing_data
       }
     end
+  end
+
+  def fill_hourly_weather_events(periodic_events, date, timezone)
+    by_hour = periodic_events
+      .select { |e| e.weather_hourly? }
+      .index_by { |e| e.starts_at.hour }
+    anchors = by_hour.keys.sort
+    return periodic_events if anchors.empty?
+
+    filled = periodic_events.dup
+    (0..23).each do |hour|
+      next if by_hour.key?(hour)
+      temp = if hour <= anchors.first
+        by_hour[anchors.first].summary.to_i
+      elsif hour >= anchors.last
+        by_hour[anchors.last].summary.to_i
+      else
+        lower = anchors.select { |h| h <= hour }.max
+        upper = anchors.select { |h| h >= hour }.min
+        t1 = by_hour[lower].summary.to_i
+        t2 = by_hour[upper].summary.to_i
+        (t1 + ((t2 - t1).to_f * (hour - lower) / (upper - lower))).round
+      end
+      nearest = anchors.min_by { |h| (h - hour).abs }
+      filled << DeviceEvent.new(
+        id: "_ha_weather_hour_#{date.change(hour: hour).to_i}",
+        starts_at: date.change(hour: hour),
+        ends_at: date.change(hour: hour),
+        summary: "#{temp}°",
+        icon: by_hour[nearest].icon,
+        timezone: timezone
+      )
+    end
+    filled.each_with_index.sort_by { |e, i| [e.start_i, i] }.map(&:first)
   end
 
   def events_for_day(day_index, date, current_time, vacation, timezone, include_wind: true)

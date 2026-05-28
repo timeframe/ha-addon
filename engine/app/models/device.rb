@@ -146,6 +146,21 @@ class Device < ActiveRecord::Base
     true
   end
 
+  DEFAULT_TEMPERATURE_HOURS = [8, 12, 16, 20].freeze
+  COMPACT_TEMPERATURE_HOURS = [8, 12, 16].freeze
+
+  def default_temperature_hours
+    %w[three_day two_day].include?(active_template) ? COMPACT_TEMPERATURE_HOURS : DEFAULT_TEMPERATURE_HOURS
+  end
+
+  def temperature_event_hours
+    defaults = default_temperature_hours
+    (0..23).select do |hour|
+      value = configuration&.dig("temperature_hour_#{hour}")
+      value.nil? ? defaults.include?(hour) : value == "true"
+    end
+  end
+
   # :nocov:
   def device_content(timezone: nil, current_time: nil)
     tz = timezone || location&.time_zone || "UTC"
@@ -153,7 +168,12 @@ class Device < ActiveRecord::Base
     two_day = active_template == "two_day"
     configuration&.dig("only_show_events_with_icons")
     include_ranged_weather_events = true
-    include_temperature_events = weather_event_enabled?("show_temperature_events")
+    include_temperature_events = if two_day
+      true
+    else
+      weather_event_enabled?("show_temperature_events")
+    end
+    temperature_hours = include_temperature_events ? temperature_event_hours : nil
     include_precip_events = include_ranged_weather_events && weather_event_enabled?("show_precip_events")
     include_wind_events = include_ranged_weather_events && weather_event_enabled?("show_wind_events")
     effective_current_time = current_time || Time.now.utc.in_time_zone(tz)
@@ -174,6 +194,7 @@ class Device < ActiveRecord::Base
       include_wind: include_wind_events,
       include_weather_alerts: include_ranged_weather_events && (include_temperature_events || include_precip_events || include_wind_events),
       include_temperature: include_temperature_events,
+      temperature_hours: temperature_hours,
       use_day_names: compact_view, include_daily_weather: !compact_view,
       weather_row: compact_view, start_time_only: compact_view,
       always_show_today: compact_view,
