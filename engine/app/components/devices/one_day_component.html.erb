@@ -1,0 +1,109 @@
+<style>
+  html, body { margin: 0; padding: 0; font-size: 16px; }
+  .one-day-wrap { display: flex; flex-direction: column; width: 100vw; height: 100vh; padding: 1rem; box-sizing: border-box; }
+  .one-day-header { display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 5.625rem; line-height: 1.2; margin-bottom: .5rem; padding-bottom: .5rem; border-bottom: 1px solid #ccc; }
+  .one-day-day-name { display: flex; align-items: center; gap: .5rem; }
+  .one-day-day-name i { font-size: 5.625rem; font-weight: 400; width: 6.75rem; text-align: center; }
+  .one-day-header-icons { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+  .one-day-clothing-large { display: inline-block; width: 5.0625rem; height: 5.0625rem; background-position: center; background-size: contain; background-repeat: no-repeat; line-height: 1; }
+  .one-day-clothing-large-shorts { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath fill='%23000' d='m89.801 8.102-.402-7.703H10.601l-.402 7.703z'/%3E%3Cpath fill='%23000' d='m90.5 13.199h-81l-7 62.699c3.3.801 6.8 1.5 10.5 2.102 11.3 1.8 21.5 1.8 30.102 1.101 1.8-11 3.699-22 5.5-33h2.898c1.801 11 3.7 22 5.5 33 8.602.7 18.801.7 30.102-1.101 3.699-.602 7.199-1.301 10.5-2.102z'/%3E%3C/svg%3E"); }
+  .one-day-clothing-large-pants { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='m45.535 87.5v6.25h-20.535v-6.25zm8.93 0h20.535v6.25h-20.535zm-29.02-53.211v-15.539h7.3c-.09 2.633-.41 5.957-1.297 8.914-1.004 3.352-2.695 6.32-6.004 6.625zm10.414-15.539h28.273c.098 2.875.441 6.547 1.418 9.813 1.426 4.75 4.199 8.582 8.996 8.863v46.949h-19.09l-5.461-50-5.461 50h-19.09v-46.949c4.797-.281 7.57-4.113 8.996-8.863.977-3.266 1.32-6.938 1.418-9.813zm31.391 0h7.3v15.539c-3.309-.305-5-3.273-6.004-6.625-.887-2.961-1.207-6.281-1.297-8.914zm-41.805-3.125-.445-9.375h50l-.445 9.375z'/%3E%3C/svg%3E"); }
+  .one-day-clothing-large-tshirt { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 1000'%3E%3Cpath fill='%23000' d='M992 126.7l-353.5-51c-2-.3-4 .7-4.9 2.5c-24.7 49.4-75.7 83.3-134.7 83.3c-58.9 0-109.8-33.8-134.6-83c-.9-1.8-2.9-2.9-4.9-2.6L7.9 126.7c-2.4.4-4.2 2.5-4 5l15.4 217c.2 2.6 2.4 4.5 4.9 4.4l176.7-11c2.7-.2 5 2 5 4.8L189.4 919.9c-.1 2.6 2 4.8 4.7 4.8h609.4c2.6 0 4.8-2.1 4.7-4.8L792.1 347.8c-.1-2.7 2.2-5 5-4.8l178.7 11.1c2.6.2 4.8-1.8 5-4.3l15.3-217c.2-2.5-1.5-4.6-4-5z'/%3E%3C/svg%3E"); }
+  .one-day-clothing-large-long-sleeve-shirt { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9.97 4.34c-.04-.13-.14-.24-.27-.3c-.13-.06-.28-.06-.4 0l-4.5 2c-.15.06-.25.19-.29.34l-2.5 11c-.05.23.06.46.27.56l2 1c.13.07.28.07.42.02c.13-.06.24-.17.28-.31L7 12.58V20.5c0 .28.22.5.5.5h9c.28 0 .5-.22.5-.5v-7.92l2.03 6.08c.04.14.15.25.28.3c.14.06.29.06.42-.01l2-1c.21-.1.32-.33.27-.56l-2.5-11c-.04-.15-.14-.28-.29-.34l-4.5-2c-.13-.06-.27-.06-.4 0c-.13.06-.23.17-.27.3C13.57 5.7 12.72 6.25 12 6.25S10.43 5.7 9.97 4.34Z'/%3E%3C/svg%3E"); }
+  .one-day-events { flex: 1 1 auto; min-height: 0; font-size: 2.53125rem; overflow: hidden; }
+  .one-day-events table { width: 100%; border-collapse: collapse; }
+  .one-day-events td { padding: .3rem 0; }
+  .one-day-events td.one-day-event-icon { width: 3.375rem; text-align: center; font-size: 2.8125rem; font-weight: bold; padding: .3rem .4rem .3rem 0; }
+  .one-day-event-summary { white-space: normal; overflow-wrap: break-word; word-break: normal; }
+  .one-day-events-dense .one-day-event-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+</style>
+
+<% unless @view_object[:private_mode] %>
+  <% day = @view_object[:day_groups]&.first %>
+  <% if day %>
+    <% daily_weather = day[:weather_row]&.find { |w| w[:start_time] == "12p" } || day[:weather_row]&.first %>
+    <% day_label = (day[:date].to_date == @view_object[:current_time].to_date) ? "Today" : "Tomorrow" %>
+    <% only_icons = @view_object.dig(:configuration, "only_show_events_with_icons") == "true" %>
+    <div class="one-day-wrap">
+      <div class="one-day-header">
+        <div class="one-day-day-name">
+          <% if daily_weather %>
+            <i class="mdi mdi-<%= daily_weather[:icon_class] %>"></i>
+          <% end %>
+          <%= day_label %>
+        </div>
+        <% if day[:clothing] %>
+          <div class="one-day-header-icons">
+            <span class="one-day-clothing-large one-day-clothing-large-<%= day[:clothing][:shirt_icon] %>"></span>
+            <span class="one-day-clothing-large one-day-clothing-large-<%= day[:clothing][:icon] %>"></span>
+          </div>
+        <% end %>
+      </div>
+
+      <% daily_visual = day[:show_daily] && day[:daily].any? ? (only_icons ? day[:daily].select { |e| e[:timeframe_icon] } : day[:daily]) : [] %>
+      <% visual_periodic = only_icons ? (day[:periodic] || []).select { |e| e[:timeframe_icon] } : (day[:periodic] || []) %>
+      <% if daily_visual.any? || visual_periodic.any? %>
+        <div class="one-day-events">
+          <table>
+            <% daily_visual.each do |event| %>
+              <tr>
+                <td class="one-day-event-icon">
+                  <% if event[:icon_class] %>
+                    <% if event[:icon_style] %>
+                      <i class="mdi mdi-<%= event[:icon_class] %>" style="<%= event[:icon_style] %>"></i>
+                    <% else %>
+                      <i class="mdi mdi-<%= event[:icon_class] %>"></i>
+                    <% end %>
+                  <% elsif event[:icon_text] %>
+                    <%= event[:icon_text] %>
+                  <% end %>
+                </td>
+                <td class="one-day-event-summary"><%= event[:summary] %></td>
+              </tr>
+            <% end %>
+            <% visual_periodic.each do |event| %>
+              <tr>
+                <td class="one-day-event-icon">
+                  <% if event[:icon_class] %>
+                    <% if event[:icon_style] %>
+                      <i class="mdi mdi-<%= event[:icon_class] %>" style="<%= event[:icon_style] %>"></i>
+                    <% else %>
+                      <i class="mdi mdi-<%= event[:icon_class] %>"></i>
+                    <% end %>
+                  <% elsif event[:icon_text] %>
+                    <%= event[:icon_text] %>
+                  <% end %>
+                </td>
+                <td class="one-day-event-summary"><%= event[:summary] %></td>
+              </tr>
+            <% end %>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<script>
+  (function() {
+    function fitOneDayEvents() {
+      document.querySelectorAll('.one-day-events').forEach(function(container) {
+        container.classList.remove('one-day-events-dense');
+        if (container.scrollHeight > container.clientHeight + 1) {
+          container.classList.add('one-day-events-dense');
+        }
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fitOneDayEvents);
+    } else {
+      fitOneDayEvents();
+    }
+    window.addEventListener('load', fitOneDayEvents);
+    window.addEventListener('resize', fitOneDayEvents);
+  })();
+</script>
+
+<div class="timestamp" style="position: absolute; bottom: 1px; right: 1px; font-family: 'Pixelify Sans', monospace; font-size: 8px; -webkit-font-smoothing: none; z-index: 10; writing-mode: vertical-rl; text-orientation: mixed;">
+  Noun Project icons. <%= @view_object[:attribution] if @view_object[:attribution].present? %> <%= @view_object[:timestamp] %>
+</div>

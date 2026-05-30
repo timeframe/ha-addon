@@ -11,6 +11,7 @@ class DevicesController < ApplicationController
     "trmnl" => "Devices::TrmnlComponent",
     "three_day" => "Devices::ThreeDayComponent",
     "two_day" => "Devices::TwoDayComponent",
+    "one_day" => "Devices::OneDayComponent",
     "reterminal" => "Devices::ReterminalComponent",
     "boox_mira" => "Devices::BooxMiraComponent",
     "thirteen" => "Devices::ThirteenComponent",

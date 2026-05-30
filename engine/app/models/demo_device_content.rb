@@ -63,6 +63,21 @@ class DemoDeviceContent
       include_temperature: include_temperature, temperature_hours: temperature_hours, use_day_names: use_day_names, weather_row: weather_row,
       start_offset: start_offset, clothing_forecast: clothing_forecast, fill_hourly_weather: fill_hourly_weather)
 
+    if event_filter.present?
+      keywords = event_filter.split(",").map(&:strip).reject(&:empty?).map(&:downcase)
+      unless keywords.empty?
+        keep = ->(event) {
+          icon = event[:icon_class].to_s
+          next true if icon.start_with?("weather-", "arrow-")
+          keywords.any? { |kw| event[:summary].to_s.downcase.include?(kw) }
+        }
+        out[:day_groups].each do |day|
+          day[:daily] = day[:daily].select(&keep)
+          day[:periodic] = day[:periodic].select(&keep)
+        end
+      end
+    end
+
     if auto_icons
       out[:day_groups].each do |day|
         (day[:daily] + day[:periodic]).each do |event|
