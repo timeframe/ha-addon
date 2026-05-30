@@ -161,6 +161,14 @@ class Device < ActiveRecord::Base
     end
   end
 
+  DEFAULT_WIND_GUST_THRESHOLD_MPH = 20.0
+
+  # Stored in mph so the configured value is stable across unit-system changes.
+  def wind_gust_threshold_mph
+    value = configuration&.dig("wind_gust_threshold_mph").presence
+    value ? value.to_f : DEFAULT_WIND_GUST_THRESHOLD_MPH
+  end
+
   # :nocov:
   def device_content(timezone: nil, current_time: nil)
     tz = timezone || location&.time_zone || "UTC"
@@ -199,7 +207,8 @@ class Device < ActiveRecord::Base
       weather_row: compact_view, start_time_only: compact_view,
       always_show_today: compact_view,
       clothing_forecast: compact_view && configuration&.dig("clothing_forecast") == "true",
-      auto_icons: compact_view && configuration&.dig("auto_assign_icons") != "false"
+      auto_icons: compact_view && configuration&.dig("auto_assign_icons") != "false",
+      wind_gust_threshold_mph: wind_gust_threshold_mph
     }
     args[:current_time] = current_time if current_time
     if demo_mode_enabled?

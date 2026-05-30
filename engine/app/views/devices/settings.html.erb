@@ -215,6 +215,25 @@
                 </div>
               </div>
             <% end %>
+            <% if opt[:key] == "show_wind_events" && is_on %>
+              <%
+                display_unit = (@device.account&.respond_to?(:speed_unit) && @device.account&.speed_unit == "kph") ? "kph" : "mph"
+                threshold_mph = @device.wind_gust_threshold_mph
+                display_value = (display_unit == "kph") ? (threshold_mph * 1.609344).round : threshold_mph.round
+              %>
+              <div class="mb-2 ms-4">
+                <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "d-flex align-items-center gap-2" do %>
+                  <input type="hidden" name="key" value="wind_gust_threshold_mph">
+                  <input type="hidden" name="unit" value="<%= display_unit %>">
+                  <label class="form-label small mb-0">Gust threshold</label>
+                  <div class="input-group input-group-sm" style="max-width: 10rem;">
+                    <input type="number" min="1" step="1" name="value" value="<%= display_value %>" class="form-control">
+                    <span class="input-group-text"><%= display_unit %></span>
+                    <%= submit_tag "Save", class: "btn btn-primary" %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
           <% end %>
           <% if @device.active_template == "two_day" && @device.configuration&.dig("two_day_rollover_enabled") == "true" %>
             <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "mt-3" do %>

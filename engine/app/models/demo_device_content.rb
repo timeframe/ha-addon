@@ -5,7 +5,7 @@ class DemoDeviceContent
     include_weather_alerts: true, include_temperature: true, temperature_hours: nil,
     use_day_names: false, include_daily_weather: true, weather_row: false, start_time_only: false,
     always_show_today: false, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filter: nil,
-    fill_hourly_weather: false)
+    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0)
     current_time ||= Time.now.utc.in_time_zone(timezone)
 
     out = {}

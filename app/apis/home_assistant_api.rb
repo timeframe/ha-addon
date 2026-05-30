@@ -24,9 +24,10 @@ class HomeAssistantApi
   CALENDAR_DOMAIN = "home_assistant_calendar_api"
   WEATHER_DOMAIN = "home_assistant_weather_api"
 
-  def initialize(config = TimeframeConfig.new, store: Rails.cache)
+  def initialize(config = TimeframeConfig.new, store: Rails.cache, wind_gust_threshold_mph: 20.0)
     @config = config
     @store = store
+    @wind_gust_threshold_mph = wind_gust_threshold_mph.to_f
   end
 
   def home_assistant_base_url
@@ -208,7 +209,11 @@ class HomeAssistantApi
   }.freeze
 
   def ha_speed_unit
-    HA_SPEED_UNITS[unit_system[:wind_speed]] || "mph"
+    # unit_system.wind_speed is HA's frontend display preference and does NOT
+    # reflect the unit a weather integration actually returns. Prefer the
+    # active weather entity's own wind_speed_unit attribute when present.
+    entity_unit = data.find { |e| e[:entity_id] == weather_entity_id }&.dig(:attributes, :wind_speed_unit)
+    HA_SPEED_UNITS[entity_unit] || HA_SPEED_UNITS[unit_system[:wind_speed]] || "mph"
   end
 
   def ha_temperature_unit
@@ -422,8 +427,10 @@ class HomeAssistantApi
     end
   end
 
+  # Threshold is stored in mph for stability across unit-system changes;
+  # convert to the active display unit for comparison.
   def wind_gust_threshold
-    (speed_unit == "kph") ? 32.0 : 20.0
+    (speed_unit == "kph") ? (@wind_gust_threshold_mph * 1.609344) : @wind_gust_threshold_mph
   end
 
   def daily_max_gust(day_start, day_end)

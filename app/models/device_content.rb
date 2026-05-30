@@ -1,7 +1,7 @@
 class DeviceContent
   def call(
     device: nil,
-    home_assistant_api: HomeAssistantApi.new,
+    home_assistant_api: nil,
     calendar_feed: CalendarFeed.new,
     timezone: nil,
     current_time: nil,
@@ -19,8 +19,10 @@ class DeviceContent
     start_offset: 0,
     clothing_forecast: false,
     auto_icons: false,
-    event_filter: nil
+    event_filter: nil,
+    wind_gust_threshold_mph: 20.0
   )
+    home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph)
     current_time ||= Time.now.utc.in_time_zone(home_assistant_api.time_zone)
 
     out = {}

@@ -435,6 +435,18 @@ class DeviceTest < Minitest::Test
     assert device.weather_event_enabled?("show_precip_events")
   end
 
+  def test_wind_gust_threshold_mph_defaults_and_overrides
+    device = Device.new
+    device.configuration = nil
+    assert_equal Device::DEFAULT_WIND_GUST_THRESHOLD_MPH, device.wind_gust_threshold_mph
+
+    device.configuration = {"wind_gust_threshold_mph" => "27.5"}
+    assert_in_delta 27.5, device.wind_gust_threshold_mph, 0.001
+
+    device.configuration = {"wind_gust_threshold_mph" => ""}
+    assert_equal Device::DEFAULT_WIND_GUST_THRESHOLD_MPH, device.wind_gust_threshold_mph
+  end
+
   def test_two_day_uses_today_and_tomorrow_before_default_rollover_time
     device = Device.create!(
       location: test_location,

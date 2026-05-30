@@ -741,6 +741,31 @@ class HomeAssistantApiTest < Minitest::Test
     end
   end
 
+  # Reproducer for #91: HA unit_system.wind_speed is a frontend display
+  # preference (e.g. "m/s") that does not reflect the unit a weather
+  # integration actually returns. The entity's own wind_speed_unit attribute
+  # is authoritative and must take precedence.
+  def test_ha_speed_unit_prefers_entity_wind_speed_unit_over_unit_system
+    api = HomeAssistantApi.new
+    weather_entity = {entity_id: "weather.forecast_home_weather", state: "cloudy",
+                      attributes: {wind_speed_unit: "km/h"}}
+    api.stub :config_data, {unit_system: {wind_speed: "m/s"}} do
+      api.stub :data, [weather_entity] do
+        assert_equal "kph", api.ha_speed_unit
+      end
+    end
+  end
+
+  def test_ha_speed_unit_falls_back_to_unit_system_when_entity_missing_attribute
+    api = HomeAssistantApi.new
+    weather_entity = {entity_id: "weather.foo", state: "cloudy", attributes: {}}
+    api.stub :config_data, {unit_system: {wind_speed: "km/h"}} do
+      api.stub :data, [weather_entity] do
+        assert_equal "kph", api.ha_speed_unit
+      end
+    end
+  end
+
   # --- Calendars ---
 
   def test_fetch_calendars
@@ -1412,6 +1437,51 @@ class HomeAssistantApiTest < Minitest::Test
     ] do
       events = api.wind_calendar_events
       assert_equal 0, events.length
+    end
+  end
+
+  def test_wind_calendar_events_respects_configured_threshold_mph
+    future_time = (Time.now + 1.hour).utc.beginning_of_hour.iso8601
+
+    config = TimeframeConfig.new(speed_unit: "mph")
+    # 30 mph gust, threshold 35 mph -> no event
+    api = HomeAssistantApi.new(config, wind_gust_threshold_mph: 35.0)
+    api.stub :hourly_forecast, [
+      {datetime: future_time, wind_gust_speed: 30.0, wind_bearing: 180}
+    ] do
+      assert_empty api.wind_calendar_events
+    end
+
+    # Same gust, threshold 25 mph -> one event
+    api_low = HomeAssistantApi.new(config, wind_gust_threshold_mph: 25.0)
+    api_low.stub :hourly_forecast, [
+      {datetime: future_time, wind_gust_speed: 30.0, wind_bearing: 180}
+    ] do
+      assert_equal 1, api_low.wind_calendar_events.length
+    end
+  end
+
+  def test_wind_threshold_in_kph_converts_from_mph
+    future_time = (Time.now + 1.hour).utc.beginning_of_hour.iso8601
+
+    config = TimeframeConfig.new(speed_unit: "kph")
+    # 20 mph threshold -> ~32.19 kph. 35 kph gust crosses it.
+    api = HomeAssistantApi.new(config, wind_gust_threshold_mph: 20.0)
+    api.stub :ha_speed_unit, "kph" do
+      api.stub :hourly_forecast, [
+        {datetime: future_time, wind_gust_speed: 35.0, wind_bearing: 180}
+      ] do
+        assert_equal 1, api.wind_calendar_events.length
+      end
+    end
+
+    api_high = HomeAssistantApi.new(config, wind_gust_threshold_mph: 25.0)
+    api_high.stub :ha_speed_unit, "kph" do
+      api_high.stub :hourly_forecast, [
+        {datetime: future_time, wind_gust_speed: 35.0, wind_bearing: 180}
+      ] do
+        assert_empty api_high.wind_calendar_events
+      end
     end
   end
 

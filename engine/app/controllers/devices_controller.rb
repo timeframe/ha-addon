@@ -125,7 +125,7 @@ class DevicesController < ApplicationController
   def update_configuration
     device = @location.devices.find(params[:id])
     config = device.configuration || {}
-    config[params[:key]] = params[:value]
+    config[params[:key]] = normalize_configuration_value(params[:key], params[:value], params[:unit])
     device.update!(configuration: config)
     RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
     redirect_back fallback_location: root_path
@@ -240,6 +240,14 @@ class DevicesController < ApplicationController
   end
 
   private
+
+  def normalize_configuration_value(key, value, unit)
+    return value unless key == "wind_gust_threshold_mph"
+    numeric = value.to_f
+    return nil if numeric <= 0
+    mph = (unit.to_s == "kph") ? (numeric / 1.609344) : numeric
+    mph.round(2).to_s
+  end
 
   def set_account_and_location
     @account = if current_user.is_admin?
