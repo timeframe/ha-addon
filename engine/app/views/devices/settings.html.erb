@@ -159,7 +159,7 @@
           <% one_day_template = @device.active_template == "one_day" %>
           <% compact_template = %w[two_day three_day one_day].include?(@device.active_template) %>
           <% if compact_template %>
-            <% options << {key: "only_show_events_with_icons", on_label: "Only Show Calendar Events with Icons or Attachments", off_label: "Only Show Calendar Events with Icons or Attachments", default_on: false} %>
+            <% options << {key: "only_show_events_with_icons", on_label: "Only Show Calendar Events with Icons", off_label: "Only Show Calendar Events with Icons", default_on: false} %>
           <% end %>
           <% show_hourly_conditions = !one_day_template && @device.active_template != "two_day" %>
           <% if show_hourly_conditions %>

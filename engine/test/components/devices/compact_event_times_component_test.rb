@@ -44,7 +44,7 @@ class CompactEventTimesComponentTest < ActiveSupport::TestCase
     refute_includes html, "2:00pm"
   end
 
-  test "two day only show calendar events with icons or attachments filters to tagged events" do
+  test "two day only show calendar events with icons filters to tagged events" do
     html = render_component(
       Devices::TwoDayComponent,
       events: [
@@ -62,7 +62,7 @@ class CompactEventTimesComponentTest < ActiveSupport::TestCase
     refute_includes html, "Plain Event"
   end
 
-  test "two day without only show calendar events with icons or attachments includes all events" do
+  test "two day without only show calendar events with icons includes all events" do
     html = render_component(
       Devices::TwoDayComponent,
       events: [
@@ -80,7 +80,7 @@ class CompactEventTimesComponentTest < ActiveSupport::TestCase
     assert_includes html, "Plain Event"
   end
 
-  test "three day only show calendar events with icons or attachments filters to tagged events" do
+  test "three day only show calendar events with icons filters to tagged events" do
     html = render_component(
       Devices::ThreeDayComponent,
       events: [

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 13) do
+ActiveRecord::Schema[8.1].define(version: 14) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -65,14 +65,13 @@ ActiveRecord::Schema[8.1].define(version: 13) do
   end
 
   create_table "calendar_events", force: :cascade do |t|
-    t.string "attachment_content_type"
-    t.text "attachment_data"
     t.bigint "calendar_id", null: false
     t.datetime "created_at", null: false
     t.text "description"
     t.string "end_timezone"
     t.datetime "ends_at", null: false
     t.string "external_id", null: false
+    t.boolean "has_attachment", default: false, null: false
     t.string "location"
     t.string "provider_etag"
     t.string "provider_url"
