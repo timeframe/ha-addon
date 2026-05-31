@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 12) do
+ActiveRecord::Schema[8.1].define(version: 13) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -226,6 +226,9 @@ ActiveRecord::Schema[8.1].define(version: 12) do
   create_table "google_accounts", force: :cascade do |t|
     t.text "access_token", null: false
     t.bigint "account_id", null: false
+    t.string "calendar_list_webhook_channel_id"
+    t.datetime "calendar_list_webhook_expires_at"
+    t.string "calendar_list_webhook_resource_id"
     t.datetime "created_at", null: false
     t.text "email", null: false
     t.text "google_uid", null: false
@@ -235,6 +238,7 @@ ActiveRecord::Schema[8.1].define(version: 12) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "google_uid"], name: "index_google_accounts_on_account_id_and_google_uid", unique: true
     t.index ["account_id"], name: "index_google_accounts_on_account_id"
+    t.index ["calendar_list_webhook_channel_id"], name: "index_google_accounts_on_calendar_list_webhook_channel_id", unique: true
   end
 
   create_table "ha_syncs", force: :cascade do |t|

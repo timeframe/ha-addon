@@ -64,12 +64,12 @@ class DemoDeviceContent
       start_offset: start_offset, clothing_forecast: clothing_forecast, fill_hourly_weather: fill_hourly_weather)
 
     if event_filter.present?
-      keywords = event_filter.split(",").map(&:strip).reject(&:empty?).map(&:downcase)
+      keywords = event_filter.split(",").map(&:strip).reject(&:empty?)
       unless keywords.empty?
         keep = ->(event) {
           icon = event[:icon_class].to_s
           next true if icon.start_with?("weather-", "arrow-")
-          keywords.any? { |kw| event[:summary].to_s.downcase.include?(kw) }
+          keywords.any? { |kw| event[:summary].to_s.include?(kw) }
         }
         out[:day_groups].each do |day|
           day[:daily] = day[:daily].select(&keep)

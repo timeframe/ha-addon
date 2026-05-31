@@ -342,7 +342,7 @@ class DeviceTest < Minitest::Test
       mac_address: "EF:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
       display_template: "three_day",
       demo_mode_enabled: true,
-      configuration: {"event_filter" => "piano"}
+      configuration: {"event_filter" => "Piano"}
     )
     current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 8)
 
@@ -350,9 +350,9 @@ class DeviceTest < Minitest::Test
 
     summaries = result[:day_groups].flat_map { |day| (day[:daily] + day[:periodic]).map { |e| e[:summary] } }
     calendar_summaries = summaries - ["Vacation"]
-    refute_empty calendar_summaries.select { |s| s.to_s.downcase.include?("piano") },
+    refute_empty calendar_summaries.select { |s| s.to_s.include?("Piano") },
       "expected at least one event matching the filter"
-    non_matching = calendar_summaries.reject { |s| s.to_s.downcase.include?("piano") || s.to_s.match?(/\A-?\d+°/) || s.to_s.match?(/Gusts/i) }
+    non_matching = calendar_summaries.reject { |s| s.to_s.include?("Piano") || s.to_s.match?(/\A-?\d+°/) || s.to_s.match?(/Gusts/i) }
     assert_empty non_matching,
       "expected event_filter to remove non-matching calendar events, but found: #{non_matching.inspect}"
   end

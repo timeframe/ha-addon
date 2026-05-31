@@ -79,8 +79,8 @@ class DeviceContent
 
     cal_events = home_assistant_api.calendar_events
     if event_filter.present?
-      keywords = event_filter.split(",").map(&:strip).reject(&:empty?).map(&:downcase)
-      cal_events = cal_events.select { |e| keywords.any? { |kw| e.summary.to_s.downcase.include?(kw) } } unless keywords.empty?
+      keywords = event_filter.split(",").map(&:strip).reject(&:empty?)
+      cal_events = cal_events.select { |e| keywords.any? { |kw| e.summary.to_s.include?(kw) } } unless keywords.empty?
     end
     raw_events << cal_events
 

@@ -696,7 +696,7 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 18, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 19, 0, 0, "-0600"), summary: "Dinner")
       ]
       api.stub :calendar_events, events do
-        result = DeviceContent.new.call(home_assistant_api: api, event_filter: "soccer, piano", always_show_today: true)
+        result = DeviceContent.new.call(home_assistant_api: api, event_filter: "Soccer, Piano", always_show_today: true)
 
         today = result[:day_groups].find { |d| d[:day_name] == "Today" }
         summaries = today[:periodic].map { |e| e[:summary] }
@@ -741,7 +741,7 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
-  def test_event_filter_case_insensitive
+  def test_event_filter_is_case_sensitive
     travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
       api = new_test_api
       events = [
@@ -750,6 +750,11 @@ class DeviceContenttTest < Minitest::Test
       api.stub :calendar_events, events do
         result = DeviceContent.new.call(home_assistant_api: api, event_filter: "soccer", always_show_today: true)
 
+        today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+        summaries = today[:periodic].map { |e| e[:summary] }
+        refute_includes summaries, "Soccer Practice"
+
+        result = DeviceContent.new.call(home_assistant_api: api, event_filter: "Soccer", always_show_today: true)
         today = result[:day_groups].find { |d| d[:day_name] == "Today" }
         summaries = today[:periodic].map { |e| e[:summary] }
         assert_includes summaries, "Soccer Practice"
