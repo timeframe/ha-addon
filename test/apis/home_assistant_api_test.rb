@@ -801,6 +801,38 @@ class HomeAssistantApiTest < Minitest::Test
     assert_equal "calendar", fetched.icon
   end
 
+  def test_fetch_calendars_tags_events_with_entity_id
+    api = new_test_api
+    calendar = {"entity_id" => "calendar.family"}
+    event = {
+      "summary" => "Dentist",
+      "start" => {"dateTime" => "2024-09-05T10:00:00-06:00"},
+      "end" => {"dateTime" => "2024-09-05T11:00:00-06:00"}
+    }
+
+    api.stub :fetch_calendar_list, [calendar] do
+      api.stub :fetch_calendar_icons, {} do
+        HTTParty.stub :get, [event] do
+          api.fetch_calendars
+        end
+      end
+    end
+
+    assert_equal "calendar.family", api.calendar_events.first.entity_id
+  end
+
+  def test_calendar_entities
+    api = new_test_api
+    api.stub :fetch_calendar_list, [{"entity_id" => "calendar.family", "name" => "Family"}, {"entity_id" => "calendar.work"}] do
+      api.stub :fetch_calendar_icons, {"calendar.family" => "home"} do
+        entities = api.calendar_entities
+        assert_equal 2, entities.length
+        assert_equal({entity_id: "calendar.family", name: "Family", icon: "home"}, entities.first)
+        assert_equal({entity_id: "calendar.work", name: "calendar.work", icon: "calendar"}, entities.last)
+      end
+    end
+  end
+
   def test_private_mode
     api = new_test_api
     api.seed_calendars([])

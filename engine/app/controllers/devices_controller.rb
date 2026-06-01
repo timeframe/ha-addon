@@ -132,6 +132,16 @@ class DevicesController < ApplicationController
     redirect_back fallback_location: root_path
   end
 
+  def update_calendars
+    device = @location.devices.find(params[:id])
+    all_identifiers = available_calendar_identifiers_for(device)
+    included = Array(params[:calendar_identifiers]).map(&:to_s)
+    excluded = all_identifiers - included
+    device.update!(excluded_calendar_identifiers: excluded)
+    RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
+    redirect_back fallback_location: settings_account_location_device_path(@account, @location, device)
+  end
+
   def rename
     device = @location.devices.find(params[:id])
     new_name = params[:name].to_s.strip
@@ -248,6 +258,13 @@ class DevicesController < ApplicationController
     return nil if numeric <= 0
     mph = (unit.to_s == "kph") ? (numeric / 1.609344) : numeric
     mph.round(2).to_s
+  end
+
+  # Apps override this to list the calendar identifiers the device can choose
+  # from. Cloud returns Calendar IDs (as strings); ha-addon returns HA
+  # entity_ids. Default is an empty list (no per-device selection).
+  def available_calendar_identifiers_for(_device)
+    []
   end
 
   def set_account_and_location

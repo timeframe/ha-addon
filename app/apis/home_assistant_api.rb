@@ -249,6 +249,7 @@ class HomeAssistantApi
         event["starts_at"] = event["start"]["date"] || event["start"]["dateTime"]
         event["ends_at"] = event["end"]["date"] || event["end"]["dateTime"]
         event["icon"] = icons[entity_id] || "calendar"
+        event["entity_id"] = entity_id
         uid = event["uid"]
         event["id"] = uid.present? ? uid : "#{entity_id}_#{event["starts_at"]}_#{Digest::MD5.hexdigest(event["summary"].to_s)[0, 8]}"
         event.delete("uid")
@@ -277,6 +278,15 @@ class HomeAssistantApi
 
   def calendar_events
     @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map { DeviceEvent.new(**it.symbolize_keys!, timezone: time_zone) }
+  end
+
+  def calendar_entities
+    calendars = fetch_calendar_list
+    icons = fetch_calendar_icons(calendars)
+    calendars.map do |c|
+      entity_id = c["entity_id"]
+      {entity_id: entity_id, name: c["name"].presence || entity_id, icon: icons[entity_id] || "calendar"}
+    end
   end
 
   def fetch_calendar_list

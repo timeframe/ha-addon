@@ -78,6 +78,9 @@ class DeviceContent
     out[:private_mode] = private_mode
 
     cal_events = home_assistant_api.calendar_events
+    if device&.excluded_calendar_identifiers&.any?
+      cal_events = cal_events.reject { |e| device.calendar_excluded?(e.entity_id) }
+    end
     if event_filter.present?
       keywords = event_filter.split(",").map(&:strip).reject(&:empty?)
       cal_events = cal_events.select { |e| keywords.any? { |kw| e.summary.to_s.include?(kw) } } unless keywords.empty?

@@ -147,6 +147,32 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_excluded_calendar_identifiers_filter_calendar_events
+    device = test_location.devices.create!(
+      name: "excl-#{SecureRandom.hex(4)}",
+      model: "visionect_13",
+      excluded_calendar_identifiers: ["calendar.skip"]
+    )
+
+    travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
+      api = new_test_api
+      events = [
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 12, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 13, 0, 0, "-0600"), summary: "Keep me", entity_id: "calendar.keep", timezone: "America/Denver"),
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Skip me", entity_id: "calendar.skip", timezone: "America/Denver")
+      ]
+      api.stub :calendars_healthy?, false do
+        api.stub :private_mode?, false do
+          api.stub :calendar_events, events do
+            result = DeviceContent.new.call(home_assistant_api: api, device: device)
+            summaries = result[:day_groups].flat_map { |d| d[:periodic].map { |e| e[:summary] } }
+            assert_includes summaries, "Keep me"
+            refute_includes summaries, "Skip me"
+          end
+        end
+      end
+    end
+  end
+
   def test_use_day_names_option
     travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
       result = DeviceContent.new.call(home_assistant_api: new_test_api, use_day_names: true)

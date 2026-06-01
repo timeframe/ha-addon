@@ -135,6 +135,10 @@ class Device < ActiveRecord::Base
     SUPPORTED_MODELS.dig(model, :templates)
   end
 
+  def calendar_excluded?(identifier)
+    excluded_calendar_identifiers.include?(identifier.to_s)
+  end
+
   def weather_event_enabled?(key)
     value = configuration&.dig(key)
     return value != "false" unless value.nil?
