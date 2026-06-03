@@ -1,8 +1,13 @@
 <% content_for :title, @device.name %>
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
+    <% if defined?(current_user) && current_user&.is_admin? %>
+      <% admin_user = @device.account&.users&.first %>
+      <% if admin_user %>
+        <p class="mb-1"><%= link_to "← Back to #{admin_user.email}", admin_user_path(admin_user), class: "text-decoration-none small" %></p>
+      <% end %>
+    <% end %>
     <div class="d-flex align-items-center mb-4">
-      <a href="/" class="text-decoration-none me-2">&larr;</a>
       <h3 class="mb-0"><%= @device.name %></h3>
       <span class="text-body-tertiary ms-2" style="font-size: 0.85rem;"><%= @device.model_name_label %></span>
     </div>
@@ -152,6 +157,35 @@
         </div>
       <% end %>
     </div>
+
+    <% if defined?(current_user) && current_user&.is_admin? %>
+      <%# Admin: Reassign to another location %>
+      <div class="card mb-3 border-warning">
+        <%= form_with url: reassign_account_location_device_path(@account, @location, @device), method: :patch do %>
+          <div class="card-header d-flex align-items-center justify-content-between py-2 bg-warning-subtle">
+            <span class="small text-body-secondary">Admin: Reassign Location</span>
+            <%= submit_tag "Reassign", class: "btn btn-warning btn-sm" %>
+          </div>
+          <div class="card-body">
+            <select name="target_location_id" class="form-select" required>
+              <% Account.includes(:locations).order(:name).each do |acct| %>
+                <% next if acct.locations.empty? %>
+                <optgroup label="<%= acct.name %>">
+                  <% acct.locations.order(:name).each do |loc| %>
+                    <% if loc.id == @device.location_id %>
+                      <option value="<%= loc.id %>" selected><%= loc.name %> (current)</option>
+                    <% else %>
+                      <option value="<%= loc.id %>"><%= loc.name %></option>
+                    <% end %>
+                  <% end %>
+                </optgroup>
+              <% end %>
+            </select>
+            <p class="form-text mb-0">Move this device to a different account or location.</p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
 
     <%# Template selection %>
     <% if @device.template_options %>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 16) do
+ActiveRecord::Schema[8.1].define(version: 17) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -294,6 +294,7 @@ ActiveRecord::Schema[8.1].define(version: 16) do
     t.datetime "created_at", null: false
     t.text "email", null: false
     t.boolean "is_admin", default: false, null: false
+    t.datetime "last_signed_in_at"
     t.text "login_code"
     t.integer "login_code_attempts", default: 0, null: false
     t.datetime "login_code_sent_at"

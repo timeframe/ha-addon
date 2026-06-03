@@ -18,3 +18,5 @@ vendor/bundle/*
 test_output.txt
 test_full_output.txt
 engine/test/dummy/tmp/
+# Capybara/system test screenshots
+tmp/screenshots/
