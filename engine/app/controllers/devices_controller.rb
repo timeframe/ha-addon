@@ -11,6 +11,7 @@ class DevicesController < ApplicationController
     "trmnl" => "Devices::TrmnlComponent",
     "three_day" => "Devices::ThreeDayComponent",
     "two_day" => "Devices::TwoDayComponent",
+    "one_day" => "Devices::OneDayComponent",
     "reterminal" => "Devices::ReterminalComponent",
     "boox_mira" => "Devices::BooxMiraComponent",
     "thirteen" => "Devices::ThirteenComponent",
@@ -125,10 +126,20 @@ class DevicesController < ApplicationController
   def update_configuration
     device = @location.devices.find(params[:id])
     config = device.configuration || {}
-    config[params[:key]] = params[:value]
+    config[params[:key]] = normalize_configuration_value(params[:key], params[:value], params[:unit])
     device.update!(configuration: config)
     RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
     redirect_back fallback_location: root_path
+  end
+
+  def update_calendars
+    device = @location.devices.find(params[:id])
+    all_identifiers = available_calendar_identifiers_for(device)
+    included = Array(params[:calendar_identifiers]).map(&:to_s)
+    excluded = all_identifiers - included
+    device.update!(excluded_calendar_identifiers: excluded)
+    RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
+    redirect_back fallback_location: settings_account_location_device_path(@account, @location, device)
   end
 
   def rename
@@ -240,6 +251,21 @@ class DevicesController < ApplicationController
   end
 
   private
+
+  def normalize_configuration_value(key, value, unit)
+    return value unless key == "wind_gust_threshold_mph"
+    numeric = value.to_f
+    return nil if numeric <= 0
+    mph = (unit.to_s == "kph") ? (numeric / 1.609344) : numeric
+    mph.round(2).to_s
+  end
+
+  # Apps override this to list the calendar identifiers the device can choose
+  # from. Cloud returns Calendar IDs (as strings); ha-addon returns HA
+  # entity_ids. Default is an empty list (no per-device selection).
+  def available_calendar_identifiers_for(_device)
+    []
+  end
 
   def set_account_and_location
     @account = if current_user.is_admin?

@@ -24,9 +24,10 @@ class HomeAssistantApi
   CALENDAR_DOMAIN = "home_assistant_calendar_api"
   WEATHER_DOMAIN = "home_assistant_weather_api"
 
-  def initialize(config = TimeframeConfig.new, store: Rails.cache)
+  def initialize(config = TimeframeConfig.new, store: Rails.cache, wind_gust_threshold_mph: 20.0)
     @config = config
     @store = store
+    @wind_gust_threshold_mph = wind_gust_threshold_mph.to_f
   end
 
   def home_assistant_base_url
@@ -208,7 +209,11 @@ class HomeAssistantApi
   }.freeze
 
   def ha_speed_unit
-    HA_SPEED_UNITS[unit_system[:wind_speed]] || "mph"
+    # unit_system.wind_speed is HA's frontend display preference and does NOT
+    # reflect the unit a weather integration actually returns. Prefer the
+    # active weather entity's own wind_speed_unit attribute when present.
+    entity_unit = data.find { |e| e[:entity_id] == weather_entity_id }&.dig(:attributes, :wind_speed_unit)
+    HA_SPEED_UNITS[entity_unit] || HA_SPEED_UNITS[unit_system[:wind_speed]] || "mph"
   end
 
   def ha_temperature_unit
@@ -244,6 +249,7 @@ class HomeAssistantApi
         event["starts_at"] = event["start"]["date"] || event["start"]["dateTime"]
         event["ends_at"] = event["end"]["date"] || event["end"]["dateTime"]
         event["icon"] = icons[entity_id] || "calendar"
+        event["entity_id"] = entity_id
         uid = event["uid"]
         event["id"] = uid.present? ? uid : "#{entity_id}_#{event["starts_at"]}_#{Digest::MD5.hexdigest(event["summary"].to_s)[0, 8]}"
         event.delete("uid")
@@ -272,6 +278,15 @@ class HomeAssistantApi
 
   def calendar_events
     @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map { DeviceEvent.new(**it.symbolize_keys!, timezone: time_zone) }
+  end
+
+  def calendar_entities
+    calendars = fetch_calendar_list
+    icons = fetch_calendar_icons(calendars)
+    calendars.map do |c|
+      entity_id = c["entity_id"]
+      {entity_id: entity_id, name: c["name"].presence || entity_id, icon: icons[entity_id] || "calendar"}
+    end
   end
 
   def fetch_calendar_list
@@ -422,8 +437,10 @@ class HomeAssistantApi
     end
   end
 
+  # Threshold is stored in mph for stability across unit-system changes;
+  # convert to the active display unit for comparison.
   def wind_gust_threshold
-    (speed_unit == "kph") ? 32.0 : 20.0
+    (speed_unit == "kph") ? (@wind_gust_threshold_mph * 1.609344) : @wind_gust_threshold_mph
   end
 
   def daily_max_gust(day_start, day_end)
@@ -448,12 +465,7 @@ class HomeAssistantApi
     return [] unless hours.present?
 
     (-1..7).map { |i| today + i.days }.flat_map do |day|
-      [
-        (day.noon - 4.hours),
-        day.noon,
-        (day.noon + 4.hours),
-        (day.noon + 8.hours)
-      ].map do |hour|
+      (0..23).map { |h| day.beginning_of_day + h.hours }.map do |hour|
         hour_ts = hour.to_i
         weather_hour = hours.find { DateTime.parse(it[:datetime]).to_i == hour_ts }
 

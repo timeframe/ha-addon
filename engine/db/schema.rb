@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 11) do
+ActiveRecord::Schema[8.1].define(version: 16) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -18,8 +18,10 @@ ActiveRecord::Schema[8.1].define(version: 11) do
   create_table "account_users", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.datetime "created_at", null: false
+    t.string "role", default: "owner", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.index ["account_id", "role"], name: "index_account_users_on_account_id_unique_owner", unique: true, where: "((role)::text = 'owner'::text)"
     t.index ["account_id", "user_id"], name: "index_account_users_on_account_id_and_user_id", unique: true
     t.index ["account_id"], name: "index_account_users_on_account_id"
     t.index ["user_id"], name: "index_account_users_on_user_id"
@@ -63,14 +65,13 @@ ActiveRecord::Schema[8.1].define(version: 11) do
   end
 
   create_table "calendar_events", force: :cascade do |t|
-    t.string "attachment_content_type"
-    t.text "attachment_data"
     t.bigint "calendar_id", null: false
     t.datetime "created_at", null: false
     t.text "description"
     t.string "end_timezone"
     t.datetime "ends_at", null: false
     t.string "external_id", null: false
+    t.boolean "has_attachment", default: false, null: false
     t.string "location"
     t.string "provider_etag"
     t.string "provider_url"
@@ -123,6 +124,7 @@ ActiveRecord::Schema[8.1].define(version: 11) do
     t.text "display_key"
     t.bigint "display_state_crc"
     t.string "display_template", default: "default", null: false
+    t.string "excluded_calendar_identifiers", default: [], null: false, array: true
     t.string "firmware_version"
     t.string "friendly_id"
     t.datetime "last_connection_at"
@@ -224,6 +226,9 @@ ActiveRecord::Schema[8.1].define(version: 11) do
   create_table "google_accounts", force: :cascade do |t|
     t.text "access_token", null: false
     t.bigint "account_id", null: false
+    t.string "calendar_list_webhook_channel_id"
+    t.datetime "calendar_list_webhook_expires_at"
+    t.string "calendar_list_webhook_resource_id"
     t.datetime "created_at", null: false
     t.text "email", null: false
     t.text "google_uid", null: false
@@ -233,6 +238,7 @@ ActiveRecord::Schema[8.1].define(version: 11) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "google_uid"], name: "index_google_accounts_on_account_id_and_google_uid", unique: true
     t.index ["account_id"], name: "index_google_accounts_on_account_id"
+    t.index ["calendar_list_webhook_channel_id"], name: "index_google_accounts_on_calendar_list_webhook_channel_id", unique: true
   end
 
   create_table "ha_syncs", force: :cascade do |t|

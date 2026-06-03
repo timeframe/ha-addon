@@ -10,8 +10,8 @@ class Device < ActiveRecord::Base
     "visionect_13" => {name: "Visionect Place & Play 13\"", template: "thirteen", width: 1200, height: 1600},
     "boox_mira_pro" => {name: "Boox Mira Pro 25.3\"", template: "mira", width: 1800, height: 3200, realtime: true},
     "boox_mira" => {name: "Boox Mira 13.3\"", template: "boox_mira", width: 1650, height: 2200, realtime: true},
-    "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Landscape Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}], screenshotted: true},
-    "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Landscape Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}], screenshotted: true},
+    "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Landscape Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
+    "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Landscape Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
     "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1404, height: 1872, screenshotted: true},
     "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, screenshotted: true}
   }.freeze
@@ -135,6 +135,10 @@ class Device < ActiveRecord::Base
     SUPPORTED_MODELS.dig(model, :templates)
   end
 
+  def calendar_excluded?(identifier)
+    excluded_calendar_identifiers.include?(identifier.to_s)
+  end
+
   def weather_event_enabled?(key)
     value = configuration&.dig(key)
     return value != "false" unless value.nil?
@@ -146,14 +150,43 @@ class Device < ActiveRecord::Base
     true
   end
 
+  DEFAULT_TEMPERATURE_HOURS = [8, 12, 16, 20].freeze
+  COMPACT_TEMPERATURE_HOURS = [8, 12, 16].freeze
+
+  def default_temperature_hours
+    %w[three_day two_day].include?(active_template) ? COMPACT_TEMPERATURE_HOURS : DEFAULT_TEMPERATURE_HOURS
+  end
+
+  def temperature_event_hours
+    defaults = default_temperature_hours
+    (0..23).select do |hour|
+      value = configuration&.dig("temperature_hour_#{hour}")
+      value.nil? ? defaults.include?(hour) : value == "true"
+    end
+  end
+
+  DEFAULT_WIND_GUST_THRESHOLD_MPH = 20.0
+
+  # Stored in mph so the configured value is stable across unit-system changes.
+  def wind_gust_threshold_mph
+    value = configuration&.dig("wind_gust_threshold_mph").presence
+    value ? value.to_f : DEFAULT_WIND_GUST_THRESHOLD_MPH
+  end
+
   # :nocov:
   def device_content(timezone: nil, current_time: nil)
     tz = timezone || location&.time_zone || "UTC"
-    compact_view = %w[three_day two_day].include?(active_template)
+    compact_view = %w[three_day two_day one_day].include?(active_template)
     two_day = active_template == "two_day"
+    one_day = active_template == "one_day"
     configuration&.dig("only_show_events_with_icons")
-    include_ranged_weather_events = true
-    include_temperature_events = weather_event_enabled?("show_temperature_events")
+    include_ranged_weather_events = !one_day
+    include_temperature_events = if two_day || one_day
+      true
+    else
+      weather_event_enabled?("show_temperature_events")
+    end
+    temperature_hours = include_temperature_events ? temperature_event_hours : nil
     include_precip_events = include_ranged_weather_events && weather_event_enabled?("show_precip_events")
     include_wind_events = include_ranged_weather_events && weather_event_enabled?("show_wind_events")
     effective_current_time = current_time || Time.now.utc.in_time_zone(tz)
@@ -161,12 +194,16 @@ class Device < ActiveRecord::Base
       days:
         if two_day
           2
+        elsif one_day
+          1
         else
           (compact_view ? 3 : 5)
         end,
       start_offset:
         if two_day
           two_day_start_offset(effective_current_time, timezone: tz)
+        elsif one_day
+          one_day_start_offset(effective_current_time, timezone: tz)
         else
           0
         end,
@@ -174,11 +211,14 @@ class Device < ActiveRecord::Base
       include_wind: include_wind_events,
       include_weather_alerts: include_ranged_weather_events && (include_temperature_events || include_precip_events || include_wind_events),
       include_temperature: include_temperature_events,
+      temperature_hours: temperature_hours,
       use_day_names: compact_view, include_daily_weather: !compact_view,
       weather_row: compact_view, start_time_only: compact_view,
       always_show_today: compact_view,
-      clothing_forecast: compact_view && configuration&.dig("clothing_forecast") == "true",
-      auto_icons: compact_view && configuration&.dig("auto_assign_icons") != "false"
+      clothing_forecast: compact_view && (one_day || configuration&.dig("clothing_forecast") == "true"),
+      auto_icons: compact_view && configuration&.dig("auto_assign_icons") != "false",
+      wind_gust_threshold_mph: wind_gust_threshold_mph,
+      event_filter: configuration&.dig("event_filter")
     }
     args[:current_time] = current_time if current_time
     if demo_mode_enabled?
@@ -195,6 +235,19 @@ class Device < ActiveRecord::Base
     display_time = current_time.in_time_zone(timezone || location&.time_zone || "UTC")
     current_minutes = (display_time.hour * 60) + display_time.min
     if current_minutes >= self.class.time_string_to_minutes(configuration&.dig("two_day_rollover_time"))
+      1
+    else
+      0
+    end
+  end
+
+  def one_day_start_offset(current_time, timezone: nil)
+    return 0 unless active_template == "one_day"
+    return 0 unless configuration&.dig("one_day_rollover_enabled") == "true"
+
+    display_time = current_time.in_time_zone(timezone || location&.time_zone || "UTC")
+    current_minutes = (display_time.hour * 60) + display_time.min
+    if current_minutes >= self.class.time_string_to_minutes(configuration&.dig("one_day_rollover_time"))
       1
     else
       0

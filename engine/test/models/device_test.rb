@@ -287,6 +287,76 @@ class DeviceTest < Minitest::Test
     refute_includes Device::REALTIME_MODELS, "trmnl_og"
   end
 
+  def test_one_day_template_available_for_trmnl_og_and_reterminal_e1001
+    %w[trmnl_og reterminal_e1001].each do |model|
+      templates = Device::SUPPORTED_MODELS.dig(model, :templates).map { |t| t[:name] }
+      assert_includes templates, "one_day", "expected #{model} to include one_day template"
+    end
+  end
+
+  def test_one_day_start_offset_returns_zero_when_rollover_disabled
+    device = Device.new(model: "trmnl_og", display_template: "one_day")
+    device.configuration = nil
+    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 23, 0))
+    device.configuration = {"one_day_rollover_enabled" => "false"}
+    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 23, 0))
+  end
+
+  def test_one_day_start_offset_rolls_over_after_configured_time
+    device = Device.new(model: "trmnl_og", display_template: "one_day")
+    device.configuration = {"one_day_rollover_enabled" => "true", "one_day_rollover_time" => "18:00"}
+    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 17, 59), timezone: "UTC")
+    assert_equal 1, device.one_day_start_offset(Time.utc(2026, 1, 1, 18, 0), timezone: "UTC")
+    assert_equal 1, device.one_day_start_offset(Time.utc(2026, 1, 1, 21, 30), timezone: "UTC")
+  end
+
+  def test_one_day_start_offset_only_applies_when_template_is_one_day
+    device = Device.new(model: "trmnl_og", display_template: "two_day")
+    device.configuration = {"one_day_rollover_enabled" => "true", "one_day_rollover_time" => "18:00"}
+    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 20, 0))
+  end
+
+  def test_one_day_device_content_populates_weather_row_for_daily_icon
+    device = Device.create!(
+      location: test_location,
+      name: "test_one_day_icon_#{SecureRandom.hex(4)}",
+      model: "trmnl_og",
+      mac_address: "OD:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      display_template: "one_day",
+      demo_mode_enabled: true
+    )
+    current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 8)
+
+    result = device.device_content(timezone: "America/Chicago", current_time: current_time)
+
+    assert_equal 1, result[:day_groups].length
+    assert result[:day_groups].first[:weather_row].any?,
+      "Expected weather_row to be populated so the header weather icon renders"
+  end
+
+  def test_event_filter_configuration_is_applied_to_device_content
+    device = Device.create!(
+      location: test_location,
+      name: "test_event_filter_#{SecureRandom.hex(4)}",
+      model: "trmnl_og",
+      mac_address: "EF:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      display_template: "three_day",
+      demo_mode_enabled: true,
+      configuration: {"event_filter" => "Piano"}
+    )
+    current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 8)
+
+    result = device.device_content(timezone: "America/Chicago", current_time: current_time)
+
+    summaries = result[:day_groups].flat_map { |day| (day[:daily] + day[:periodic]).map { |e| e[:summary] } }
+    calendar_summaries = summaries - ["Vacation"]
+    refute_empty calendar_summaries.select { |s| s.to_s.include?("Piano") },
+      "expected at least one event matching the filter"
+    non_matching = calendar_summaries.reject { |s| s.to_s.include?("Piano") || s.to_s.match?(/\A-?\d+°/) || s.to_s.match?(/Gusts/i) }
+    assert_empty non_matching,
+      "expected event_filter to remove non-matching calendar events, but found: #{non_matching.inspect}"
+  end
+
   def test_active_template_for_boox_mira
     device = Device.new(model: "boox_mira", display_template: "default")
     assert_equal "boox_mira", device.active_template
@@ -433,6 +503,18 @@ class DeviceTest < Minitest::Test
 
     device.configuration = {"show_precip_events" => "true", "show_weather_events" => "false"}
     assert device.weather_event_enabled?("show_precip_events")
+  end
+
+  def test_wind_gust_threshold_mph_defaults_and_overrides
+    device = Device.new
+    device.configuration = nil
+    assert_equal Device::DEFAULT_WIND_GUST_THRESHOLD_MPH, device.wind_gust_threshold_mph
+
+    device.configuration = {"wind_gust_threshold_mph" => "27.5"}
+    assert_in_delta 27.5, device.wind_gust_threshold_mph, 0.001
+
+    device.configuration = {"wind_gust_threshold_mph" => ""}
+    assert_equal Device::DEFAULT_WIND_GUST_THRESHOLD_MPH, device.wind_gust_threshold_mph
   end
 
   def test_two_day_uses_today_and_tomorrow_before_default_rollover_time

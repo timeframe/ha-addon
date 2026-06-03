@@ -94,7 +94,7 @@ class TwoDayVisualRegressionTest < ApplicationSystemTestCase
         "show_weather_events" => "false",
         "show_event_times" => "true",
         "show_icons" => "true",
-        "hide_dates" => "false"
+        "show_dates" => "true"
       }
     )
   end

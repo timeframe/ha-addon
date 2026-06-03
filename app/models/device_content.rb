@@ -1,7 +1,7 @@
 class DeviceContent
   def call(
     device: nil,
-    home_assistant_api: HomeAssistantApi.new,
+    home_assistant_api: nil,
     calendar_feed: CalendarFeed.new,
     timezone: nil,
     current_time: nil,
@@ -10,6 +10,7 @@ class DeviceContent
     include_wind: true,
     include_weather_alerts: true,
     include_temperature: true,
+    temperature_hours: nil,
     use_day_names: false,
     include_daily_weather: true,
     weather_row: false,
@@ -18,8 +19,10 @@ class DeviceContent
     start_offset: 0,
     clothing_forecast: false,
     auto_icons: false,
-    event_filter: nil
+    event_filter: nil,
+    wind_gust_threshold_mph: 20.0
   )
+    home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph)
     current_time ||= Time.now.utc.in_time_zone(home_assistant_api.time_zone)
 
     out = {}
@@ -75,9 +78,12 @@ class DeviceContent
     out[:private_mode] = private_mode
 
     cal_events = home_assistant_api.calendar_events
+    if device&.excluded_calendar_identifiers&.any?
+      cal_events = cal_events.reject { |e| device.calendar_excluded?(e.entity_id) }
+    end
     if event_filter.present?
-      keywords = event_filter.split(",").map(&:strip).reject(&:empty?).map(&:downcase)
-      cal_events = cal_events.select { |e| keywords.any? { |kw| e.summary.to_s.downcase.include?(kw) } } unless keywords.empty?
+      keywords = event_filter.split(",").map(&:strip).reject(&:empty?)
+      cal_events = cal_events.select { |e| keywords.any? { |kw| e.summary.to_s.include?(kw) } } unless keywords.empty?
     end
     raw_events << cal_events
 
@@ -135,7 +141,8 @@ class DeviceContent
             weather_events, _ = periodic_events.partition(&:weather?)
           end
           periodic_events = periodic_events.reject(&:weather?)
-          weather_events = weather_events.select { |e| e.weather_hourly? && [8, 12, 16].include?(e.starts_at.hour) }
+          weather_row_hours = temperature_hours || [8, 12, 16]
+          weather_events = weather_events.select { |e| e.weather_hourly? && weather_row_hours.include?(e.starts_at.hour) }
           weather_row_data = include_temperature ? weather_events.map { |e| e.as_json(date: date.to_date) } : []
 
           if clothing_forecast && clothing_threshold
@@ -157,6 +164,10 @@ class DeviceContent
               }
             end
           end
+        end
+
+        if temperature_hours && !weather_row
+          periodic_events = periodic_events.reject { |e| e.weather_hourly? && !temperature_hours.include?(e.starts_at.hour) }
         end
 
         {

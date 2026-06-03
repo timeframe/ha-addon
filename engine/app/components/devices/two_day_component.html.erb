@@ -46,7 +46,7 @@
               <% end %>
               <%= day[:day_name] %>
             </div>
-            <% unless @view_object.dig(:configuration, "hide_dates") == "true" %>
+            <% if @view_object.dig(:configuration, "show_dates") != "false" %>
               <div class="two-day-date"><%= day[:date].strftime("%B %-d") %></div>
             <% end %>
           </div>

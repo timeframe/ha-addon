@@ -12,9 +12,12 @@
         <div class="mb-3">
           <label class="form-label">Device</label>
           <select name="device_model" class="form-select" required data-field="model">
-            <option value="">Select a device...</option>
-            <% Device::SUPPORTED_MODELS.each do |key, info| %>
-              <option value="<%= key %>"><%= info[:name] %></option>
+            <% Device::SUPPORTED_MODELS.sort_by { |_, info| info[:name].to_s.downcase }.each do |key, info| %>
+              <% if key == "reterminal_e1001" %>
+                <option value="<%= key %>" selected><%= info[:name] %></option>
+              <% else %>
+                <option value="<%= key %>"><%= info[:name] %></option>
+              <% end %>
             <% end %>
           </select>
         </div>
@@ -26,10 +29,10 @@
           <% end %>
         </div>
         <p class="small text-muted" data-setup-note style="display: none;">On your Boox device, visit <code><%= request.base_url %>/pair</code> to get a pairing code.</p>
-        <p class="small text-muted" data-trmnl-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code. <a href="https://help.trmnl.com/en/articles/12263392-connect-your-device-to-terminus-byos" target="_blank">Learn more</a></p>
-        <p class="small text-muted" data-reterminal-note style="display: none;">In your reTerminal E10-3 SenseCraft HMI settings, set the API server URL to <code><%= request.base_url %></code>. The device will register and display a pairing code.</p>
-        <p class="small text-muted" data-trmnl-x-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code. <a href="https://help.trmnl.com/en/articles/12263392-connect-your-device-to-terminus-byos" target="_blank">Learn more</a></p>
-        <p class="small text-muted" data-reterminal-e1001-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code.</p>
+        <p class="small text-muted" data-trmnl-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code. <a href="https://help.trmnl.com/en/articles/12263392-connect-your-device-to-terminus-byos" target="_blank">Learn more</a><br><em>If this device was previously paired with another server, soft reset it first so it re-enters WiFi setup mode.</em></p>
+        <p class="small text-muted" data-reterminal-note style="display: none;">In your reTerminal E10-3 SenseCraft HMI settings, set the API server URL to <code><%= request.base_url %></code>. The device will register and display a pairing code.<br><em>If this device was previously paired with another server, soft reset it first before updating the API server URL.</em></p>
+        <p class="small text-muted" data-trmnl-x-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code. <a href="https://help.trmnl.com/en/articles/12263392-connect-your-device-to-terminus-byos" target="_blank">Learn more</a><br><em>If this device was previously paired with another server, soft reset it first so it re-enters WiFi setup mode.</em></p>
+        <p class="small text-muted" data-reterminal-e1001-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code.<br><em>If this device was previously paired with another server, soft reset it first so it re-enters WiFi setup mode.</em></p>
         <%= submit_tag "Add Device", class: "btn btn-primary w-100", disabled: true, id: "add-device-btn" %>
       <% end %>
     </div>

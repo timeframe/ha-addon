@@ -6,133 +6,159 @@
       <span class="text-body-tertiary ms-2" style="font-size: 0.85rem;"><%= @device.model_name_label %></span>
     </div>
 
-    <%# Screenshot %>
-    <% if @device.screenshotted? && @device.cached_image.present? %>
-      <div class="card mb-3">
-        <div class="card-header d-flex align-items-center justify-content-between py-2">
-          <span class="small text-body-secondary">Screenshot</span>
-          <button type="button" class="btn btn-outline-secondary btn-sm" id="regen-screenshot-btn">Regenerate</button>
-        </div>
-        <div class="card-body p-2">
-          <div class="d-flex align-items-center justify-content-center" style="background: #f0f0f0; border-radius: .25rem; overflow: hidden; min-height: 100px;" id="screenshot-container">
-            <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img">
-            <div id="screenshot-loading" style="display: none;" class="text-body-secondary small py-4">Regenerating screenshot&hellip;</div>
+    <%# Preview + Screenshot %>
+    <% has_screenshot = @device.screenshotted? && @device.cached_image.present? %>
+    <div class="card mb-3">
+      <div class="card-header preview-tabs-header">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button type="button" class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview-pane" role="tab" aria-controls="preview-pane" aria-selected="true">Preview</button>
+          </li>
+          <% if has_screenshot %>
+            <li class="nav-item" role="presentation">
+              <button type="button" class="nav-link" id="screenshot-tab" data-bs-toggle="tab" data-bs-target="#screenshot-pane" role="tab" aria-controls="screenshot-pane" aria-selected="false">Screenshot</button>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+      <style>
+        .preview-tabs-header .nav-link { color: var(--bs-body-color); }
+        .preview-tabs-header .nav-link:hover,
+        .preview-tabs-header .nav-link:focus { color: var(--bs-body-color); }
+        .preview-tabs-header .nav-link.active { color: var(--bs-body-color); }
+      </style>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="preview-pane" role="tabpanel" aria-labelledby="preview-tab">
+          <div class="card-body p-0">
+            <div id="preview-container" style="position: relative; background: white; overflow: hidden; width: 100%;">
+              <iframe
+                id="preview-iframe"
+                src="<%= preview_frame_account_location_device_path(@account, @location, @device) %>"
+                width="<%= @device.display_width %>"
+                height="<%= @device.display_height %>"
+                scrolling="no"
+                style="border: none; position: absolute; top: 0; left: 0; width: <%= @device.display_width %>px; height: <%= @device.display_height %>px; transform-origin: top left;"
+              ></iframe>
+            </div>
+          </div>
+          <div class="card-footer py-2">
+            <div class="d-flex flex-wrap align-items-center gap-1">
+              <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary" id="preview-prev" title="Previous day">&larr;</button>
+                <button type="button" class="btn btn-outline-secondary" id="preview-today">Today</button>
+                <button type="button" class="btn btn-outline-secondary" id="preview-next" title="Next day">&rarr;</button>
+              </div>
+              <input type="date" class="form-control form-control-sm w-auto flex-shrink-0" id="preview-date" value="<%= @preview_now.to_date.to_s %>">
+              <input type="time" class="form-control form-control-sm w-auto flex-shrink-0" id="preview-time" value="<%= @preview_now.strftime("%H:%M") %>">
+            </div>
           </div>
         </div>
+        <% if has_screenshot %>
+          <div class="tab-pane fade" id="screenshot-pane" role="tabpanel" aria-labelledby="screenshot-tab">
+            <div class="card-body p-2">
+              <div class="d-flex align-items-center justify-content-center" style="background: #f0f0f0; border-radius: .25rem; overflow: hidden; min-height: 100px;" id="screenshot-container">
+                <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img">
+                <div id="screenshot-loading" style="display: none;" class="text-body-secondary small py-4">Regenerating screenshot&hellip;</div>
+              </div>
+            </div>
+            <div class="card-footer py-2 d-flex justify-content-end">
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="regen-screenshot-btn">Regenerate</button>
+            </div>
+          </div>
+        <% end %>
       </div>
       <script>
         (function() {
-          var btn = document.getElementById('regen-screenshot-btn');
-          var img = document.getElementById('screenshot-img');
-          var loading = document.getElementById('screenshot-loading');
-          btn.addEventListener('click', function() {
-            btn.disabled = true;
-            btn.textContent = 'Regenerating\u2026';
-            img.style.display = 'none';
-            loading.style.display = '';
-            var newImg = new Image();
-            newImg.onload = function() {
-              img.src = newImg.src;
-              img.style.display = '';
-              loading.style.display = 'none';
-              btn.disabled = false;
-              btn.textContent = 'Regenerate';
-            };
-            newImg.onerror = function() {
-              loading.textContent = 'Failed to regenerate screenshot.';
-              btn.disabled = false;
-              btn.textContent = 'Regenerate';
-            };
-            newImg.src = '<%= screenshot_account_location_device_path(@account, @location, @device) %>' + '?force=true&_=' + Date.now();
+          var basePath = '<%= preview_frame_account_location_device_path(@account, @location, @device) %>';
+          var dateInput = document.getElementById('preview-date');
+          var timeInput = document.getElementById('preview-time');
+          var prevBtn = document.getElementById('preview-prev');
+          var nextBtn = document.getElementById('preview-next');
+          var todayBtn = document.getElementById('preview-today');
+          var container = document.getElementById('preview-container');
+          var iframe = document.getElementById('preview-iframe');
+          var deviceWidth = <%= @device.display_width %>;
+          var deviceHeight = <%= @device.display_height %>;
+          function updatePreview() {
+            var at = dateInput.value + 'T' + timeInput.value + ':00';
+            iframe.src = basePath + '?at=' + encodeURIComponent(at);
+          }
+          function shiftDate(days) {
+            var d = new Date(dateInput.value + 'T12:00:00');
+            d.setDate(d.getDate() + days);
+            dateInput.value = d.toISOString().slice(0, 10);
+            updatePreview();
+          }
+          prevBtn.addEventListener('click', function() { shiftDate(-1); });
+          nextBtn.addEventListener('click', function() { shiftDate(1); });
+          todayBtn.addEventListener('click', function() {
+            dateInput.value = '<%= @preview_now.to_date.to_s %>';
+            timeInput.value = '<%= @preview_now.strftime("%H:%M") %>';
+            updatePreview();
           });
+          dateInput.addEventListener('change', updatePreview);
+          timeInput.addEventListener('change', updatePreview);
+          function scaleToFit() {
+            var availWidth = container.parentElement.clientWidth;
+            var scale = availWidth / deviceWidth;
+            iframe.style.transform = 'scale(' + scale + ')';
+            container.style.height = Math.floor(deviceHeight * scale) + 'px';
+          }
+          scaleToFit();
+          window.addEventListener('resize', scaleToFit);
         })();
       </script>
-    <% end %>
-
-    <%# Live preview %>
-    <div class="card mb-3">
-        <div class="card-header d-flex align-items-center justify-content-between py-2">
-          <span class="small text-body-secondary">Preview</span>
-          <div class="d-flex align-items-center gap-1">
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="preview-prev" title="Previous day">&larr;</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="preview-today">Today</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="preview-next" title="Next day">&rarr;</button>
-            <input type="date" class="form-control form-control-sm ms-1" id="preview-date" value="<%= @preview_now.to_date.to_s %>" style="width: auto;">
-            <input type="time" class="form-control form-control-sm" id="preview-time" value="<%= @preview_now.strftime("%H:%M") %>" style="width: auto;">
-            <button type="button" class="btn btn-primary btn-sm" id="preview-go">Go</button>
-          </div>
-        </div>
-        <div class="card-body p-0">
-          <div id="preview-container" style="position: relative; background: white; overflow: hidden; width: 100%;">
-            <iframe
-              id="preview-iframe"
-              src="<%= preview_frame_account_location_device_path(@account, @location, @device) %>"
-              width="<%= @device.display_width %>"
-              height="<%= @device.display_height %>"
-              scrolling="no"
-              style="border: none; position: absolute; top: 0; left: 0; width: <%= @device.display_width %>px; height: <%= @device.display_height %>px; transform-origin: top left;"
-            ></iframe>
-          </div>
-        </div>
+      <% if has_screenshot %>
         <script>
           (function() {
-            var basePath = '<%= preview_frame_account_location_device_path(@account, @location, @device) %>';
-            var dateInput = document.getElementById('preview-date');
-            var timeInput = document.getElementById('preview-time');
-            var goBtn = document.getElementById('preview-go');
-            var prevBtn = document.getElementById('preview-prev');
-            var nextBtn = document.getElementById('preview-next');
-            var todayBtn = document.getElementById('preview-today');
-            var container = document.getElementById('preview-container');
-            var iframe = document.getElementById('preview-iframe');
-            var deviceWidth = <%= @device.display_width %>;
-            var deviceHeight = <%= @device.display_height %>;
-            function updatePreview() {
-              var at = dateInput.value + 'T' + timeInput.value + ':00';
-              iframe.src = basePath + '?at=' + encodeURIComponent(at);
-            }
-            function shiftDate(days) {
-              var d = new Date(dateInput.value + 'T12:00:00');
-              d.setDate(d.getDate() + days);
-              dateInput.value = d.toISOString().slice(0, 10);
-              updatePreview();
-            }
-            prevBtn.addEventListener('click', function() { shiftDate(-1); });
-            nextBtn.addEventListener('click', function() { shiftDate(1); });
-            todayBtn.addEventListener('click', function() {
-              dateInput.value = '<%= @preview_now.to_date.to_s %>';
-              timeInput.value = '<%= @preview_now.strftime("%H:%M") %>';
-              updatePreview();
+            var btn = document.getElementById('regen-screenshot-btn');
+            var img = document.getElementById('screenshot-img');
+            var loading = document.getElementById('screenshot-loading');
+            btn.addEventListener('click', function() {
+              btn.disabled = true;
+              btn.textContent = 'Regenerating\u2026';
+              img.style.display = 'none';
+              loading.style.display = '';
+              var newImg = new Image();
+              newImg.onload = function() {
+                img.src = newImg.src;
+                img.style.display = '';
+                loading.style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = 'Regenerate';
+              };
+              newImg.onerror = function() {
+                loading.textContent = 'Failed to regenerate screenshot.';
+                btn.disabled = false;
+                btn.textContent = 'Regenerate';
+              };
+              newImg.src = '<%= screenshot_account_location_device_path(@account, @location, @device) %>' + '?force=true&_=' + Date.now();
             });
-            function scaleToFit() {
-              var availWidth = container.parentElement.clientWidth;
-              var scale = availWidth / deviceWidth;
-              iframe.style.transform = 'scale(' + scale + ')';
-              container.style.height = Math.floor(deviceHeight * scale) + 'px';
-            }
-            goBtn.addEventListener('click', updatePreview);
-            scaleToFit();
-            window.addEventListener('resize', scaleToFit);
           })();
         </script>
+      <% end %>
     </div>
 
     <%# Rename %>
     <div class="card mb-3">
-      <div class="card-body">
-        <h6 class="card-title">Device Name</h6>
-        <%= form_with url: rename_account_location_device_path(@account, @location, @device), method: :patch, class: "d-flex gap-2" do %>
+      <%= form_with url: rename_account_location_device_path(@account, @location, @device), method: :patch do %>
+        <div class="card-header d-flex align-items-center justify-content-between py-2">
+          <span class="small text-body-secondary">Device Name</span>
+          <%= submit_tag "Save", class: "btn btn-primary btn-sm" %>
+        </div>
+        <div class="card-body">
           <input type="text" name="name" value="<%= @device.name %>" class="form-control" required>
-          <%= submit_tag "Rename", class: "btn btn-primary" %>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
     </div>
 
     <%# Template selection %>
     <% if @device.template_options %>
       <div class="card mb-3">
+        <div class="card-header py-2">
+          <span class="small text-body-secondary">Display Template</span>
+        </div>
         <div class="card-body">
-          <h6 class="card-title">Display Template</h6>
           <div class="list-group list-group-flush">
             <% @device.template_options.each do |tmpl| %>
               <%= form_with url: update_template_account_location_device_path(@account, @location, @device), method: :patch do %>
@@ -153,26 +179,39 @@
     <%# Display options %>
     <% if @device.active_template.present? %>
       <div class="card mb-3">
+        <div class="card-header py-2">
+          <span class="small text-body-secondary">Display Options</span>
+        </div>
         <div class="card-body">
-          <h6 class="card-title">Display Options</h6>
           <% options = [] %>
-          <% compact_template = %w[two_day three_day].include?(@device.active_template) %>
+          <% one_day_template = @device.active_template == "one_day" %>
+          <% compact_template = %w[two_day three_day one_day].include?(@device.active_template) %>
           <% if compact_template %>
-            <% options << {key: "only_show_events_with_icons", on_label: "Only Show Calendar Events with Icons or Attachments", off_label: "Only Show Calendar Events with Icons or Attachments", default_on: false} %>
+            <% options << {key: "only_show_events_with_icons", on_label: "Only Show Calendar Events with Icons", off_label: "Only Show Calendar Events with Icons", default_on: false} %>
           <% end %>
-          <% options << {key: "show_temperature_events", on_label: "Show Hourly Temperature Events", off_label: "Show Hourly Temperature Events", default_on: true} %>
-          <% options << {key: "show_precip_events", on_label: "Show Precip Events", off_label: "Show Precip Events", default_on: true} %>
-          <% options << {key: "show_wind_events", on_label: "Show Wind Events", off_label: "Show Wind Events", default_on: true} %>
+          <% show_hourly_conditions = !one_day_template && @device.active_template != "two_day" %>
+          <% if show_hourly_conditions %>
+            <% options << {key: "show_temperature_events", on_label: "Hourly Conditions", off_label: "Hourly Conditions", default_on: true} %>
+          <% end %>
+          <% unless one_day_template %>
+            <% options << {key: "show_precip_events", on_label: "Precipitation Events", off_label: "Precipitation Events", default_on: true} %>
+            <% options << {key: "show_wind_events", on_label: "Wind Events", off_label: "Wind Events", default_on: true} %>
+          <% end %>
           <% if compact_template %>
-            <% options << {key: "clothing_forecast", on_label: "Clothing Forecast", off_label: "Clothing Forecast", default_on: false} %>
-            <% options << {key: "show_icons", on_label: "Show Icons", off_label: "Show Icons", default_on: true} %>
-            <% if @device.configuration&.dig("show_icons") != "false" %>
+            <% unless one_day_template %>
+              <% options << {key: "clothing_forecast", on_label: "Clothing Forecast", off_label: "Clothing Forecast", default_on: false} %>
+              <% options << {key: "show_icons", on_label: "Icons", off_label: "Icons", default_on: true} %>
+            <% end %>
+            <% if one_day_template || @device.configuration&.dig("show_icons") != "false" %>
               <% options << {key: "auto_assign_icons", on_label: "Auto Assign Icons", off_label: "Auto Assign Icons", default_on: true} %>
             <% end %>
             <% if @device.active_template == "two_day" %>
-              <% options << {key: "hide_dates", on_label: "Hide Dates", off_label: "Hide Dates", default_on: false} %>
-              <% options << {key: "show_event_times", on_label: "Show Event Times", off_label: "Show Event Times", default_on: true} %>
+              <% options << {key: "show_dates", on_label: "Dates", off_label: "Dates", default_on: true} %>
+              <% options << {key: "show_event_times", on_label: "Event Times", off_label: "Event Times", default_on: true} %>
               <% options << {key: "two_day_rollover_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: false} %>
+            <% end %>
+            <% if one_day_template %>
+              <% options << {key: "one_day_rollover_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: false} %>
             <% end %>
           <% end %>
           <% options.each do |opt| %>
@@ -193,6 +232,44 @@
                 <label class="form-check-label"><%= opt[:on_label] %></label>
               </div>
             <% end %>
+            <% if opt[:key] == "show_temperature_events" && is_on %>
+              <% selected_hours = @device.temperature_event_hours %>
+              <div class="mb-2 ms-4">
+                <div class="d-flex flex-wrap gap-1">
+                  <% (0..23).each do |hour| %>
+                    <% checked = selected_hours.include?(hour) %>
+                    <% hour_new_value = checked ? "false" : "true" %>
+                    <% label = Time.new(2000, 1, 1, hour).strftime("%-l%P") %>
+                    <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "m-0" do %>
+                      <input type="hidden" name="key" value="temperature_hour_<%= hour %>">
+                      <input type="hidden" name="value" value="<%= hour_new_value %>">
+                      <button type="submit" class="btn btn-sm <%= checked ? "btn-primary" : "btn-outline-secondary" %>" style="min-width: 2.5rem; padding: 0.15rem 0.4rem; font-size: 0.75rem;">
+                        <%= label %>
+                      </button>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+            <% if opt[:key] == "show_wind_events" && is_on %>
+              <%
+                display_unit = (@device.account&.respond_to?(:speed_unit) && @device.account&.speed_unit == "kph") ? "kph" : "mph"
+                threshold_mph = @device.wind_gust_threshold_mph
+                display_value = (display_unit == "kph") ? (threshold_mph * 1.609344).round : threshold_mph.round
+              %>
+              <div class="mb-2 ms-4">
+                <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "d-flex align-items-center gap-2" do %>
+                  <input type="hidden" name="key" value="wind_gust_threshold_mph">
+                  <input type="hidden" name="unit" value="<%= display_unit %>">
+                  <label class="form-label small mb-0">Gust threshold</label>
+                  <div class="input-group input-group-sm" style="max-width: 10rem;">
+                    <input type="number" min="1" step="1" name="value" value="<%= display_value %>" class="form-control">
+                    <span class="input-group-text"><%= display_unit %></span>
+                    <%= submit_tag "Save", class: "btn btn-primary" %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
           <% end %>
           <% if @device.active_template == "two_day" && @device.configuration&.dig("two_day_rollover_enabled") == "true" %>
             <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "mt-3" do %>
@@ -210,55 +287,76 @@
               </div>
             <% end %>
           <% end %>
+          <% if @device.active_template == "one_day" && @device.configuration&.dig("one_day_rollover_enabled") == "true" %>
+            <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "mt-3" do %>
+              <input type="hidden" name="key" value="one_day_rollover_time">
+              <label class="form-label small mb-1" for="one-day-rollover-time">Hide Current Day After</label>
+              <div class="input-group input-group-sm">
+                <input
+                  type="time"
+                  id="one-day-rollover-time"
+                  name="value"
+                  value="<%= @device.configuration&.dig("one_day_rollover_time").presence || Device::TWO_DAY_DEFAULT_ROLLOVER_TIME %>"
+                  class="form-control"
+                >
+                <%= submit_tag "Save", class: "btn btn-primary" %>
+              </div>
+            <% end %>
+          <% end %>
         </div>
       </div>
     <% end %>
 
     <%# Event filter %>
     <div class="card mb-3">
-      <div class="card-body">
-        <h6 class="card-title">Event Filter</h6>
-        <p class="small text-body-secondary mb-2">Only show calendar events matching these keywords (comma-separated). Leave blank to show all events.</p>
-        <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "d-flex gap-2" do %>
-          <input type="hidden" name="key" value="event_filter">
+      <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch do %>
+        <input type="hidden" name="key" value="event_filter">
+        <div class="card-header d-flex align-items-center justify-content-between py-2">
+          <span class="small text-body-secondary">Event Filter</span>
+          <%= submit_tag "Save", class: "btn btn-primary btn-sm" %>
+        </div>
+        <div class="card-body">
+          <p class="small text-body-secondary mb-2">Only show calendar events matching these keywords (comma-separated). Leave blank to show all events.</p>
           <input type="text" name="value" value="<%= @device.configuration&.dig("event_filter") %>" class="form-control" placeholder="e.g. soccer, piano, dentist">
-          <%= submit_tag "Save", class: "btn btn-primary" %>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
     </div>
+
+    <% if lookup_context.template_exists?("calendars", "devices", true) %>
+      <%= render "devices/calendars" %>
+    <% end %>
 
     <% if lookup_context.template_exists?("event_icons", "devices", true) %>
       <%= render "devices/event_icons" %>
     <% end %>
 
-    <%# Demo mode %>
-    <div class="card mb-3">
-      <div class="card-body">
-        <%= form_with url: account_location_device_path(@account, @location, @device), method: :patch do %>
-          <div class="form-check form-switch">
-            <% if @device.demo_mode_enabled? %>
-              <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" checked onchange="this.form.submit()">
-            <% else %>
-              <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" onchange="this.form.submit()">
-            <% end %>
-            <label class="form-check-label">Demo Mode</label>
-          </div>
-        <% end %>
-      </div>
-    </div>
-
-    <% if defined?(current_user) && current_user&.is_admin? %>
+    <% admin_context = !defined?(current_user) || current_user&.is_admin? %>
+    <% if admin_context %>
       <div class="card mb-3">
+        <div class="card-header py-2">
+          <span class="small text-body-secondary">Admin</span>
+        </div>
         <div class="card-body">
-          <h6 class="card-title">Admin</h6>
-          <div class="d-flex gap-2">
-            <% if respond_to?(:admin_device_path) %>
-              <%= link_to "Audit Log", admin_device_path(@device), class: "btn btn-outline-secondary btn-sm" %>
-            <% end %>
-            <% if @device.screenshotted? %>
-              <a href="<%= screenshot_account_location_device_path(@account, @location, @device) %>" class="btn btn-outline-secondary btn-sm">Screenshot</a>
-            <% end %>
-          </div>
+          <%= form_with url: account_location_device_path(@account, @location, @device), method: :patch do %>
+            <div class="form-check form-switch mb-2">
+              <% if @device.demo_mode_enabled? %>
+                <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" checked onchange="this.form.submit()">
+              <% else %>
+                <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" onchange="this.form.submit()">
+              <% end %>
+              <label class="form-check-label">Demo Mode</label>
+            </div>
+          <% end %>
+          <% if defined?(current_user) && current_user&.is_admin? %>
+            <div class="d-flex gap-2">
+              <% if respond_to?(:admin_device_path) %>
+                <%= link_to "Audit Log", admin_device_path(@device), class: "btn btn-outline-secondary btn-sm" %>
+              <% end %>
+              <% if @device.screenshotted? %>
+                <a href="<%= screenshot_account_location_device_path(@account, @location, @device) %>" class="btn btn-outline-secondary btn-sm">Screenshot</a>
+              <% end %>
+            </div>
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -266,8 +364,10 @@
     <%# Token URL %>
     <% if @device.visionect? && @device.display_key.present? %>
       <div class="card mb-3">
+        <div class="card-header py-2">
+          <span class="small text-body-secondary">Token URL</span>
+        </div>
         <div class="card-body">
-          <h6 class="card-title">Token URL</h6>
           <div class="input-group mb-2">
             <input type="text" class="form-control form-control-sm" value="<%= @device.token_device_url(host: request.base_url) %>" readonly id="token-url-<%= @device.id %>">
             <button class="btn btn-outline-secondary btn-sm" type="button" onclick="var el=document.getElementById('token-url-<%= @device.id %>'); navigator.clipboard.writeText(el.value).then(function(){alert('Copied!')})">Copy</button>
@@ -298,8 +398,10 @@
     <%# Reconnect %>
     <% if @device.pairing_code_device? && @device.disconnected? %>
       <div class="card mb-3">
+        <div class="card-header py-2">
+          <span class="small text-body-secondary">Reconnect</span>
+        </div>
         <div class="card-body">
-          <h6 class="card-title">Reconnect</h6>
           <% if @device.reterminal_e1003? %>
             <p class="small text-muted">On your reTerminal, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
           <% elsif @device.trmnl? || @device.reterminal_e1001? %>
@@ -328,8 +430,10 @@
 
     <%# Danger zone %>
     <div class="card mb-3 border-danger">
+      <div class="card-header py-2 border-danger">
+        <span class="small text-danger">Delete Device</span>
+      </div>
       <div class="card-body">
-        <h6 class="card-title text-danger">Delete Device</h6>
         <p class="small text-muted">Type <strong><%= @device.name %></strong> to confirm deletion.</p>
         <%= form_with url: account_location_device_path(@account, @location, @device), method: :delete do %>
           <div class="input-group">

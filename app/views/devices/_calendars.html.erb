@@ -1,0 +1,34 @@
+<%
+  begin
+    calendar_entities = HomeAssistantApi.new.calendar_entities
+  rescue
+    calendar_entities = []
+  end
+%>
+<% if calendar_entities.any? %>
+  <div class="card mb-3">
+    <%= form_with url: update_calendars_account_location_device_path(@account, @location, @device), method: :patch do %>
+      <div class="card-header d-flex align-items-center justify-content-between py-2">
+        <span class="small text-body-secondary">Calendars</span>
+        <%= submit_tag "Save", class: "btn btn-primary btn-sm" %>
+      </div>
+      <div class="card-body">
+        <p class="small text-body-secondary mb-2">Choose which Home Assistant calendars contribute events to this device. All are included by default.</p>
+        <% calendar_entities.each do |c| %>
+          <% included = !@device.calendar_excluded?(c[:entity_id]) %>
+          <div class="form-check mb-1">
+            <% if included %>
+              <input type="checkbox" class="form-check-input" id="device-cal-<%= c[:entity_id] %>" name="calendar_identifiers[]" value="<%= c[:entity_id] %>" checked>
+            <% else %>
+              <input type="checkbox" class="form-check-input" id="device-cal-<%= c[:entity_id] %>" name="calendar_identifiers[]" value="<%= c[:entity_id] %>">
+            <% end %>
+            <label class="form-check-label d-inline-flex align-items-center gap-1" for="device-cal-<%= c[:entity_id] %>">
+              <span class="mdi mdi-<%= c[:icon] %>"></span>
+              <%= c[:name] %>
+            </label>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
