@@ -249,6 +249,9 @@
               <% options << {key: "one_day_rollover_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: false} %>
             <% end %>
           <% end %>
+          <% if Device::HIDE_CURRENT_DAY_TEMPLATES.include?(@device.active_template) %>
+            <% options << {key: "hide_current_day_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: @device.hide_current_day_default_on?} %>
+          <% end %>
           <% options.each do |opt| %>
             <%
               current_value = @device.configuration&.dig(opt[:key])
@@ -332,6 +335,22 @@
                   id="one-day-rollover-time"
                   name="value"
                   value="<%= @device.configuration&.dig("one_day_rollover_time").presence || Device::TWO_DAY_DEFAULT_ROLLOVER_TIME %>"
+                  class="form-control"
+                >
+                <%= submit_tag "Save", class: "btn btn-primary" %>
+              </div>
+            <% end %>
+          <% end %>
+          <% if Device::HIDE_CURRENT_DAY_TEMPLATES.include?(@device.active_template) && @device.hide_current_day_enabled? %>
+            <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch, class: "mt-3" do %>
+              <input type="hidden" name="key" value="hide_current_day_time">
+              <label class="form-label small mb-1" for="hide-current-day-time">Hide Current Day After</label>
+              <div class="input-group input-group-sm">
+                <input
+                  type="time"
+                  id="hide-current-day-time"
+                  name="value"
+                  value="<%= @device.configuration&.dig("hide_current_day_time").presence || Device::HIDE_CURRENT_DAY_DEFAULT_TIME %>"
                   class="form-control"
                 >
                 <%= submit_tag "Save", class: "btn btn-primary" %>

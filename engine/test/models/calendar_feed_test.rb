@@ -213,6 +213,39 @@ class CalendarFeedTest < Minitest::Test
     end
   end
 
+  def test_periodic_sort_places_moments_before_periods_at_same_start
+    start_time = DateTime.new(2023, 8, 27, 15, 0, 0, "-0600")
+    calendar_events = [
+      DeviceEvent.new(
+        id: "period-early",
+        starts_at: start_time,
+        ends_at: start_time + 2.hours,
+        summary: "earlier period"
+      ),
+      DeviceEvent.new(
+        id: "period-same",
+        starts_at: start_time + 1.hour,
+        ends_at: start_time + 3.hours,
+        summary: "period at 4pm"
+      ),
+      DeviceEvent.new(
+        id: "moment-same",
+        starts_at: start_time + 1.hour,
+        ends_at: start_time + 1.hour,
+        summary: "moment at 4pm"
+      )
+    ]
+
+    travel_to start_time do
+      window_start = start_time.utc.to_time
+      window_end = (start_time + 6.hours).utc.to_time
+
+      periodic = CalendarFeed.new.events_for(window_start, window_end, calendar_events)[:periodic]
+
+      assert_equal ["earlier period", "moment at 4pm", "period at 4pm"], periodic.map(&:summary)
+    end
+  end
+
   def test_filtering_private_events
     calendar_events = [
       DeviceEvent.new(

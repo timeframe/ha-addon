@@ -22,6 +22,22 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_hide_today_after_minutes_can_be_customized
+    travel_to DateTime.new(2023, 8, 27, 17, 0, 0, "-0600") do
+      result = DeviceContent.new.call(home_assistant_api: new_test_api, hide_today_after_minutes: (16 * 60))
+
+      assert_equal(result[:day_groups].count, 4)
+    end
+  end
+
+  def test_hide_today_disabled_keeps_today_after_default_cutoff
+    travel_to DateTime.new(2023, 8, 27, 20, 15, 0, "-0600") do
+      result = DeviceContent.new.call(home_assistant_api: new_test_api, hide_today_after_minutes: (24 * 60))
+
+      assert_equal(result[:day_groups].count, 5)
+    end
+  end
+
   def test_hide_events_after_cutoff_if_periodic_extends_to_tomorrow
     travel_time = DateTime.new(2023, 8, 27, 20, 15, 0, "-0600")
     travel_to travel_time do

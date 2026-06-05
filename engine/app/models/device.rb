@@ -173,6 +173,29 @@ class Device < ActiveRecord::Base
     value ? value.to_f : DEFAULT_WIND_GUST_THRESHOLD_MPH
   end
 
+  HIDE_CURRENT_DAY_DEFAULT_TIME = "20:00"
+  HIDE_CURRENT_DAY_TEMPLATES = %w[trmnl three_day thirteen mira boox_mira reterminal].freeze
+
+  def hide_current_day_supported?
+    HIDE_CURRENT_DAY_TEMPLATES.include?(active_template)
+  end
+
+  def hide_current_day_default_on?
+    # Preserve historical behavior: trmnl-class templates hid today after 8pm,
+    # while three_day always showed today.
+    active_template != "three_day"
+  end
+
+  def hide_current_day_enabled?
+    return false unless hide_current_day_supported?
+    value = configuration&.dig("hide_current_day_enabled")
+    value.nil? ? hide_current_day_default_on? : value == "true"
+  end
+
+  def hide_current_day_after_minutes
+    self.class.time_string_to_minutes(configuration&.dig("hide_current_day_time").presence || HIDE_CURRENT_DAY_DEFAULT_TIME)
+  end
+
   # :nocov:
   def device_content(timezone: nil, current_time: nil)
     tz = timezone || location&.time_zone || "UTC"
@@ -190,12 +213,21 @@ class Device < ActiveRecord::Base
     include_precip_events = include_ranged_weather_events && weather_event_enabled?("show_precip_events")
     include_wind_events = include_ranged_weather_events && weather_event_enabled?("show_wind_events")
     effective_current_time = current_time || Time.now.utc.in_time_zone(tz)
+    hide_today_enabled = hide_current_day_enabled?
+    hide_today_minutes = hide_today_enabled ? hide_current_day_after_minutes : (24 * 60)
+    always_show_today_value = if two_day || one_day
+      true
+    else
+      !hide_today_enabled
+    end
     args = {
       days:
         if two_day
           2
         elsif one_day
           1
+        elsif active_template == "trmnl"
+          14
         else
           (compact_view ? 3 : 5)
         end,
@@ -214,7 +246,8 @@ class Device < ActiveRecord::Base
       temperature_hours: temperature_hours,
       use_day_names: compact_view, include_daily_weather: !compact_view,
       weather_row: compact_view, start_time_only: compact_view,
-      always_show_today: compact_view,
+      always_show_today: always_show_today_value,
+      hide_today_after_minutes: hide_today_minutes,
       clothing_forecast: compact_view && (one_day || configuration&.dig("clothing_forecast") == "true"),
       auto_icons: compact_view && configuration&.dig("auto_assign_icons") != "false",
       wind_gust_threshold_mph: wind_gust_threshold_mph,

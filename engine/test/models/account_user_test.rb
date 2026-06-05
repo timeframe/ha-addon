@@ -34,4 +34,32 @@ class AccountUserTest < ActiveSupport::TestCase
     refute au.valid?
     assert_includes au.errors[:role], "is not included in the list"
   end
+
+  def test_destroying_last_membership_destroys_account
+    AccountUser.create!(account: @account, user: @user_a)
+    account_id = @account.id
+
+    @account.account_users.first.destroy!
+
+    refute Account.exists?(account_id), "Account should be destroyed when its last user leaves"
+  end
+
+  def test_destroying_one_of_many_memberships_keeps_account
+    AccountUser.create!(account: @account, user: @user_a)
+    AccountUser.create!(account: @account, user: @user_b, role: "member")
+    account_id = @account.id
+
+    @account.account_users.find_by(user: @user_b).destroy!
+
+    assert Account.exists?(account_id), "Account should remain while other users belong to it"
+  end
+
+  def test_destroying_user_destroys_orphaned_account
+    AccountUser.create!(account: @account, user: @user_a)
+    account_id = @account.id
+
+    @user_a.destroy!
+
+    refute Account.exists?(account_id), "Account should be destroyed when its sole user is destroyed"
+  end
 end

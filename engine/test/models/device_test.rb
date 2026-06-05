@@ -626,6 +626,59 @@ class DeviceTest < Minitest::Test
     pass
   end
 
+  def test_hide_current_day_enabled_defaults_per_template
+    %w[trmnl thirteen mira boox_mira reterminal].each do |tmpl|
+      device = Device.new(model: "trmnl_og")
+      device.stub(:active_template, tmpl) do
+        assert device.hide_current_day_enabled?, "expected #{tmpl} to default to on"
+      end
+    end
+    device = Device.new(model: "trmnl_og", display_template: "three_day")
+    refute device.hide_current_day_enabled?, "expected three_day to default to off"
+  end
+
+  def test_hide_current_day_enabled_not_supported_for_two_day_and_one_day
+    %w[two_day one_day].each do |tmpl|
+      device = Device.new(model: "trmnl_og", display_template: tmpl)
+      device.configuration = {"hide_current_day_enabled" => "true"}
+      refute device.hide_current_day_enabled?, "expected #{tmpl} to ignore hide_current_day_enabled"
+    end
+  end
+
+  def test_hide_current_day_enabled_reads_configuration
+    device = Device.new(model: "trmnl_og", display_template: "three_day")
+    device.configuration = {"hide_current_day_enabled" => "true"}
+    assert device.hide_current_day_enabled?
+
+    device = Device.new(model: "trmnl_og", display_template: "trmnl")
+    device.configuration = {"hide_current_day_enabled" => "false"}
+    refute device.hide_current_day_enabled?
+  end
+
+  def test_hide_current_day_after_minutes_defaults_and_reads_config
+    device = Device.new(model: "trmnl_og", display_template: "trmnl")
+    assert_equal 20 * 60, device.hide_current_day_after_minutes
+    device.configuration = {"hide_current_day_time" => "21:30"}
+    assert_equal (21 * 60) + 30, device.hide_current_day_after_minutes
+  end
+
+  def test_trmnl_template_requests_fourteen_days_of_data
+    device = Device.create!(
+      location: test_location,
+      name: "test_trmnl_days_#{SecureRandom.hex(4)}",
+      model: "trmnl_og",
+      mac_address: "T8:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      display_template: "trmnl",
+      demo_mode_enabled: true,
+      configuration: {"hide_current_day_enabled" => "false"}
+    )
+    current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 9)
+
+    result = device.device_content(timezone: "America/Chicago", current_time: current_time)
+
+    assert_equal 14, result[:day_groups].size
+  end
+
   private
 
   def generate_test_png

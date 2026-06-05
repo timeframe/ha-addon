@@ -16,6 +16,7 @@ class DeviceContent
     weather_row: false,
     start_time_only: false,
     always_show_today: false,
+    hide_today_after_minutes: 1200,
     start_offset: 0,
     clothing_forecast: false,
     auto_icons: false,
@@ -115,13 +116,15 @@ class DeviceContent
           device_name: device_name
         )
 
-        # Attempt to hide Today if it's after 8pm and there are no events
-        if day_index.zero? && current_time.hour >= 20 && !always_show_today
+        current_minutes_in_day = (current_time.hour * 60) + current_time.min
+
+        # Attempt to hide Today after the configured cutoff if there are no events
+        if day_index.zero? && current_minutes_in_day >= hide_today_after_minutes && !always_show_today
           next if events[:periodic].empty? ||
             events[:periodic].all? { it.ends_at > date.end_of_day.utc }
         end
 
-        show_daily = (day_index.zero? && (current_time.hour < 20 || always_show_today)) || !day_index.zero?
+        show_daily = (day_index.zero? && (current_minutes_in_day < hide_today_after_minutes || always_show_today)) || !day_index.zero?
 
         periodic_events = events[:periodic]
         weather_row_data = nil

@@ -42,7 +42,7 @@ class CalendarFeed
       daily: filtered_events.select(&:daily?),
       periodic: filtered_events
         .reject(&:daily?)
-        .sort_by(&:start_i)
+        .sort_by { |e| [e.start_i, (e.start_i == e.end_i) ? 0 : 1] }
     }
   end
 end
