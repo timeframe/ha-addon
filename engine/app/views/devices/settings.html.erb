@@ -9,7 +9,12 @@
     <% end %>
     <div class="d-flex align-items-center mb-4">
       <h3 class="mb-0"><%= @device.name %></h3>
-      <span class="text-body-tertiary ms-2" style="font-size: 0.85rem;"><%= @device.model_name_label %></span>
+      <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
+        <span class="text-body-tertiary ms-2" style="font-size: 0.85rem;"><%= @device.model_name_label %></span>
+      <% end %>
+      <% if defined?(current_user) && current_user&.is_admin? %>
+        <span class="badge text-bg-secondary ms-2" style="font-size: 0.7rem;">ID #<%= @device.id %></span>
+      <% end %>
     </div>
 
     <%# Preview + Screenshot %>

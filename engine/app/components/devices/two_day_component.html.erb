@@ -138,6 +138,4 @@
   })();
 </script>
 
-<div class="timestamp" style="position: absolute; bottom: 1px; right: 1px; font-family: 'Pixelify Sans', monospace; font-size: 8px; -webkit-font-smoothing: none; z-index: 10; writing-mode: vertical-rl; text-orientation: mixed;">
-  Noun Project icons. <%= @view_object[:attribution] if @view_object[:attribution].present? %> <%= @view_object[:timestamp] %>
-</div>
+<%= render Devices::AttributionComponent.new(view_object: @view_object, offset: "1px") %>

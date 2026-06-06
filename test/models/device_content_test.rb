@@ -38,6 +38,28 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_hide_today_after_cutoff_ignores_weather_only_events
+    travel_to DateTime.new(2023, 8, 27, 20, 15, 0, "-0600") do
+      api = new_test_api
+      tz = "America/Denver"
+      weather_event = DeviceEvent.new(
+        id: "_ha_weather_hour_x",
+        starts_at: DateTime.new(2023, 8, 27, 22, 0, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 27, 22, 0, 0, "-0600"),
+        summary: "60°",
+        icon: "weather-night",
+        timezone: tz
+      )
+      api.stub :weather_healthy?, true do
+        api.stub :hourly_calendar_events, [weather_event] do
+          result = DeviceContent.new.call(home_assistant_api: api)
+
+          assert_equal(4, result[:day_groups].count)
+        end
+      end
+    end
+  end
+
   def test_hide_events_after_cutoff_if_periodic_extends_to_tomorrow
     travel_time = DateTime.new(2023, 8, 27, 20, 15, 0, "-0600")
     travel_to travel_time do
@@ -859,6 +881,55 @@ class DeviceContenttTest < Minitest::Test
         result = DeviceContent.new.call(home_assistant_api: api, always_show_today: true)
 
         assert_nil result[:banner]
+      end
+    end
+  end
+
+  def test_banner_hidden_for_other_device
+    device = test_location.devices.create!(
+      name: "Living Room #{SecureRandom.hex(4)}",
+      model: "boox_mira_pro"
+    )
+
+    travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
+      api = new_test_api
+      events = [
+        DeviceEvent.new(
+          starts_at: DateTime.new(2023, 8, 27, 9, 0, 0, "-0600"),
+          ends_at: DateTime.new(2023, 8, 27, 17, 0, 0, "-0600"),
+          summary: "Office Closed",
+          description: "timeframe-banner\ntimeframe-only:Kitchen\nBuilding maintenance"
+        )
+      ]
+      api.stub :calendar_events, events do
+        result = DeviceContent.new.call(home_assistant_api: api, device: device, always_show_today: true)
+
+        assert_nil result[:banner]
+      end
+    end
+  end
+
+  def test_banner_shown_for_allowed_device
+    device = test_location.devices.create!(
+      name: "Kitchen #{SecureRandom.hex(4)}",
+      model: "boox_mira_pro"
+    )
+
+    travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
+      api = new_test_api
+      events = [
+        DeviceEvent.new(
+          starts_at: DateTime.new(2023, 8, 27, 9, 0, 0, "-0600"),
+          ends_at: DateTime.new(2023, 8, 27, 17, 0, 0, "-0600"),
+          summary: "Office Closed",
+          description: "timeframe-banner\ntimeframe-only:#{device.name}\nBuilding maintenance"
+        )
+      ]
+      api.stub :calendar_events, events do
+        result = DeviceContent.new.call(home_assistant_api: api, device: device, always_show_today: true)
+
+        assert result[:banner].present?
+        assert_equal "Office Closed", result[:banner][:title]
       end
     end
   end

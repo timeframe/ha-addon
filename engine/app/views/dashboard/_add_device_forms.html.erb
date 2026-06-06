@@ -9,18 +9,23 @@
           <label class="form-label">Name</label>
           <input type="text" name="device_name" class="form-control" placeholder="e.g. Kitchen Display" required data-field="name">
         </div>
-        <div class="mb-3">
-          <label class="form-label">Device</label>
-          <select name="device_model" class="form-select" required data-field="model">
-            <% Device::SUPPORTED_MODELS.sort_by { |_, info| info[:name].to_s.downcase }.each do |key, info| %>
-              <% if key == "reterminal_e1001" %>
-                <option value="<%= key %>" selected><%= info[:name] %></option>
-              <% else %>
-                <option value="<%= key %>"><%= info[:name] %></option>
+        <% restrict_models = defined?(current_user) && current_user && !current_user.is_admin? %>
+        <% if restrict_models %>
+          <input type="hidden" name="device_model" value="reterminal_e1001" data-field="model">
+        <% else %>
+          <div class="mb-3">
+            <label class="form-label">Device</label>
+            <select name="device_model" class="form-select" required data-field="model">
+              <% Device::SUPPORTED_MODELS.sort_by { |_, info| info[:name].to_s.downcase }.each do |key, info| %>
+                <% if key == "reterminal_e1001" %>
+                  <option value="<%= key %>" selected><%= info[:name] %></option>
+                <% else %>
+                  <option value="<%= key %>"><%= info[:name] %></option>
+                <% end %>
               <% end %>
-            <% end %>
-          </select>
-        </div>
+            </select>
+          </div>
+        <% end %>
         <div class="mb-3" data-pairing-code style="display: none;">
           <label class="form-label">Pairing Code</label>
           <input type="text" name="pairing_code" class="form-control" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-field="pairing">

@@ -118,10 +118,14 @@ class DeviceContent
 
         current_minutes_in_day = (current_time.hour * 60) + current_time.min
 
-        # Attempt to hide Today after the configured cutoff if there are no events
+        # Attempt to hide Today after the configured cutoff if there are no events.
+        # Weather events are ignored here: on their own they don't render a visible
+        # timeline row in the evening, so they should not keep an otherwise-empty
+        # Today visible.
         if day_index.zero? && current_minutes_in_day >= hide_today_after_minutes && !always_show_today
-          next if events[:periodic].empty? ||
-            events[:periodic].all? { it.ends_at > date.end_of_day.utc }
+          remaining_today = events[:periodic].reject(&:weather?)
+          next if remaining_today.empty? ||
+            remaining_today.all? { it.ends_at > date.end_of_day.utc }
         end
 
         show_daily = (day_index.zero? && (current_minutes_in_day < hide_today_after_minutes || always_show_today)) || !day_index.zero?
@@ -201,7 +205,10 @@ class DeviceContent
 
     # Check for active banner events
     all_events = raw_events.flatten
-    banner_event = all_events.find { |e| e.banner? && e.start_i <= current_time.to_i && e.end_i > current_time.to_i }
+    banner_event = all_events.find do |e|
+      e.banner? && e.start_i <= current_time.to_i && e.end_i > current_time.to_i &&
+        !e.hidden_for?(device&.name)
+    end
     if banner_event
       out[:banner] = {title: banner_event.banner_title, description: banner_event.banner_description}
     end

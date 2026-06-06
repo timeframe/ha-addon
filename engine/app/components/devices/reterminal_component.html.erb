@@ -1,8 +1,6 @@
 <style>html { font-size: 38px; }</style>
 <div class="fade-bottom"></div>
-<div class="timestamp" style="position: absolute; bottom: .25rem; right: .25rem; font-family: 'Pixelify Sans', monospace; font-size: 8px; -webkit-font-smoothing: none; color: #777; z-index: 10; writing-mode: vertical-rl; text-orientation: mixed;">
-  Noun Project icons. <%= @view_object[:attribution] if @view_object[:attribution].present? %> <%= @view_object[:timestamp] %>
-</div>
+<%= render Devices::AttributionComponent.new(view_object: @view_object, offset: ".25rem") %>
 <%= render Devices::StatusBarComponent.new(view_object: @view_object) %>
 <div style="clear: both; line-height: .7; margin-bottom: 1rem; padding-bottom: .5rem; font-size: 2.5rem;">
   <div style="float: left;">

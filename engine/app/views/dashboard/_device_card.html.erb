@@ -1,7 +1,12 @@
 <div style="min-width: 300px;">
   <div class="card h-100">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0"><%= device.name %></h5>
+      <h5 class="mb-0">
+        <%= device.name %>
+        <% if defined?(current_user) && current_user&.is_admin? %>
+          <span class="badge text-bg-secondary align-middle" style="font-size: 0.6rem;">ID #<%= device.id %></span>
+        <% end %>
+      </h5>
       <% if device.battery_level.present? %>
         <%
           bl = device.battery_level.to_i

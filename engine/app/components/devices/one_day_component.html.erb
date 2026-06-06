@@ -12,8 +12,8 @@
   .one-day-clothing-large-long-sleeve-shirt { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9.97 4.34c-.04-.13-.14-.24-.27-.3c-.13-.06-.28-.06-.4 0l-4.5 2c-.15.06-.25.19-.29.34l-2.5 11c-.05.23.06.46.27.56l2 1c.13.07.28.07.42.02c.13-.06.24-.17.28-.31L7 12.58V20.5c0 .28.22.5.5.5h9c.28 0 .5-.22.5-.5v-7.92l2.03 6.08c.04.14.15.25.28.3c.14.06.29.06.42-.01l2-1c.21-.1.32-.33.27-.56l-2.5-11c-.04-.15-.14-.28-.29-.34l-4.5-2c-.13-.06-.27-.06-.4 0c-.13.06-.23.17-.27.3C13.57 5.7 12.72 6.25 12 6.25S10.43 5.7 9.97 4.34Z'/%3E%3C/svg%3E"); }
   .one-day-events { flex: 1 1 auto; min-height: 0; font-size: 5.625rem; overflow: hidden; }
   .one-day-events table { width: 100%; border-collapse: collapse; }
-  .one-day-events td { padding: .3rem 0; }
-  .one-day-events td.one-day-event-icon { width: 6.75rem; text-align: center; font-size: 5.625rem; font-weight: bold; padding: .3rem .5rem .3rem 0; }
+  .one-day-events td { padding: .053em 0; }
+  .one-day-events td.one-day-event-icon { width: 1.2em; text-align: center; font-size: 1em; font-weight: bold; padding: .053em .089em .053em 0; }
   .one-day-event-summary { white-space: normal; overflow-wrap: break-word; word-break: normal; }
   .one-day-events-dense .one-day-event-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
 </style>
@@ -89,6 +89,16 @@
     function fitOneDayEvents() {
       document.querySelectorAll('.one-day-events').forEach(function(container) {
         container.classList.remove('one-day-events-dense');
+        container.style.fontSize = '';
+        var base = parseFloat(window.getComputedStyle(container).fontSize);
+        var size = base;
+        var min = base * 0.2;
+        // Shrink the events to fit the available height before clipping.
+        while (container.scrollHeight > container.clientHeight + 1 && size > min) {
+          size *= 0.94;
+          container.style.fontSize = size + 'px';
+        }
+        // Fall back to single-line ellipsis only if a line is still too wide.
         if (container.scrollHeight > container.clientHeight + 1) {
           container.classList.add('one-day-events-dense');
         }
@@ -104,6 +114,4 @@
   })();
 </script>
 
-<div class="timestamp" style="position: absolute; bottom: 1px; right: 1px; font-family: 'Pixelify Sans', monospace; font-size: 8px; -webkit-font-smoothing: none; z-index: 10; writing-mode: vertical-rl; text-orientation: mixed;">
-  Noun Project icons. <%= @view_object[:attribution] if @view_object[:attribution].present? %> <%= @view_object[:timestamp] %>
-</div>
+<%= render Devices::AttributionComponent.new(view_object: @view_object, offset: "1px") %>
