@@ -76,7 +76,7 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
   test "create with expired pairing code redirects with alert" do
     mac = SecureRandom.hex(6).scan(/../).join(":")
     pending = PendingDevice.create!(mac_address: mac, api_key: SecureRandom.hex(16), friendly_id: "EX#{SecureRandom.hex(2)}")
-    pending.update_column(:created_at, 20.minutes.ago)
+    pending.update_column(:created_at, 65.minutes.ago)
 
     post account_location_devices_path(@account, @location),
       params: {device_model: "trmnl_og", device_name: "Expired TRMNL", pairing_code: pending.pairing_code}

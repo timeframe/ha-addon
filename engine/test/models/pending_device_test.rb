@@ -22,7 +22,7 @@ class PendingDeviceTest < Minitest::Test
 
   def test_expired_returns_true_after_expiry
     pd = PendingDevice.create!
-    pd.update_column(:created_at, 20.minutes.ago)
+    pd.update_column(:created_at, 65.minutes.ago)
     assert pd.expired?
   end
 
@@ -38,7 +38,7 @@ class PendingDeviceTest < Minitest::Test
 
   def test_find_active_by_code_destroys_and_returns_nil_for_expired
     pd = PendingDevice.create!
-    pd.update_column(:created_at, 20.minutes.ago)
+    pd.update_column(:created_at, 65.minutes.ago)
     assert_nil PendingDevice.find_active_by_code(pd.pairing_code)
     refute PendingDevice.exists?(pd.id)
   end
@@ -46,7 +46,7 @@ class PendingDeviceTest < Minitest::Test
   def test_refresh_generates_new_code_and_resets_created_at
     pd = PendingDevice.create!
     old_code = pd.pairing_code
-    pd.update_column(:created_at, 20.minutes.ago)
+    pd.update_column(:created_at, 65.minutes.ago)
     assert pd.expired?
 
     pd.refresh!

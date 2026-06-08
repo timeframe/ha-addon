@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 17) do
+ActiveRecord::Schema[8.1].define(version: 18) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -300,6 +300,7 @@ ActiveRecord::Schema[8.1].define(version: 17) do
     t.datetime "login_code_sent_at"
     t.datetime "remember_created_at"
     t.text "remember_token"
+    t.date "trial_started_on"
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
   end

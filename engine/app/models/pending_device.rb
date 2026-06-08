@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class PendingDevice < ActiveRecord::Base
-  EXPIRY_DURATION = 15.minutes
+  EXPIRY_DURATION = 60.minutes
 
   belongs_to :claimed_device, class_name: "Device", optional: true
 

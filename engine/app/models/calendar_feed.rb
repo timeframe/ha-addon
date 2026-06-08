@@ -38,8 +38,11 @@ class CalendarFeed
 
     filtered_events = filtered_events.select { !it.private? } if private_mode
 
+    daily_events = filtered_events.select(&:daily?)
+    weather_daily, other_daily = daily_events.partition(&:weather?)
+
     {
-      daily: filtered_events.select(&:daily?),
+      daily: weather_daily + other_daily,
       periodic: filtered_events
         .reject(&:daily?)
         .sort_by { |e| [e.start_i, (e.start_i == e.end_i) ? 0 : 1] }

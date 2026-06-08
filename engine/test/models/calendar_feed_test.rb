@@ -194,6 +194,40 @@ class CalendarFeedTest < Minitest::Test
     end
   end
 
+  def test_daily_weather_events_sort_before_other_daily_events
+    calendar_events = [
+      DeviceEvent.new(
+        id: "user-cal-1",
+        starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"),
+        summary: "Birthday",
+        timezone: "America/Denver"
+      ),
+      DeviceEvent.new(
+        id: "_wk_weather_daily_2023-08-27",
+        starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"),
+        summary: "75°/55°",
+        timezone: "America/Denver"
+      ),
+      DeviceEvent.new(
+        id: "user-cal-2",
+        starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"),
+        summary: "Anniversary",
+        timezone: "America/Denver"
+      )
+    ]
+
+    travel_to DateTime.new(2023, 8, 27, 22, 20, 0, "-0600") do
+      start_time_utc = DateTime.new(2023, 8, 27, 20, 20, 0, "-0600").utc.to_time
+      end_time_utc = DateTime.new(2023, 8, 28, 0, 0, 0, "-0600").utc.to_time
+
+      daily = CalendarFeed.new.events_for(start_time_utc, end_time_utc, calendar_events)[:daily]
+      assert_equal ["_wk_weather_daily_2023-08-27", "user-cal-1", "user-cal-2"], daily.map(&:id)
+    end
+  end
+
   def test_filtering_multi_day_periodic_events
     calendar_events = [
       DeviceEvent.new(
