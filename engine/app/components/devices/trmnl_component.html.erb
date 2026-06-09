@@ -1,14 +1,9 @@
 <%= render Devices::StatusBarComponent.new(view_object: @view_object) %>
 <% unless @view_object[:private_mode] %>
   <style>
-    html { font-size: 16px; --timeline-day-name-size: 1rem; --timeline-day-name-line-height: normal; }
-    .timeline-day-header--compact { display: flex; align-items: baseline; gap: .25rem; }
-    .timeline-day-header--compact .timeline-day-weather-icon { font-size: 1.25rem; font-weight: 700; }
-    .timeline-day-header--compact .timeline-day-summary { margin-left: auto; text-align: right; }
-    .timeline-day-daily { border-collapse: collapse; }
-    .timeline-day-daily td { padding-top: 0; padding-bottom: 0; }
+    html { font-size: 16px; }
   </style>
-  <%= render Devices::TimelineComponent.new(view_object: @view_object, compact_header: true) %>
+  <%= render Devices::TimelineComponent.new(view_object: @view_object) %>
 <% end %>
 
 <%= render Devices::AttributionComponent.new(view_object: @view_object, offset: "4px") %>

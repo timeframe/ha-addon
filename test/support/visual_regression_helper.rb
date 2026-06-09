@@ -61,7 +61,7 @@ module VisualRegressionHelper
   end
 
   def write_visual_diff(expected_path, actual_path, diff_path)
-    MiniMagick::Tool::Compare.new do |compare|
+    MiniMagick.compare(errors: false) do |compare|
       compare.metric("AE")
       compare.fuzz("8%")
       compare << expected_path.to_s

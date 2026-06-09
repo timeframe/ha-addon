@@ -1,49 +1,10 @@
 <% @view_object[:day_groups].each_with_index do |event_day, index| %>
   <div style="display: flex; margin-bottom: 1rem">
     <div style="width: 15.5rem; vertical-align: top; padding-right: 1rem; border-right: 2px solid #ccc;">
-      <% if @compact_header %>
-        <% weather_event = event_day[:show_daily] ? event_day[:daily].find { |e| e[:weather] } : nil %>
-        <% remaining_daily = event_day[:show_daily] ? (weather_event ? event_day[:daily] - [weather_event] : event_day[:daily]) : [] %>
-        <div class="timeline-day-header timeline-day-header--compact">
-          <% if weather_event %>
-            <span class="timeline-day-weather-icon"><%= event_icon(weather_event) %></span>
-          <% end %>
-          <span class="timeline-day-name" style="font-size: var(--timeline-day-name-size, 2rem); font-weight: 700; line-height: var(--timeline-day-name-line-height, 1)"><%= event_day[:day_name] %></span>
-          <% if weather_event %>
-            <span class="timeline-day-summary"><%= event_summary_html(weather_event) %></span>
-          <% end %>
-        </div>
-        <% if remaining_daily.any? %>
-          <table class="timeline-day-daily">
-            <% remaining_daily.each do |event| %>
-            <tr>
-              <td style="width: 1%; text-align: center; font-size: 1.25rem; font-weight: bold; padding-right: 0.25rem;">
-                <% if event[:icon_text] %>
-                  <span><%= event[:icon_text] %></span>
-                <% else %>
-                  <% if event[:icon_style] %>
-                    <i class="<%= "mdi mdi-#{event[:icon_class]}" %>" style="<%= event[:icon_style] %>"></i>
-                  <% else %>
-                    <i class="<%= "mdi mdi-#{event[:icon_class]}" %>"></i>
-                  <% end %>
-                <% end %>
-              </td>
-              <td>
-                <div>
-                  <%= event[:summary] %><% if event[:precip] %><% event[:precip].each do |p| %> / <% if p[:icon] %><i class="mdi mdi-<%= p[:icon] %>"></i> <% end %><%= p[:label] %><% end %><% end %><% if event[:wind_gust] %> / <i class="mdi mdi-weather-windy"></i> <%= event[:wind_gust] %><% end %>
-                  <div style="font-size: .5rem;"><%= event[:location] %></div>
-                </div>
-              </td>
-            </tr>
-            <% end %>
-          </table>
-        <% end %>
-      <% else %>
-      <div class="timeline-day-header">
-        <div class="timeline-day-name" style="font-size: var(--timeline-day-name-size, 2rem); font-weight: 700; line-height: var(--timeline-day-name-line-height, 1)"><%= event_day[:day_name] %></div>
-        <% if event_day[:show_daily] %>
-          <table class="timeline-day-daily">
-            <% event_day[:daily].each do |event| %>
+      <div style="font-size: 2rem; font-weight: 700; line-height: 1"><%= event_day[:day_name] %></div>
+      <% if event_day[:show_daily] %>
+        <table>
+          <% event_day[:daily].each do |event| %>
             <tr>
               <td style="width: 1%; text-align: center; font-size: 1.25rem; font-weight: bold; padding-right: 0.25rem;">
                 <% if event[:icon_text] %>
@@ -65,8 +26,6 @@
             </tr>
           <% end %>
         </table>
-      <% end %>
-      </div>
       <% end %>
     </div>
     <div style="width: 30rem;">
