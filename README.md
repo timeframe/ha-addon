@@ -19,6 +19,52 @@ An e-paper calendar, weather, and smart home family dashboard
 5. Click **Start**
 6. Access the app at port 8099 (e.g. `http://homeassistant.local:8099`)
 
+## Run as a standalone Docker container
+
+Timeframe can also run as a regular Docker container, independent of the Home Assistant add-on system. All configuration comes from environment variables, and it can point at any reachable Home Assistant instance — local or remote.
+
+You'll need a Home Assistant **long-lived access token**: in HA, open your profile → **Security** → **Long-Lived Access Tokens** → **Create Token**.
+
+### Using Docker Compose
+
+A ready-to-edit [`docker-compose.yml`](docker-compose.yml) is included. Set `TIMEFRAME_HOME_ASSISTANT_URL` and `TIMEFRAME_HOME_ASSISTANT_TOKEN`, then:
+
+```
+docker compose up -d --build
+```
+
+Open the dashboard at `http://localhost:8099`.
+
+### Using docker run
+
+```
+docker build -t timeframe .
+
+docker run -d \
+  --name timeframe \
+  -p 8099:8099 \
+  -v timeframe-data:/data \
+  -e TIMEFRAME_HOME_ASSISTANT_URL="http://192.168.1.50:8123" \
+  -e TIMEFRAME_HOME_ASSISTANT_TOKEN="your_long_lived_access_token" \
+  timeframe
+```
+
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `TIMEFRAME_HOME_ASSISTANT_URL` | `http://homeassistant.local:8123` | Base URL of your Home Assistant instance. Use any reachable address, e.g. `http://192.168.1.50:8123`. |
+| `TIMEFRAME_HOME_ASSISTANT_TOKEN` | _(required)_ | Home Assistant long-lived access token. Required when running standalone. |
+| `TIMEFRAME_TEMPERATURE_UNIT` | `F` | `F` or `C`. |
+| `TIMEFRAME_SPEED_UNIT` | `mph` | `mph` or `kph`. |
+| `TIMEFRAME_PRECIPITATION_UNIT` | `in` | `in`, `mm`, or `cm`. |
+| `SECRET_KEY_BASE` | _(auto-generated)_ | Secret used to encrypt sessions and stored data. If unset, a random key is generated and persisted to the `/data` volume on first run. |
+| `PORT` | `8099` | Port the web interface listens on inside the container. |
+
+Keep the `/data` volume across restarts — it holds the bundled Postgres database and the generated secret key.
+
+> When installed as a Home Assistant add-on, Timeframe instead authenticates automatically via the Supervisor and reads unit options from the add-on configuration UI, so no environment variables are required in that mode.
+
 ## Configuration
 
 The following entities can be created in Home Assistant to customize behavior. Icon names are from [Material Design Icons](https://pictogrammers.com/library/mdi/) (without the `mdi-` prefix).

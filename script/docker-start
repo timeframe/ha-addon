@@ -5,6 +5,26 @@ PG_VERSION=17
 PG_CLUSTER=main
 PG_DATA="/data/pgdata"
 
+# Ensure a stable SECRET_KEY_BASE so encrypted columns and sessions survive
+# restarts. An explicit env var always wins. Otherwise persist a key to the
+# data volume: generate a fresh secure key for new installs, but keep the
+# legacy default for databases created before this existed so their already
+# encrypted data stays decryptable. Must run before the cluster is created
+# below, since it checks whether the data dir predates this version.
+if [ -z "${SECRET_KEY_BASE:-}" ]; then
+  SECRET_FILE="/data/.secret_key_base"
+  mkdir -p /data
+  if [ ! -f "$SECRET_FILE" ]; then
+    if [ -f "$PG_DATA/PG_VERSION" ]; then
+      printf 'foo' > "$SECRET_FILE"
+    else
+      ruby -rsecurerandom -e 'print SecureRandom.hex(64)' > "$SECRET_FILE"
+    fi
+  fi
+  SECRET_KEY_BASE="$(cat "$SECRET_FILE")"
+  export SECRET_KEY_BASE
+fi
+
 # Move Postgres data to persistent storage on first run
 if [ ! -f "$PG_DATA/PG_VERSION" ]; then
   mkdir -p "$PG_DATA"

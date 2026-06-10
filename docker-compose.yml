@@ -1,0 +1,32 @@
+# Standalone Docker deployment for Timeframe, independent of the Home Assistant
+# add-on system. All configuration is supplied via environment variables.
+#
+#   docker compose up -d --build
+#
+# Then open http://localhost:8099
+services:
+  timeframe:
+    build: .
+    # Alternatively, run an image you've built/pushed yourself:
+    # image: timeframe:latest
+    restart: unless-stopped
+    ports:
+      - "8099:8099"
+    volumes:
+      # Holds the Postgres database and the generated secret key.
+      - timeframe-data:/data
+    environment:
+      # Base URL of your Home Assistant instance (any reachable address).
+      TIMEFRAME_HOME_ASSISTANT_URL: "http://homeassistant.local:8123"
+      # Long-lived access token (HA: Profile -> Long-Lived Access Tokens).
+      TIMEFRAME_HOME_ASSISTANT_TOKEN: "your_long_lived_access_token"
+      # Optional unit overrides (defaults shown).
+      TIMEFRAME_TEMPERATURE_UNIT: "F"     # F or C
+      TIMEFRAME_SPEED_UNIT: "mph"         # mph or kph
+      TIMEFRAME_PRECIPITATION_UNIT: "in"  # in, mm, or cm
+      # Optional: pin the secret used to encrypt sessions and stored data.
+      # If omitted, a key is generated and persisted to the data volume.
+      # SECRET_KEY_BASE: "change_me_to_a_long_random_string"
+
+volumes:
+  timeframe-data:
