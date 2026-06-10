@@ -477,6 +477,32 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_clothing_forecast_without_weather_row_for_timeline
+    travel_to DateTime.new(2023, 8, 27, 7, 0, 0, "-0600") do
+      api = new_test_api
+      tz = "America/Denver"
+      weather_events = [
+        DeviceEvent.new(id: "_ha_weather_hour_1", starts_at: DateTime.new(2023, 8, 27, 8, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 8, 0, 0, "-0600"), summary: "72°", icon: "weather-sunny", timezone: tz),
+        DeviceEvent.new(id: "_ha_weather_hour_2", starts_at: DateTime.new(2023, 8, 27, 12, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 12, 0, 0, "-0600"), summary: "85°", icon: "weather-sunny", timezone: tz),
+        DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "80°", icon: "weather-sunny", timezone: tz),
+        DeviceEvent.new(id: "_ha_weather_day_1", starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"), summary: "85° / 65°", icon: "weather-sunny", timezone: tz)
+      ]
+      api.stub :calendars_healthy?, false do
+        api.stub :private_mode?, false do
+          api.stub :calendar_events, weather_events do
+            result = DeviceContent.new.call(home_assistant_api: api, weather_row: false, clothing_forecast: true, always_show_today: true)
+
+            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+            assert_equal "Shorts", today[:clothing][:summary]
+            assert_equal "shorts", today[:clothing][:icon]
+            assert_equal "T-shirt", today[:clothing][:shirt_summary]
+            assert_equal "tshirt", today[:clothing][:shirt_icon]
+          end
+        end
+      end
+    end
+  end
+
   def test_clothing_forecast_pants_with_short_sleeves_when_noon_above_shirt_threshold
     travel_to DateTime.new(2023, 8, 27, 7, 0, 0, "-0600") do
       api = new_test_api
@@ -755,12 +781,12 @@ class DeviceContenttTest < Minitest::Test
     travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
       api = new_test_api
       events = [
-        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer practice"),
-        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 17, 0, 0, "-0600"), summary: "Piano lesson"),
-        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 18, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 19, 0, 0, "-0600"), summary: "Dinner")
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer practice", entity_id: "calendar.family"),
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 17, 0, 0, "-0600"), summary: "Piano lesson", entity_id: "calendar.family"),
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 18, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 19, 0, 0, "-0600"), summary: "Dinner", entity_id: "calendar.family")
       ]
       api.stub :calendar_events, events do
-        result = DeviceContent.new.call(home_assistant_api: api, event_filter: "Soccer, Piano", always_show_today: true)
+        result = DeviceContent.new.call(home_assistant_api: api, event_filters: {"calendar.family" => "Soccer, Piano"}, always_show_today: true)
 
         today = result[:day_groups].find { |d| d[:day_name] == "Today" }
         summaries = today[:periodic].map { |e| e[:summary] }
@@ -771,15 +797,33 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_event_filter_only_applies_to_its_calendar
+    travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
+      api = new_test_api
+      events = [
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer practice", entity_id: "calendar.family"),
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 17, 0, 0, "-0600"), summary: "Standup", entity_id: "calendar.work")
+      ]
+      api.stub :calendar_events, events do
+        result = DeviceContent.new.call(home_assistant_api: api, event_filters: {"calendar.family" => "Soccer"}, always_show_today: true)
+
+        today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+        summaries = today[:periodic].map { |e| e[:summary] }
+        assert_includes summaries, "Soccer practice"
+        assert_includes summaries, "Standup"
+      end
+    end
+  end
+
   def test_event_filter_blank_shows_all_events
     travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
       api = new_test_api
       events = [
-        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer practice"),
-        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 17, 0, 0, "-0600"), summary: "Dinner")
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer practice", entity_id: "calendar.family"),
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 17, 0, 0, "-0600"), summary: "Dinner", entity_id: "calendar.family")
       ]
       api.stub :calendar_events, events do
-        result = DeviceContent.new.call(home_assistant_api: api, event_filter: "", always_show_today: true)
+        result = DeviceContent.new.call(home_assistant_api: api, event_filters: {"calendar.family" => ""}, always_show_today: true)
 
         today = result[:day_groups].find { |d| d[:day_name] == "Today" }
         summaries = today[:periodic].map { |e| e[:summary] }
@@ -793,10 +837,10 @@ class DeviceContenttTest < Minitest::Test
     travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
       api = new_test_api
       events = [
-        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer practice")
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer practice", entity_id: "calendar.family")
       ]
       api.stub :calendar_events, events do
-        result = DeviceContent.new.call(home_assistant_api: api, event_filter: ",,", always_show_today: true)
+        result = DeviceContent.new.call(home_assistant_api: api, event_filters: {"calendar.family" => ",,"}, always_show_today: true)
 
         today = result[:day_groups].find { |d| d[:day_name] == "Today" }
         summaries = today[:periodic].map { |e| e[:summary] }
@@ -809,16 +853,16 @@ class DeviceContenttTest < Minitest::Test
     travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
       api = new_test_api
       events = [
-        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer Practice")
+        DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Soccer Practice", entity_id: "calendar.family")
       ]
       api.stub :calendar_events, events do
-        result = DeviceContent.new.call(home_assistant_api: api, event_filter: "soccer", always_show_today: true)
+        result = DeviceContent.new.call(home_assistant_api: api, event_filters: {"calendar.family" => "soccer"}, always_show_today: true)
 
         today = result[:day_groups].find { |d| d[:day_name] == "Today" }
         summaries = today[:periodic].map { |e| e[:summary] }
         refute_includes summaries, "Soccer Practice"
 
-        result = DeviceContent.new.call(home_assistant_api: api, event_filter: "Soccer", always_show_today: true)
+        result = DeviceContent.new.call(home_assistant_api: api, event_filters: {"calendar.family" => "Soccer"}, always_show_today: true)
         today = result[:day_groups].find { |d| d[:day_name] == "Today" }
         summaries = today[:periodic].map { |e| e[:summary] }
         assert_includes summaries, "Soccer Practice"

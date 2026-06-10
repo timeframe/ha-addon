@@ -24,7 +24,7 @@ class VisionectDisplayFlowTest < ApplicationSystemTestCase
       click_button "Add Device"
     end
 
-    # Should redirect back to dashboard with the new device
+    # Should redirect to the device settings page
     assert_text device_name
 
     # Step 3: Enable demo mode via the dropdown menu
@@ -33,11 +33,7 @@ class VisionectDisplayFlowTest < ApplicationSystemTestCase
     assert device.confirmed?, "Visionect device should be auto-confirmed"
     assert device.display_key.present?, "Visionect device should have a display key"
 
-    # Navigate to settings page and enable demo mode
-    card = first("h5", text: device_name).ancestor(".card")
-    within(card) do
-      click_link "Settings"
-    end
+    # Already on the settings page; enable demo mode
     within(first(".form-check", text: "Demo Mode")) do
       find("input[type='checkbox'][role='switch']").check
     end

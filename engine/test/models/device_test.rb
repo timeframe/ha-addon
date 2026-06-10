@@ -296,10 +296,15 @@ class DeviceTest < Minitest::Test
 
   def test_one_day_start_offset_returns_zero_when_rollover_disabled
     device = Device.new(model: "trmnl_og", display_template: "one_day")
-    device.configuration = nil
-    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 23, 0))
     device.configuration = {"one_day_rollover_enabled" => "false"}
     assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 23, 0))
+  end
+
+  def test_one_day_start_offset_defaults_to_rollover_enabled
+    device = Device.new(model: "trmnl_og", display_template: "one_day")
+    device.configuration = nil
+    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 17, 59), timezone: "UTC")
+    assert_equal 1, device.one_day_start_offset(Time.utc(2026, 1, 1, 18, 0), timezone: "UTC")
   end
 
   def test_one_day_start_offset_rolls_over_after_configured_time
@@ -342,7 +347,7 @@ class DeviceTest < Minitest::Test
       mac_address: "EF:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
       display_template: "three_day",
       demo_mode_enabled: true,
-      configuration: {"event_filter" => "Piano"}
+      configuration: {"event_filter_demo" => "Piano"}
     )
     current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 8)
 
@@ -368,7 +373,7 @@ class DeviceTest < Minitest::Test
     assert_kind_of Array, options
     assert options.all? { |t| t.key?(:name) && t.key?(:label) }
     assert_equal "trmnl", options.first[:name]
-    assert_equal "Landscape Timeline", options.first[:label]
+    assert_equal "Timeline", options.first[:label]
   end
 
   def test_template_options_nil_for_single_template_device
@@ -533,7 +538,7 @@ class DeviceTest < Minitest::Test
     assert_equal [Date.new(2026, 3, 19), Date.new(2026, 3, 20)], result[:day_groups].map { |day| day[:date] }
   end
 
-  def test_two_day_rollover_is_disabled_by_default
+  def test_two_day_rollover_is_enabled_by_default
     device = Device.create!(
       location: test_location,
       name: "test_two_day_rollover_disabled_#{SecureRandom.hex(4)}",
@@ -546,7 +551,7 @@ class DeviceTest < Minitest::Test
 
     result = device.device_content(timezone: "America/Chicago", current_time: current_time)
 
-    assert_equal [Date.new(2026, 3, 19), Date.new(2026, 3, 20)], result[:day_groups].map { |day| day[:date] }
+    assert_equal [Date.new(2026, 3, 20), Date.new(2026, 3, 21)], result[:day_groups].map { |day| day[:date] }
   end
 
   def test_two_day_uses_tomorrow_and_following_day_at_default_rollover_time
@@ -627,14 +632,12 @@ class DeviceTest < Minitest::Test
   end
 
   def test_hide_current_day_enabled_defaults_per_template
-    %w[trmnl thirteen mira boox_mira reterminal].each do |tmpl|
+    %w[trmnl thirteen mira boox_mira reterminal three_day].each do |tmpl|
       device = Device.new(model: "trmnl_og")
       device.stub(:active_template, tmpl) do
         assert device.hide_current_day_enabled?, "expected #{tmpl} to default to on"
       end
     end
-    device = Device.new(model: "trmnl_og", display_template: "three_day")
-    refute device.hide_current_day_enabled?, "expected three_day to default to off"
   end
 
   def test_hide_current_day_enabled_not_supported_for_two_day_and_one_day
@@ -657,7 +660,7 @@ class DeviceTest < Minitest::Test
 
   def test_hide_current_day_after_minutes_defaults_and_reads_config
     device = Device.new(model: "trmnl_og", display_template: "trmnl")
-    assert_equal 20 * 60, device.hide_current_day_after_minutes
+    assert_equal 18 * 60, device.hide_current_day_after_minutes
     device.configuration = {"hide_current_day_time" => "21:30"}
     assert_equal (21 * 60) + 30, device.hide_current_day_after_minutes
   end

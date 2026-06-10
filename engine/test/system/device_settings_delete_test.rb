@@ -23,11 +23,7 @@ class DeviceSettingsDeleteTest < ApplicationSystemTestCase
 
     assert_text device_name
 
-    card = first("h5", text: device_name).ancestor(".card")
-    within(card) do
-      click_link "Settings"
-    end
-
+    # Adding a device now lands directly on its settings page
     fill_in "name_confirmation", with: device_name
     click_button "Delete Device"
 
@@ -49,6 +45,7 @@ class DeviceSettingsDeleteTest < ApplicationSystemTestCase
     end
 
     assert_text device_name
+    visit "/"
     assert_text "Updated <1m ago"
     assert_no_text "Updated less than a minute ago"
   end

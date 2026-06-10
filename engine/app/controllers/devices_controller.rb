@@ -86,11 +86,11 @@ class DevicesController < ApplicationController
     name = params[:device_name].to_s.strip
 
     if model == "visionect_13"
-      @location.devices.create!(name: name, model: model)
-      redirect_back fallback_location: root_path, notice: "Device \"#{name}\" added."
+      device = @location.devices.create!(name: name, model: model)
+      redirect_to settings_account_location_device_path(@account, @location, device), notice: "Device \"#{name}\" added."
     elsif current_user.is_admin? && params[:pairing_code].blank?
-      @location.devices.create!(name: name, model: model, mac_address: SecureRandom.hex(6), confirmed_at: Time.current)
-      redirect_back fallback_location: root_path, notice: "Device \"#{name}\" added."
+      device = @location.devices.create!(name: name, model: model, mac_address: SecureRandom.hex(6), confirmed_at: Time.current)
+      redirect_to settings_account_location_device_path(@account, @location, device), notice: "Device \"#{name}\" added."
     else
       pairing_code = params[:pairing_code].to_s.strip
       pending_device = PendingDevice.find_active_by_code(pairing_code)
@@ -99,8 +99,8 @@ class DevicesController < ApplicationController
         return redirect_back fallback_location: root_path, alert: "Invalid or expired pairing code."
       end
 
-      pending_device.claim!(location: @location, name: name, model: model)
-      redirect_back fallback_location: root_path, notice: "Device \"#{name}\" paired successfully."
+      device = pending_device.claim!(location: @location, name: name, model: model)
+      redirect_to settings_account_location_device_path(@account, @location, device), notice: "Device \"#{name}\" paired successfully."
     end
   rescue ActiveRecord::RecordInvalid => e
     redirect_back fallback_location: root_path, alert: e.message
@@ -137,9 +137,67 @@ class DevicesController < ApplicationController
     all_identifiers = available_calendar_identifiers_for(device)
     included = Array(params[:calendar_identifiers]).map(&:to_s)
     excluded = all_identifiers - included
-    device.update!(excluded_calendar_identifiers: excluded)
+    config = device.configuration || {}
+    config = config.reject { |key, _| key.to_s.start_with?("event_filter_") }
+    included.each do |identifier|
+      value = params.dig(:event_filters, identifier).to_s.strip
+      config["event_filter_#{identifier}"] = value if value.present?
+    end
+    device.update!(excluded_calendar_identifiers: excluded, configuration: config)
     RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
     redirect_back fallback_location: settings_account_location_device_path(@account, @location, device)
+  end
+
+  # Consolidated save for the device "Options" pane: name, template,
+  # configuration toggles, temperature hours, wind threshold, and the
+  # per-calendar selection/filters all in a single request.
+  def update_options
+    device = @location.devices.find(params[:id])
+
+    attrs = {}
+    new_name = params[:name].to_s.strip
+    attrs[:name] = new_name if new_name.present?
+    attrs[:display_template] = params[:display_template] if params[:display_template].present?
+
+    config = device.configuration || {}
+
+    submitted_config = params[:configuration]
+    if submitted_config.respond_to?(:each)
+      submitted_config.each do |key, value|
+        config[key.to_s] = normalize_configuration_value(key.to_s, value, params.dig(:units, key))
+      end
+    end
+
+    if params.key?(:temperature_hours_present)
+      selected_hours = Array(params[:temperature_hours]).map(&:to_s)
+      (0..23).each do |hour|
+        config["temperature_hour_#{hour}"] = selected_hours.include?(hour.to_s) ? "true" : "false"
+      end
+    end
+
+    if params.key?(:calendar_identifiers_present)
+      all_identifiers = available_calendar_identifiers_for(device)
+      included = Array(params[:calendar_identifiers]).map(&:to_s)
+      attrs[:excluded_calendar_identifiers] = all_identifiers - included
+      config = config.reject { |key, _| key.to_s.start_with?("event_filter_") }
+      included.each do |identifier|
+        value = params.dig(:event_filters, identifier).to_s.strip
+        config["event_filter_#{identifier}"] = value if value.present?
+      end
+    end
+
+    attrs[:configuration] = config
+    device.update!(**attrs)
+
+    RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
+    if device.realtime_display?
+      DeviceBroadcaster.clear_hash(device.id)
+      DeviceBroadcaster.broadcast_if_changed(device)
+    end
+
+    redirect_to settings_account_location_device_path(@account, @location, device), notice: "Options saved."
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_to settings_account_location_device_path(@account, @location, device), alert: e.message
   end
 
   def rename
@@ -153,31 +211,6 @@ class DevicesController < ApplicationController
     end
   rescue ActiveRecord::RecordInvalid => e
     redirect_to settings_account_location_device_path(@account, @location, device), alert: e.message
-  end
-
-  def update_event_icon
-    device = @location.devices.find(params[:id])
-    calendar_event = @account.calendar_events.find(params[:calendar_event_id])
-
-    CalendarEventIconUpdater.call(calendar_event: calendar_event, icon: params[:icon])
-
-    RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
-    if device.realtime_display?
-      DeviceBroadcaster.clear_hash(device.id)
-      DeviceBroadcaster.broadcast_if_changed(device)
-    end
-
-    redirect_to settings_account_location_device_path(@account, @location, device), notice: "Event icon updated."
-  rescue CalendarEventIconUpdater::Error => e
-    flash[:alert] = e.message
-    if defined?(CalendarEventIconUpdater::GOOGLE_RECONNECT_MESSAGE) && e.message == CalendarEventIconUpdater::GOOGLE_RECONNECT_MESSAGE
-      flash[:google_reconnect_account_id] = @account.id
-    elsif defined?(CalendarEventIconUpdater::MICROSOFT_RECONNECT_MESSAGE) && e.message == CalendarEventIconUpdater::MICROSOFT_RECONNECT_MESSAGE
-      flash[:microsoft_reconnect_account_id] = @account.id
-    end
-    redirect_to settings_account_location_device_path(@account, @location, device)
-  rescue ActiveRecord::RecordNotFound
-    redirect_to settings_account_location_device_path(@account, @location, params[:id]), alert: "Event not found."
   end
 
   def destroy

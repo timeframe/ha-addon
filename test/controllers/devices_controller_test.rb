@@ -35,11 +35,11 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     post account_location_devices_path(@account, @location),
       params: {device_model: "visionect_13", device_name: name}
 
-    assert_redirected_to root_path
-    follow_redirect!
-    assert_includes response.body, name
     device = Device.find_by(name: name)
     assert device.present?
+    assert_redirected_to settings_account_location_device_path(@account, @location, device)
+    follow_redirect!
+    assert_includes response.body, name
     assert device.confirmed?
     assert device.display_key.present?
   end
@@ -48,20 +48,26 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     mac = SecureRandom.hex(6).scan(/../).join(":")
     pending = PendingDevice.create!(mac_address: mac, api_key: SecureRandom.hex(16), friendly_id: "T1#{SecureRandom.hex(2)}")
 
+    name = "My TRMNL #{SecureRandom.hex(4)}"
     post account_location_devices_path(@account, @location),
-      params: {device_model: "trmnl_og", device_name: "My TRMNL #{SecureRandom.hex(4)}", pairing_code: pending.pairing_code}
+      params: {device_model: "trmnl_og", device_name: name, pairing_code: pending.pairing_code}
 
-    assert_redirected_to root_path
+    device = Device.find_by(name: name)
+    assert device.present?
+    assert_redirected_to settings_account_location_device_path(@account, @location, device)
   end
 
   test "create pairs a Boox device via pairing code" do
     mac = SecureRandom.hex(6).scan(/../).join(":")
     pending = PendingDevice.create!(mac_address: mac, api_key: SecureRandom.hex(16), friendly_id: "B1#{SecureRandom.hex(2)}")
 
+    name = "My Boox #{SecureRandom.hex(4)}"
     post account_location_devices_path(@account, @location),
-      params: {device_model: "boox_mira_pro", device_name: "My Boox #{SecureRandom.hex(4)}", pairing_code: pending.pairing_code}
+      params: {device_model: "boox_mira_pro", device_name: name, pairing_code: pending.pairing_code}
 
-    assert_redirected_to root_path
+    device = Device.find_by(name: name)
+    assert device.present?
+    assert_redirected_to settings_account_location_device_path(@account, @location, device)
   end
 
   test "create with invalid pairing code redirects with alert" do

@@ -20,7 +20,7 @@ class DeviceContent
     start_offset: 0,
     clothing_forecast: false,
     auto_icons: false,
-    event_filter: nil,
+    event_filters: {},
     wind_gust_threshold_mph: 20.0
   )
     home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph)
@@ -59,7 +59,7 @@ class DeviceContent
     end
 
     if home_assistant_api.weather_healthy?
-      raw_events << home_assistant_api.hourly_calendar_events if include_temperature || (weather_row && clothing_forecast)
+      raw_events << home_assistant_api.hourly_calendar_events if include_temperature || clothing_forecast
       raw_events << home_assistant_api.daily_calendar_events if include_daily_weather
       raw_events << home_assistant_api.precip_calendar_events if include_precip
       raw_events << home_assistant_api.wind_calendar_events if include_wind
@@ -82,9 +82,16 @@ class DeviceContent
     if device&.excluded_calendar_identifiers&.any?
       cal_events = cal_events.reject { |e| device.calendar_excluded?(e.entity_id) }
     end
-    if event_filter.present?
-      keywords = event_filter.split(",").map(&:strip).reject(&:empty?)
-      cal_events = cal_events.select { |e| keywords.any? { |kw| e.summary.to_s.include?(kw) } } unless keywords.empty?
+    if event_filters.present?
+      cal_events = cal_events.reject do |e|
+        filter = event_filters[e.entity_id.to_s]
+        next false if filter.blank?
+
+        keywords = filter.split(",").map(&:strip).reject(&:empty?)
+        next false if keywords.empty?
+
+        keywords.none? { |kw| e.summary.to_s.include?(kw) }
+      end
     end
     raw_events << cal_events
 
@@ -153,24 +160,27 @@ class DeviceContent
           weather_row_data = include_temperature ? weather_events.map { |e| e.as_json(date: date.to_date) } : []
 
           if clothing_forecast && clothing_threshold
-            morning = weather_events.find { |e| e.starts_at.hour == 8 }
-            noon = weather_events.find { |e| e.starts_at.hour == 12 }
-            if morning
-              morning_temp = morning.summary.to_i
-              noon_temp = noon ? noon.summary.to_i : morning_temp
-              daily_weather = events[:daily].find(&:weather?)
-              daily_high = daily_weather ? daily_weather.summary.to_i : nil
-              is_shorts = morning_temp >= clothing_threshold && noon_temp >= clothing_noon_threshold
-              is_shorts = false if daily_high && daily_high < clothing_noon_threshold
-              short_sleeves = is_shorts || noon_temp > clothing_shirt_threshold
-              clothing_data = {
-                icon: is_shorts ? "shorts" : "pants",
-                summary: is_shorts ? "Shorts" : "Pants",
-                shirt_icon: short_sleeves ? "tshirt" : "long-sleeve-shirt",
-                shirt_summary: short_sleeves ? "T-shirt" : "Long sleeves"
-              }
-            end
+            daily_weather = events[:daily].find(&:weather?)
+            daily_high = daily_weather ? daily_weather.summary.to_i : nil
+            clothing_data = clothing_recommendation(
+              weather_events, daily_high,
+              threshold: clothing_threshold,
+              noon_threshold: clothing_noon_threshold,
+              shirt_threshold: clothing_shirt_threshold
+            )
           end
+        end
+
+        if !weather_row && clothing_forecast && clothing_threshold
+          day_weather_events = events[:periodic].select(&:weather_hourly?)
+          daily_weather = events[:daily].find(&:weather?)
+          daily_high = daily_weather ? daily_weather.summary.to_i : nil
+          clothing_data = clothing_recommendation(
+            day_weather_events, daily_high,
+            threshold: clothing_threshold,
+            noon_threshold: clothing_noon_threshold,
+            shirt_threshold: clothing_shirt_threshold
+          )
         end
 
         if temperature_hours && !weather_row
@@ -214,5 +224,24 @@ class DeviceContent
     end
 
     out
+  end
+
+  private
+
+  def clothing_recommendation(weather_events, daily_high, threshold:, noon_threshold:, shirt_threshold:)
+    morning = weather_events.find { |e| e.starts_at.hour == 8 }
+    return nil unless morning
+    noon = weather_events.find { |e| e.starts_at.hour == 12 }
+    morning_temp = morning.summary.to_i
+    noon_temp = noon ? noon.summary.to_i : morning_temp
+    is_shorts = morning_temp >= threshold && noon_temp >= noon_threshold
+    is_shorts = false if daily_high && daily_high < noon_threshold
+    short_sleeves = is_shorts || noon_temp > shirt_threshold
+    {
+      icon: is_shorts ? "shorts" : "pants",
+      summary: is_shorts ? "Shorts" : "Pants",
+      shirt_icon: short_sleeves ? "tshirt" : "long-sleeve-shirt",
+      shirt_summary: short_sleeves ? "T-shirt" : "Long sleeves"
+    }
   end
 end

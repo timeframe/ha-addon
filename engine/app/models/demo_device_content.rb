@@ -4,7 +4,7 @@ class DemoDeviceContent
   def call(timezone: "UTC", current_time: nil, days: 5, include_precip: true, include_wind: true,
     include_weather_alerts: true, include_temperature: true, temperature_hours: nil,
     use_day_names: false, include_daily_weather: true, weather_row: false, start_time_only: false,
-    always_show_today: false, hide_today_after_minutes: 1200, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filter: nil,
+    always_show_today: false, hide_today_after_minutes: 1200, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filters: {},
     fill_hourly_weather: false, wind_gust_threshold_mph: 20.0)
     current_time ||= Time.now.utc.in_time_zone(timezone)
 
@@ -63,8 +63,8 @@ class DemoDeviceContent
       include_temperature: include_temperature, temperature_hours: temperature_hours, use_day_names: use_day_names, weather_row: weather_row,
       start_offset: start_offset, clothing_forecast: clothing_forecast, fill_hourly_weather: fill_hourly_weather)
 
-    if event_filter.present?
-      keywords = event_filter.split(",").map(&:strip).reject(&:empty?)
+    if event_filters.present?
+      keywords = event_filters.values.flat_map { |value| value.to_s.split(",") }.map(&:strip).reject(&:empty?)
       unless keywords.empty?
         keep = ->(event) {
           icon = event[:icon_class].to_s

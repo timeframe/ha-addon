@@ -43,11 +43,7 @@ class BooxMiraProSetupFlowTest < ApplicationSystemTestCase
     assert_equal "boox_mira_pro", device.model
     assert device.confirmed?, "Device should be confirmed after pairing"
 
-    # Step 5: Enable demo mode so the display has content
-    card = first("h5", text: device_name).ancestor(".card")
-    within(card) do
-      click_link "Settings"
-    end
+    # Step 5: Enable demo mode so the display has content (already on settings page)
     within(first(".form-check", text: "Demo Mode")) do
       find("input[type='checkbox'][role='switch']").check
     end

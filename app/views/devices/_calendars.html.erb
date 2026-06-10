@@ -6,29 +6,31 @@
   end
 %>
 <% if calendar_entities.any? %>
-  <div class="card mb-3">
-    <%= form_with url: update_calendars_account_location_device_path(@account, @location, @device), method: :patch do %>
-      <div class="card-header d-flex align-items-center justify-content-between py-2">
-        <span class="small text-body-secondary">Calendars</span>
-        <%= submit_tag "Save", class: "btn btn-primary btn-sm" %>
-      </div>
-      <div class="card-body">
-        <p class="small text-body-secondary mb-2">Choose which Home Assistant calendars contribute events to this device. All are included by default.</p>
+  <hr class="my-3">
+  <label class="form-label small fw-bold mb-1">Calendars</label>
+  <input type="hidden" name="calendar_identifiers_present" value="1">
+  <p class="small text-body-secondary mb-2">Choose which Home Assistant calendars contribute events to this device. All are included by default. Add an optional filter under a calendar to only show events whose title contains one of the comma-separated keywords.</p>
         <% calendar_entities.each do |c| %>
           <% included = !@device.calendar_excluded?(c[:entity_id]) %>
           <div class="form-check mb-1">
-            <% if included %>
-              <input type="checkbox" class="form-check-input" id="device-cal-<%= c[:entity_id] %>" name="calendar_identifiers[]" value="<%= c[:entity_id] %>" checked>
-            <% else %>
-              <input type="checkbox" class="form-check-input" id="device-cal-<%= c[:entity_id] %>" name="calendar_identifiers[]" value="<%= c[:entity_id] %>">
-            <% end %>
+            <%= check_box_tag "calendar_identifiers[]", c[:entity_id], included, id: "device-cal-#{c[:entity_id]}", class: "form-check-input", data: {"calendar-toggle": c[:entity_id]} %>
             <label class="form-check-label d-inline-flex align-items-center gap-1" for="device-cal-<%= c[:entity_id] %>">
               <span class="mdi mdi-<%= c[:icon] %>"></span>
               <%= c[:name] %>
             </label>
           </div>
+          <div class="ms-4 mb-2<%= ' d-none' unless included %>" data-calendar-filter="<%= c[:entity_id] %>">
+            <input type="text" name="event_filters[<%= c[:entity_id] %>]" value="<%= @device.configuration&.dig("event_filter_#{c[:entity_id]}") %>" class="form-control form-control-sm" placeholder="Filter keywords, e.g. soccer, piano">
+          </div>
         <% end %>
-      </div>
-    <% end %>
-  </div>
+        <script>
+          (function() {
+            document.querySelectorAll('[data-calendar-toggle]').forEach(function(checkbox) {
+              checkbox.addEventListener('change', function() {
+                var filter = document.querySelector('[data-calendar-filter="' + checkbox.getAttribute('data-calendar-toggle') + '"]');
+                if (filter) { filter.classList.toggle('d-none', !checkbox.checked); }
+              });
+            });
+          })();
+        </script>
 <% end %>

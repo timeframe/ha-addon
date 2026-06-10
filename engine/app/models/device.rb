@@ -10,8 +10,8 @@ class Device < ActiveRecord::Base
     "visionect_13" => {name: "Visionect Place & Play 13\"", template: "thirteen", width: 1200, height: 1600},
     "boox_mira_pro" => {name: "Boox Mira Pro 25.3\"", template: "mira", width: 1800, height: 3200, realtime: true},
     "boox_mira" => {name: "Boox Mira 13.3\"", template: "boox_mira", width: 1650, height: 2200, realtime: true},
-    "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Landscape Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
-    "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Landscape Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
+    "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
+    "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
     "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1404, height: 1872, screenshotted: true},
     "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, screenshotted: true}
   }.freeze
@@ -139,6 +139,17 @@ class Device < ActiveRecord::Base
     excluded_calendar_identifiers.include?(identifier.to_s)
   end
 
+  # Per-calendar event filters, keyed by calendar identifier. Built from
+  # configuration keys of the form "event_filter_<identifier>".
+  def calendar_event_filters
+    (configuration || {}).each_with_object({}) do |(key, value), filters|
+      next unless key.to_s.start_with?("event_filter_")
+
+      identifier = key.to_s.delete_prefix("event_filter_")
+      filters[identifier] = value if value.present?
+    end
+  end
+
   def weather_event_enabled?(key)
     value = configuration&.dig(key)
     return value != "false" unless value.nil?
@@ -173,7 +184,7 @@ class Device < ActiveRecord::Base
     value ? value.to_f : DEFAULT_WIND_GUST_THRESHOLD_MPH
   end
 
-  HIDE_CURRENT_DAY_DEFAULT_TIME = "20:00"
+  HIDE_CURRENT_DAY_DEFAULT_TIME = "18:00"
   HIDE_CURRENT_DAY_TEMPLATES = %w[trmnl three_day thirteen mira boox_mira reterminal].freeze
 
   def hide_current_day_supported?
@@ -181,9 +192,7 @@ class Device < ActiveRecord::Base
   end
 
   def hide_current_day_default_on?
-    # Preserve historical behavior: trmnl-class templates hid today after 8pm,
-    # while three_day always showed today.
-    active_template != "three_day"
+    true
   end
 
   def hide_current_day_enabled?
@@ -248,10 +257,10 @@ class Device < ActiveRecord::Base
       weather_row: compact_view, start_time_only: compact_view,
       always_show_today: always_show_today_value,
       hide_today_after_minutes: hide_today_minutes,
-      clothing_forecast: compact_view && (one_day || configuration&.dig("clothing_forecast") == "true"),
+      clothing_forecast: (compact_view || active_template == "trmnl") && (one_day || configuration&.dig("clothing_forecast") == "true"),
       auto_icons: compact_view && configuration&.dig("auto_assign_icons") != "false",
       wind_gust_threshold_mph: wind_gust_threshold_mph,
-      event_filter: configuration&.dig("event_filter")
+      event_filters: calendar_event_filters
     }
     args[:current_time] = current_time if current_time
     if demo_mode_enabled?
@@ -263,7 +272,7 @@ class Device < ActiveRecord::Base
 
   def two_day_start_offset(current_time, timezone: nil)
     return 0 unless active_template == "two_day"
-    return 0 unless configuration&.dig("two_day_rollover_enabled") == "true"
+    return 0 if configuration&.dig("two_day_rollover_enabled") == "false"
 
     display_time = current_time.in_time_zone(timezone || location&.time_zone || "UTC")
     current_minutes = (display_time.hour * 60) + display_time.min
@@ -276,7 +285,7 @@ class Device < ActiveRecord::Base
 
   def one_day_start_offset(current_time, timezone: nil)
     return 0 unless active_template == "one_day"
-    return 0 unless configuration&.dig("one_day_rollover_enabled") == "true"
+    return 0 if configuration&.dig("one_day_rollover_enabled") == "false"
 
     display_time = current_time.in_time_zone(timezone || location&.time_zone || "UTC")
     current_minutes = (display_time.hour * 60) + display_time.min

@@ -14,6 +14,7 @@
   .one-day-events table { width: 100%; border-collapse: collapse; }
   .one-day-events td { padding: .053em 0; }
   .one-day-events td.one-day-event-icon { width: 1.2em; text-align: center; font-size: 1em; font-weight: bold; padding: .053em .089em .053em 0; }
+  .one-day-events td.one-day-event-time { white-space: nowrap; font-weight: 400; padding: .053em .2em .053em 0; }
   .one-day-event-summary { white-space: normal; overflow-wrap: break-word; word-break: normal; }
   .one-day-events-dense .one-day-event-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
 </style>
@@ -24,6 +25,8 @@
     <% daily_weather = day[:weather_row]&.find { |w| w[:start_time] == "12p" } || day[:weather_row]&.first %>
     <% day_label = (day[:date].to_date == @view_object[:current_time].to_date) ? "Today" : "Tomorrow" %>
     <% only_icons = @view_object.dig(:configuration, "only_show_events_with_icons") == "true" %>
+    <% show_times = @view_object.dig(:configuration, "show_event_times") == "true" %>
+    <% show_icons = @view_object.dig(:configuration, "show_icons") != "false" %>
     <div class="one-day-wrap">
       <div class="one-day-header">
         <div class="one-day-day-name">
@@ -47,6 +50,10 @@
           <table>
             <% daily_visual.each do |event| %>
               <tr>
+                <% if show_times %>
+                  <td class="one-day-event-time"></td>
+                <% end %>
+                <% if show_icons %>
                 <td class="one-day-event-icon">
                   <% if event[:icon_class] %>
                     <% if event[:icon_style] %>
@@ -58,11 +65,16 @@
                     <%= event[:icon_text] %>
                   <% end %>
                 </td>
+                <% end %>
                 <td class="one-day-event-summary"><%= event[:summary] %></td>
               </tr>
             <% end %>
             <% visual_periodic.each do |event| %>
               <tr>
+                <% if show_times %>
+                  <td class="one-day-event-time"><%= event[:time_html]&.html_safe %></td>
+                <% end %>
+                <% if show_icons %>
                 <td class="one-day-event-icon">
                   <% if event[:icon_class] %>
                     <% if event[:icon_style] %>
@@ -74,6 +86,7 @@
                     <%= event[:icon_text] %>
                   <% end %>
                 </td>
+                <% end %>
                 <td class="one-day-event-summary"><%= event[:summary] %></td>
               </tr>
             <% end %>

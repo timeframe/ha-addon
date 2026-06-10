@@ -1,22 +1,55 @@
+<style>
+  .timeline-clothing-icons { display: inline-flex; align-items: center; gap: .25rem; flex-shrink: 0; }
+  .timeline-clothing-icon { display: inline-block; width: 1.75rem; height: 1.75rem; vertical-align: middle; background-position: center; background-size: contain; background-repeat: no-repeat; }
+  .timeline-clothing-icon-shorts { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Cpath fill='%23000' d='m89.801 8.102-.402-7.703H10.601l-.402 7.703z'/%3E%3Cpath fill='%23000' d='m90.5 13.199h-81l-7 62.699c3.3.801 6.8 1.5 10.5 2.102 11.3 1.8 21.5 1.8 30.102 1.101 1.8-11 3.699-22 5.5-33h2.898c1.801 11 3.7 22 5.5 33 8.602.7 18.801.7 30.102-1.101 3.699-.602 7.199-1.301 10.5-2.102z'/%3E%3C/svg%3E"); }
+  .timeline-clothing-icon-pants { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23000' fill-rule='evenodd' d='m45.535 87.5v6.25h-20.535v-6.25zm8.93 0h20.535v6.25h-20.535zm-29.02-53.211v-15.539h7.3c-.09 2.633-.41 5.957-1.297 8.914-1.004 3.352-2.695 6.32-6.004 6.625zm10.414-15.539h28.273c.098 2.875.441 6.547 1.418 9.813 1.426 4.75 4.199 8.582 8.996 8.863v46.949h-19.09l-5.461-50-5.461 50h-19.09v-46.949c4.797-.281 7.57-4.113 8.996-8.863.977-3.266 1.32-6.938 1.418-9.813zm31.391 0h7.3v15.539c-3.309-.305-5-3.273-6.004-6.625-.887-2.961-1.207-6.281-1.297-8.914zm-41.805-3.125-.445-9.375h50l-.445 9.375z'/%3E%3C/svg%3E"); }
+  .timeline-clothing-icon-tshirt { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%201000%201000%22%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M992.0898438%2C126.6572876l-353.515625-51.0586319c-2.0094604-0.2902298-3.9515381%2C0.7611084-4.8598633%2C2.576889%20%20c-24.7077026%2C49.3899994-75.7495117%2C83.3127365-134.7323914%2C83.3127365c-58.877594%2C0-109.8470764-33.7994766-134.6046143-83.04599%20%20c-0.9104004-1.8109131-2.8497925-2.8582611-4.855835-2.5685196L7.9101477%2C126.6572952%20%20c-2.4291334%2C0.3508377-4.1753788%2C2.5174789-4.0021982%2C4.9657059l15.3541088%2C217.057724%20%20c0.1814384%2C2.5649719%2C2.3969555%2C4.5039368%2C4.9633312%2C4.343811l176.6463623-11.0222473%20%20c2.7485962-0.1715088%2C5.0511627%2C2.0541382%2C4.9731293%2C4.8069763l-16.2375031%2C572.8238525%20%20c-0.0747681%2C2.6375122%2C2.0429382%2C4.8161011%2C4.6814575%2C4.8161011h609.3862915c2.6384888%2C0%2C4.7562256-2.1785889%2C4.6814575-4.8161011%20%20l-16.2411499-572.9511108c-0.0780029-2.7528381%2C2.2245483-4.9784851%2C4.9731445-4.8069763l178.6860352%2C11.1495056%20%20c2.5664062%2C0.1601257%2C4.7819214-1.7788391%2C4.9633179-4.343811l15.354126-217.057724%20%20C996.2652588%2C129.1747742%2C994.5189819%2C127.0081329%2C992.0898438%2C126.6572876z%22%2F%3E%3C%2Fsvg%3E"); }
+  .timeline-clothing-icon-long-sleeve-shirt { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20fill%3D%22%23000%22%20d%3D%22M9.97434%204.34189C9.92976%204.20813%209.83078%204.09942%209.70178%204.04252C9.57279%203.98563%209.42577%203.98583%209.29693%204.04309L4.79693%206.04309C4.65283%206.10714%204.54738%206.23542%204.51243%206.38919L2.01243%2017.3892C1.96139%2017.6138%202.07038%2017.8442%202.27639%2017.9472L4.27639%2018.9472C4.40604%2019.012%204.55743%2019.0174%204.69134%2018.9619C4.82525%2018.9065%204.92851%2018.7956%204.97434%2018.6581L7%2012.5811V20.5C7%2020.7761%207.22386%2021%207.5%2021H16.5C16.7761%2021%2017%2020.7761%2017%2020.5V12.5811L19.0257%2018.6581C19.0715%2018.7956%2019.1747%2018.9065%2019.3087%2018.9619C19.4426%2019.0174%2019.594%2019.012%2019.7236%2018.9472L21.7236%2017.9472C21.9296%2017.8442%2022.0386%2017.6138%2021.9876%2017.3892L19.4876%206.38919C19.4526%206.23542%2019.3472%206.10714%2019.2031%206.04309L14.7031%204.04309C14.5742%203.98583%2014.4272%203.98563%2014.2982%204.04252C14.1692%204.09942%2014.0702%204.20813%2014.0257%204.34189C13.5706%205.70703%2012.7198%206.25%2012%206.25C11.2802%206.25%2010.4294%205.70703%209.97434%204.34189Z%22%2F%3E%3C%2Fsvg%3E"); }
+</style>
+
+<% show_icons = @view_object.dig(:configuration, "show_icons") != "false" %>
+<% show_dates = @view_object.dig(:configuration, "show_dates") == "true" %>
 <% @view_object[:day_groups].each_with_index do |event_day, index| %>
   <div style="display: flex; margin-bottom: 1rem">
     <div style="width: 15.5rem; vertical-align: top; padding-right: 1rem; border-right: 2px solid #ccc;">
-      <div style="font-size: 2rem; font-weight: 700; line-height: 1"><%= event_day[:day_name] %></div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 2rem; font-weight: 700; line-height: 1"><%= event_day[:day_name] %></span>
+        <% if event_day[:clothing] %>
+          <span class="timeline-clothing-icons">
+            <span class="timeline-clothing-icon timeline-clothing-icon-<%= event_day[:clothing][:shirt_icon] %>"></span>
+            <span class="timeline-clothing-icon timeline-clothing-icon-<%= event_day[:clothing][:icon] %>"></span>
+          </span>
+        <% end %>
+      </div>
       <% if event_day[:show_daily] %>
         <table>
+          <% if show_dates %>
+            <tr>
+              <% if show_icons %>
+                <td style="width: 1%; text-align: center; font-size: 1.25rem; font-weight: bold; padding-right: 0.25rem;">
+                  <i class="mdi mdi-calendar"></i>
+                </td>
+              <% end %>
+              <td>
+                <div><%= event_day[:date].strftime("%B %-d") %></div>
+              </td>
+            </tr>
+          <% end %>
           <% event_day[:daily].each do |event| %>
             <tr>
-              <td style="width: 1%; text-align: center; font-size: 1.25rem; font-weight: bold; padding-right: 0.25rem;">
-                <% if event[:icon_text] %>
-                  <span><%= event[:icon_text] %></span>
-                <% else %>
-                  <% if event[:icon_style] %>
-                    <i class="<%= "mdi mdi-#{event[:icon_class]}" %>" style="<%= event[:icon_style] %>"></i>
+              <% if show_icons %>
+                <td style="width: 1%; text-align: center; font-size: 1.25rem; font-weight: bold; padding-right: 0.25rem;">
+                  <% if event[:icon_text] %>
+                    <span><%= event[:icon_text] %></span>
                   <% else %>
-                    <i class="<%= "mdi mdi-#{event[:icon_class]}" %>"></i>
+                    <% if event[:icon_style] %>
+                      <i class="<%= "mdi mdi-#{event[:icon_class]}" %>" style="<%= event[:icon_style] %>"></i>
+                    <% else %>
+                      <i class="<%= "mdi mdi-#{event[:icon_class]}" %>"></i>
+                    <% end %>
                   <% end %>
-                <% end %>
-              </td>
+                </td>
+              <% end %>
               <td>
                 <div>
                   <%= event[:summary] %><% if event[:precip] %><% event[:precip].each do |p| %> / <% if p[:icon] %><i class="mdi mdi-<%= p[:icon] %>"></i> <% end %><%= p[:label] %><% end %><% end %><% if event[:wind_gust] %> / <i class="mdi mdi-weather-windy"></i> <%= event[:wind_gust] %><% end %>
@@ -32,17 +65,19 @@
       <table style="width: 100%">
         <% event_day[:periodic].each do |event| %>
           <tr>
-            <td style="width: 2rem; text-align: center; font-size: 1.25rem; font-weight: bold; padding-left: 1rem;">
-              <% if event[:icon_text] %>
-                <span><%= event[:icon_text] %></span>
-              <% else %>
-                <% if event[:icon_style] %>
-                  <i class="<%= "mdi mdi-#{event[:icon_class]}" %>" style="<%= event[:icon_style] %>"></i>
+            <% if show_icons %>
+              <td style="width: 2rem; text-align: center; font-size: 1.25rem; font-weight: bold; padding-left: 1rem;">
+                <% if event[:icon_text] %>
+                  <span><%= event[:icon_text] %></span>
                 <% else %>
-                  <i class="<%= "mdi mdi-#{event[:icon_class]}" %>"></i>
+                  <% if event[:icon_style] %>
+                    <i class="<%= "mdi mdi-#{event[:icon_class]}" %>" style="<%= event[:icon_style] %>"></i>
+                  <% else %>
+                    <i class="<%= "mdi mdi-#{event[:icon_class]}" %>"></i>
+                  <% end %>
                 <% end %>
-              <% end %>
-            </td>
+              </td>
+            <% end %>
             <td style="white-space: nowrap; font-size: .75rem; padding: 0 .5rem; width: 5.5rem;">
               <%= event[:time_html].html_safe %>
             </td>
