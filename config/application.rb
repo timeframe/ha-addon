@@ -28,6 +28,10 @@ module HaAddon
 
     config.active_job.queue_adapter = :good_job
     config.good_job.execution_mode = :async
+    # Isolate screenshot jobs onto their own single-threaded pool so a wedged
+    # Chromium capture can never starve other background jobs. Bounded explicitly
+    # (1 + 2 = 3 threads) so the async pool stays within the DB connection pool.
+    config.good_job.queues = ENV.fetch("GOOD_JOB_QUEUES", "screenshots:1;-screenshots:2")
     config.good_job.enable_cron = true
     config.good_job.cron = {
       refresh_disconnected_screenshots: {

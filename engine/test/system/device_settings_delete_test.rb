@@ -23,9 +23,13 @@ class DeviceSettingsDeleteTest < ApplicationSystemTestCase
 
     assert_text device_name
 
-    # Adding a device now lands directly on its settings page
-    fill_in "name_confirmation", with: device_name
-    click_button "Delete Device"
+    # Adding a device now lands directly on its settings page. Visionect devices
+    # render a second name_confirmation field (Regenerate URL), so scope to the
+    # danger zone card to disambiguate the delete confirmation.
+    within(".card.border-danger") do
+      fill_in "name_confirmation", with: device_name
+      click_button "Delete Device"
+    end
 
     assert_current_path "/"
     assert_no_text "Routing Error"
