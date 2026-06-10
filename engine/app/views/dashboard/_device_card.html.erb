@@ -32,7 +32,7 @@
       <% aspect_ratio = (device.display_height.to_f / device.display_width * 100).round(2) %>
       <div style="position: relative; width: 100%; padding-bottom: <%= aspect_ratio %>%; overflow: hidden; background: white;">
         <% if device.cached_image.present? %>
-          <% if device.reterminal_e1003? %>
+          <% if device.reterminal_e1003? || device.trmnl_x? %>
             <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; transform: translate(-50%, -50%) rotate(-90deg);">
           <% elsif device.portrait? %>
             <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; transform: translate(-50%, -50%) rotate(-90deg);">

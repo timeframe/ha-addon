@@ -68,7 +68,7 @@
           <div class="tab-pane fade" id="screenshot-pane" role="tabpanel" aria-labelledby="screenshot-tab">
             <div class="card-body p-2">
               <div class="d-flex align-items-center justify-content-center" style="background: #f0f0f0; border-radius: .25rem; overflow: hidden; min-height: 100px;" id="screenshot-container">
-                <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img">
+                <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;<%= ' transform: rotate(-90deg);' if @device.reterminal_e1003? || @device.trmnl_x? %>" id="screenshot-img">
                 <div id="screenshot-loading" style="display: none;" class="text-body-secondary small py-4">Regenerating screenshot&hellip;</div>
               </div>
             </div>
@@ -398,9 +398,7 @@
           <span class="small text-body-secondary">Reconnect</span>
         </div>
         <div class="card-body">
-          <% if @device.reterminal_e1003? %>
-            <p class="small text-muted">On your reTerminal, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
-          <% elsif @device.trmnl? || @device.reterminal_e1001? %>
+          <% if @device.trmnl? || @device.reterminal_e1001? %>
             <p class="small text-muted">On your device, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
           <% else %>
             <p class="small text-muted">On your device, visit <code><%= request.base_url %>/pair</code> to get a new pairing code.</p>
