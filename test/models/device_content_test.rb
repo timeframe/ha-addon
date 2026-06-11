@@ -575,6 +575,34 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_clothing_forecast_uses_full_day_weather_for_today_after_morning
+    # On the timeline (non-weather-row) path the events query for today is
+    # truncated to the current time, so the morning hours would otherwise be
+    # dropped. Clothing should still reflect the full day's readings.
+    travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
+      api = new_test_api
+      tz = "America/Denver"
+      weather_events = [
+        DeviceEvent.new(id: "_ha_weather_hour_1", starts_at: DateTime.new(2023, 8, 27, 8, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 8, 0, 0, "-0600"), summary: "72°", icon: "weather-sunny", timezone: tz),
+        DeviceEvent.new(id: "_ha_weather_hour_2", starts_at: DateTime.new(2023, 8, 27, 12, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 12, 0, 0, "-0600"), summary: "85°", icon: "weather-sunny", timezone: tz),
+        DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "80°", icon: "weather-sunny", timezone: tz),
+        DeviceEvent.new(id: "_ha_weather_day_1", starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"), summary: "85° / 65°", icon: "weather-sunny", timezone: tz)
+      ]
+      api.stub :calendars_healthy?, false do
+        api.stub :private_mode?, false do
+          api.stub :calendar_events, weather_events do
+            result = DeviceContent.new.call(home_assistant_api: api, weather_row: false, clothing_forecast: true, always_show_today: false)
+
+            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+            assert today[:clothing], "Expected clothing forecast using the full day's weather"
+            assert_equal "Shorts", today[:clothing][:summary]
+            assert_equal "shorts", today[:clothing][:icon]
+          end
+        end
+      end
+    end
+  end
+
   def test_clothing_forecast_pants_when_daily_high_below_threshold
     travel_to DateTime.new(2023, 8, 27, 7, 0, 0, "-0600") do
       api = new_test_api

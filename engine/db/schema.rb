@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 18) do
+ActiveRecord::Schema[8.1].define(version: 20) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -250,6 +250,28 @@ ActiveRecord::Schema[8.1].define(version: 18) do
     t.index ["location_id"], name: "index_ha_syncs_on_location_id", unique: true
   end
 
+  create_table "inner_performance_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "db_runtime"
+    t.decimal "duration"
+    t.string "event"
+    t.string "name"
+    t.text "properties"
+    t.string "type"
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "inner_performance_traces", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "duration"
+    t.bigint "event_id", null: false
+    t.string "name"
+    t.json "payload"
+    t.string "type"
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_inner_performance_traces_on_event_id"
+  end
+
   create_table "locations", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.string "country_code", limit: 2
@@ -327,6 +349,7 @@ ActiveRecord::Schema[8.1].define(version: 18) do
   add_foreign_key "devices", "locations"
   add_foreign_key "google_accounts", "accounts"
   add_foreign_key "ha_syncs", "locations"
+  add_foreign_key "inner_performance_traces", "inner_performance_events", column: "event_id"
   add_foreign_key "locations", "accounts"
   add_foreign_key "microsoft_accounts", "accounts"
   add_foreign_key "pending_devices", "devices", column: "claimed_device_id"

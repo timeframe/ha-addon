@@ -172,7 +172,21 @@ class DeviceContent
         end
 
         if !weather_row && clothing_forecast && clothing_threshold
-          day_weather_events = events[:periodic].select(&:weather_hourly?)
+          # For "today" the events query is truncated to current_time, so the
+          # morning hours are gone. Re-query the full day (like the weather_row
+          # path) so clothing reflects the entire day's readings.
+          day_weather_events =
+            if day_index <= 0
+              calendar_feed.events_for(
+                date.beginning_of_day.utc,
+                date.end_of_day.utc,
+                raw_events.flatten,
+                false,
+                device_name: device_name
+              )[:periodic].select(&:weather_hourly?)
+            else
+              events[:periodic].select(&:weather_hourly?)
+            end
           daily_weather = events[:daily].find(&:weather?)
           daily_high = daily_weather ? daily_weather.summary.to_i : nil
           clothing_data = clothing_recommendation(

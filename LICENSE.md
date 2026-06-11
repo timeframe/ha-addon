@@ -2,7 +2,7 @@
 
 <https://polyformproject.org/licenses/noncommercial/1.0.0>
 
-Required Notice: Copyright Joel Hawksley (https://github.com/timeframe)
+Required Notice: Copyright Timeframe LLC (https://github.com/timeframe)
 
 ## Acceptance
 
