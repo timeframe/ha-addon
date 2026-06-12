@@ -389,6 +389,24 @@ class DeviceTest < Minitest::Test
     refute device.visionect?
   end
 
+  def test_reterminal_template_device_content_spans_12_days
+    %w[reterminal_e1003 trmnl_x].each do |model|
+      device = Device.create!(
+        location: test_location,
+        name: "test_reterminal_days_#{SecureRandom.hex(4)}",
+        model: model,
+        mac_address: "RT:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+        demo_mode_enabled: true
+      )
+      current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 8)
+
+      result = device.device_content(timezone: "America/Chicago", current_time: current_time)
+
+      assert_equal "reterminal", device.active_template
+      assert_equal 12, result[:day_groups].length, "expected #{model} to render 12 days"
+    end
+  end
+
   def test_trmnl_x_predicate
     device = Device.new(name: "test", model: "trmnl_x")
     assert device.trmnl_x?

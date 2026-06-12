@@ -37,6 +37,14 @@ module HaAddon
       refresh_disconnected_screenshots: {
         cron: "0 * * * *",
         class: "RefreshDisconnectedDeviceScreenshotsJob"
+      },
+      record_uptime: {
+        cron: "* * * * *",
+        class: "RecordUptimeJob"
+      },
+      cleanup_uptime_checks: {
+        cron: "0 2 * * *",
+        class: "CleanupUptimeChecksJob"
       }
     }
 

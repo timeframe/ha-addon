@@ -1,3 +1,66 @@
+<%
+  state_meta = {
+    operational: {label: "All Systems Operational", badge: "text-bg-success", icon: "mdi-check-circle"},
+    degraded: {label: "Degraded Performance", badge: "text-bg-warning", icon: "mdi-alert"},
+    down: {label: "Service Disruption", badge: "text-bg-danger", icon: "mdi-alert-circle"}
+  }
+  meta = state_meta[@state]
+  fmt_pct = ->(pct) { pct.nil? ? "—" : "#{format("%.2f", pct)}%" }
+  segment_class = {up: "bg-success", degraded: "bg-warning", down: "bg-danger", no_data: "bg-secondary-subtle"}
+%>
+
+<style>
+  .status-banner { border-radius: .5rem; }
+  .uptime-bar { display: flex; gap: 2px; height: 36px; align-items: stretch; }
+  .uptime-bar .seg { flex: 1 1 0; min-width: 2px; border-radius: 2px; }
+  .uptime-legend .swatch { display: inline-block; width: .75rem; height: .75rem; border-radius: 2px; vertical-align: middle; }
+</style>
+
+<div class="d-flex align-items-center gap-3 p-3 mb-4 status-banner border">
+  <span class="mdi <%= meta[:icon] %> fs-1 lh-1"></span>
+  <div>
+    <h2 class="h4 mb-0"><%= meta[:label] %></h2>
+    <span class="text-muted small">Updated every minute</span>
+  </div>
+  <span class="badge <%= meta[:badge] %> fs-6 ms-auto"><%= @state.to_s.upcase %></span>
+</div>
+
+<div class="row g-3 mb-4">
+  <% @uptime_windows.each do |label, pct| %>
+    <div class="col-6 col-md-3">
+      <div class="card h-100 text-center">
+        <div class="card-body py-3">
+          <div class="fs-3 fw-semibold"><%= fmt_pct.call(pct) %></div>
+          <div class="text-muted small">Past <%= label %></div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h3 class="h6 mb-0">Uptime — last 90 days</h3>
+      <span class="text-muted small"><%= @daily_summary.first[:date].strftime("%b %-d") %> &ndash; <%= @daily_summary.last[:date].strftime("%b %-d, %Y") %></span>
+    </div>
+    <div class="uptime-bar">
+      <% @daily_summary.each do |day| %>
+        <% title = day[:status] == :no_data ? "#{day[:date].strftime("%b %-d, %Y")} · no data" : "#{day[:date].strftime("%b %-d, %Y")} · #{fmt_pct.call(day[:uptime_pct])} uptime" %>
+        <div class="seg <%= segment_class[day[:status]] %>"
+             data-bs-toggle="tooltip"
+             title="<%= title %>"></div>
+      <% end %>
+    </div>
+    <div class="uptime-legend d-flex flex-wrap gap-3 mt-3 small text-muted">
+      <span><span class="swatch bg-success"></span> Operational</span>
+      <span><span class="swatch bg-warning"></span> Degraded</span>
+      <span><span class="swatch bg-danger"></span> Downtime</span>
+      <span><span class="swatch bg-secondary-subtle"></span> No data</span>
+    </div>
+  </div>
+</div>
+
 <h2 class="h5 mb-3">Home Assistant Status</h2>
 
 <div class="card mb-4">
@@ -191,3 +254,11 @@
     <% end %>
   </div>
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+      new bootstrap.Tooltip(el);
+    });
+  });
+</script>

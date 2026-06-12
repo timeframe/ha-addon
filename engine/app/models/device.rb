@@ -237,6 +237,8 @@ class Device < ActiveRecord::Base
           1
         elsif active_template == "trmnl"
           14
+        elsif active_template == "reterminal"
+          12
         else
           (compact_view ? 3 : 5)
         end,

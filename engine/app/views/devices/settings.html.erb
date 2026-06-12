@@ -72,7 +72,12 @@
                 <div id="screenshot-loading" style="display: none;" class="text-body-secondary small py-4">Regenerating screenshot&hellip;</div>
               </div>
             </div>
-            <div class="card-footer py-2 d-flex justify-content-end">
+            <div class="card-footer py-2 d-flex justify-content-between align-items-center">
+              <span class="text-body-tertiary small" id="screenshot-generated-at">
+                <% if @device.cached_image_at %>
+                  Generated <%= (@device.cached_image_at > 1.minute.ago) ? "<1m" : time_ago_in_words(@device.cached_image_at) %> ago
+                <% end %>
+              </span>
               <button type="button" class="btn btn-outline-secondary btn-sm" id="regen-screenshot-btn">Regenerate</button>
             </div>
           </div>

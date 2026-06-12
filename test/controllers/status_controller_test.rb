@@ -12,4 +12,12 @@ class StatusControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Config"
     assert_includes response.body, "Weather"
   end
+
+  test "status page shows the uptime section" do
+    UptimeCheck.delete_all
+    get "/status"
+    assert_response :success
+    assert_includes response.body, "Uptime"
+    assert_includes response.body, "Past 90 days"
+  end
 end

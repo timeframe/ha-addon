@@ -2,6 +2,10 @@
 
 class StatusController < ApplicationController
   def index
+    @state = UptimeCheck.current_state
+    @uptime_windows = UptimeCheck::WINDOWS.map { |label, duration| [label, UptimeCheck.uptime_percentage(duration)] }
+    @daily_summary = UptimeCheck.daily_summary(days: 90)
+
     @api = HomeAssistantApi.new
     @statuses = DashboardController::HA_DOMAIN_CHECKS.map do |check|
       {
