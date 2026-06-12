@@ -4,6 +4,10 @@ module Api
   class TrmnlController < ActionController::API
     include Rails.application.routes.url_helpers
 
+    # Upper bound on device log entries persisted per /api/log request. Devices
+    # can batch many locally-stored logs; this caps a single burst.
+    MAX_LOG_ENTRIES_PER_REQUEST = 50
+
     before_action :authenticate_device!
     skip_before_action :authenticate_device!, only: [:setup, :display]
     before_action :authenticate_or_identify_device!, only: [:display]
@@ -93,10 +97,40 @@ module Api
     # POST /api/log
     def log
       Rails.logger.info("[API Log] mac=#{request.headers["ID"]} body=#{request.raw_post.truncate(1000)}")
+      persist_device_logs
       head :no_content
     end
 
     private
+
+    # Persist device-submitted log entries as audit logs (event_type
+    # "device.log") so they're browsable in the existing admin audit logs view.
+    # CreateAuditLogJob/AuditLog only exist in the cloud app, so this is a no-op
+    # in deployments without them (mirrors the Auditable concern's guard).
+    # :nocov: exercised by the cloud app's test suite, not the engine/ha-addon.
+    def persist_device_logs
+      return unless @device
+      return unless defined?(CreateAuditLogJob)
+
+      entries = params[:logs]
+      return unless entries.is_a?(Array)
+
+      entries.first(MAX_LOG_ENTRIES_PER_REQUEST).each do |entry|
+        next unless entry.respond_to?(:to_unsafe_h) || entry.is_a?(Hash)
+
+        metadata = (entry.respond_to?(:to_unsafe_h) ? entry.to_unsafe_h : entry).to_h
+
+        CreateAuditLogJob.perform_later(
+          subject_type: @device.class.name,
+          subject_id: @device.id,
+          event_type: "device.log",
+          metadata: metadata
+        )
+      end
+    rescue => e
+      Rails.logger.error("[API Log] Failed to persist device logs: #{e.message}")
+    end
+    # :nocov:
 
     def update_device_from_headers(device)
       attrs = {}
