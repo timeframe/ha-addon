@@ -1,3 +1,24 @@
+## [2.14.0] - 2026-06-11
+
+### Added
+- New "1-Day" template: single-day landscape layout with daily weather, clothing forecast, and events (replaces the 8-day template)
+- Per-calendar selection on device settings: choose which Home Assistant calendars contribute events to a device (all included by default), with an optional per-calendar keyword filter to only show matching events
+- Per-hour selection for hourly conditions: pick exactly which hours show temperature/conditions events
+- Configurable wind gust threshold per device
+- Standalone Docker container support: run Timeframe outside the Home Assistant add-on via `docker-compose`, configured entirely through environment variables (including a remote Home Assistant URL)
+- Page titles on web pages
+
+### Changed
+- Settings option labels simplified (e.g. "Show Icons" → "Icons", "Show Hourly Temperature Events" → "Hourly Conditions"); "Hide Dates" inverted to "Dates"
+- Hourly conditions, precipitation, and wind toggles are hidden on the two-day template
+
+### Fixed
+- Screenshot service deadlock that could cause screenshot generation to hang
+- Device preview and screenshot rotation for reTerminal E1003 and TRMNL X devices
+
+### Removed
+- 8-day template (replaced by the 1-day template)
+
 ## [2.13.0] - 2026-05-26
 
 ### Added
