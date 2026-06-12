@@ -123,7 +123,7 @@ class DemoDeviceContent
         end
       end
 
-      show_daily = (day_index.zero? && current_time.hour < 20) || !day_index.zero?
+      show_daily = true
       events = events_for_day(day_index, date, current_time, vacation, timezone, include_wind: include_wind)
 
       periodic_events = fill_hourly_weather ? fill_hourly_weather_events(events[:periodic], date, timezone) : events[:periodic]

@@ -135,7 +135,10 @@ class DeviceContent
             remaining_today.all? { it.ends_at > date.end_of_day.utc }
         end
 
-        show_daily = (day_index.zero? && (current_minutes_in_day < hide_today_after_minutes || always_show_today)) || !day_index.zero?
+        # The cutoff only hides the entire day (above) when no periodic events
+        # remain; it must never hide just the daily events while periodic events
+        # are still showing.
+        show_daily = true
 
         periodic_events = events[:periodic]
         weather_row_data = nil

@@ -149,6 +149,44 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_daily_events_remain_after_cutoff_when_periodic_events_exist
+    # After the cutoff the day must not have its daily (all-day) events hidden
+    # while a periodic event is still showing; the cutoff only hides the entire
+    # day when no periodic events remain.
+    travel_to DateTime.new(2023, 8, 27, 20, 15, 0, "-0600") do
+      api = new_test_api
+      tz = "America/Denver"
+      events = [
+        DeviceEvent.new(
+          starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"),
+          ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"),
+          summary: "All Day",
+          icon: "cake-variant",
+          daily: true,
+          timezone: tz
+        ),
+        DeviceEvent.new(
+          starts_at: DateTime.new(2023, 8, 27, 19, 0, 0, "-0600"),
+          ends_at: DateTime.new(2023, 8, 27, 21, 0, 0, "-0600"),
+          summary: "Evening event",
+          timezone: tz
+        )
+      ]
+      api.stub :calendars_healthy?, false do
+        api.stub :private_mode?, false do
+          api.stub :calendar_events, events do
+            result = DeviceContent.new.call(home_assistant_api: api)
+
+            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+            assert today, "expected Today to still be present"
+            assert today[:show_daily], "expected daily events to remain visible after cutoff"
+            assert today[:daily].any? { |e| e[:summary] == "All Day" }
+          end
+        end
+      end
+    end
+  end
+
   def test_serializes_events_with_icons_and_locations
     travel_to DateTime.new(2023, 8, 27, 10, 0, 0, "-0600") do
       api = new_test_api
