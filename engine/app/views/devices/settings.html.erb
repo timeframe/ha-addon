@@ -215,15 +215,15 @@
             <% if @device.active_template == "two_day" %>
               <% options << {key: "show_dates", on_label: "Dates", off_label: "Dates", default_on: true} %>
               <% options << {key: "show_event_times", on_label: "Event Times", off_label: "Event Times", default_on: true} %>
-              <% options << {key: "two_day_rollover_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: true} %>
+              <% options << {key: "two_day_rollover_enabled", on_label: "Hide Current Day After Time If No More Events", off_label: "Hide Current Day After Time If No More Events", default_on: true} %>
             <% end %>
             <% if one_day_template %>
               <% options << {key: "show_event_times", on_label: "Event Times", off_label: "Event Times", default_on: false} %>
-              <% options << {key: "one_day_rollover_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: true} %>
+              <% options << {key: "one_day_rollover_enabled", on_label: "Hide Current Day After Time If No More Events", off_label: "Hide Current Day After Time If No More Events", default_on: true} %>
             <% end %>
           <% end %>
           <% if Device::HIDE_CURRENT_DAY_TEMPLATES.include?(@device.active_template) %>
-            <% options << {key: "hide_current_day_enabled", on_label: "Hide Current Day After Time", off_label: "Hide Current Day After Time", default_on: @device.hide_current_day_default_on?} %>
+            <% options << {key: "hide_current_day_enabled", on_label: "Hide Current Day After Time If No More Events", off_label: "Hide Current Day After Time If No More Events", default_on: @device.hide_current_day_default_on?} %>
           <% end %>
           <% options.each do |opt| %>
             <%
@@ -266,19 +266,16 @@
           <% end %>
           <% if @device.active_template == "two_day" %>
             <div class="mt-3" data-depends-on="two_day_rollover_enabled">
-              <label class="form-label small mb-1" for="two-day-rollover-time">Hide Current Day After</label>
               <input type="time" id="two-day-rollover-time" name="configuration[two_day_rollover_time]" value="<%= @device.configuration&.dig("two_day_rollover_time").presence || Device::TWO_DAY_DEFAULT_ROLLOVER_TIME %>" class="form-control form-control-sm" style="max-width: 10rem;">
             </div>
           <% end %>
           <% if @device.active_template == "one_day" %>
             <div class="mt-3" data-depends-on="one_day_rollover_enabled">
-              <label class="form-label small mb-1" for="one-day-rollover-time">Hide Current Day After</label>
               <input type="time" id="one-day-rollover-time" name="configuration[one_day_rollover_time]" value="<%= @device.configuration&.dig("one_day_rollover_time").presence || Device::TWO_DAY_DEFAULT_ROLLOVER_TIME %>" class="form-control form-control-sm" style="max-width: 10rem;">
             </div>
           <% end %>
           <% if Device::HIDE_CURRENT_DAY_TEMPLATES.include?(@device.active_template) %>
             <div class="mt-3" data-depends-on="hide_current_day_enabled">
-              <label class="form-label small mb-1" for="hide-current-day-time">Hide Current Day After</label>
               <input type="time" id="hide-current-day-time" name="configuration[hide_current_day_time]" value="<%= @device.configuration&.dig("hide_current_day_time").presence || Device::HIDE_CURRENT_DAY_DEFAULT_TIME %>" class="form-control form-control-sm" style="max-width: 10rem;">
             </div>
           <% end %>
