@@ -96,7 +96,7 @@ class DeviceEvent
     text.gsub!(/#banner\s*/, "")
     text.gsub!(/timeframe-private\s*/, "")
     text.gsub!(/timeframe-omit\s*/, "")
-    text.gsub!(/timeframe-title:\S+\s*/, "")
+    text.gsub!(/timeframe-title:[^\n]+\s*/, "")
     text.gsub!(/timeframe-icon:(?:mdi-)?[a-z0-9][a-z0-9-]*\s*/i, "")
     text.gsub!(/timeframe-only:[^\n]+\s*/, "")
 
