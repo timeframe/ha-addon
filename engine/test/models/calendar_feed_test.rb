@@ -280,38 +280,6 @@ class CalendarFeedTest < Minitest::Test
     end
   end
 
-  def test_filtering_private_events
-    calendar_events = [
-      DeviceEvent.new(
-        id: "foo",
-        starts_at: DateTime.new(2023, 8, 27, 15, 20, 0, "-0600"),
-        ends_at: DateTime.new(2023, 8, 27, 20, 20, 0, "-0600"),
-        summary: "timeframe-private"
-      ),
-      DeviceEvent.new(
-        id: "bar",
-        starts_at: DateTime.new(2023, 8, 27, 15, 20, 0, "-0600"),
-        ends_at: DateTime.new(2023, 8, 27, 20, 20, 0, "-0600"),
-        summary: "doctor",
-        description: "timeframe-private"
-      ),
-      DeviceEvent.new(
-        id: "bar",
-        starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"),
-        ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"),
-        summary: "prep",
-        description: "timeframe-private"
-      )
-    ]
-
-    travel_to DateTime.new(2023, 8, 27, 17, 20, 0, "-0600") do
-      start_time_utc = DateTime.new(2023, 8, 27, 0, 20, 0, "-0600").utc.to_time
-      end_time_utc = DateTime.new(2023, 8, 28, 0, 0, 0, "-0600").utc.to_time
-
-      assert(CalendarFeed.new.events_for(start_time_utc, end_time_utc, calendar_events, true)[:periodic].length == 0)
-    end
-  end
-
   def test_excludes_omit
     calendar_events = [
       DeviceEvent.new(

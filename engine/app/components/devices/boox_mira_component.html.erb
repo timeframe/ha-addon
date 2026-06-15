@@ -1,21 +1,19 @@
 <div class="fade-bottom"></div>
 <div id="flash-overlay" style="display:none; position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 100"></div>
 <style>html { font-size: 44px; }</style>
-<%= render Devices::AttributionComponent.new(view_object: @view_object, offset: ".25rem") %>
+<%= render Devices::AttributionComponent.new(view_object: @view_object, offset: ".25rem", font_size: "12px") %>
 <%= render Devices::StatusBarComponent.new(view_object: @view_object) %>
 <div style="clear: both; line-height: .7; margin-bottom: 1rem; padding-bottom: .5rem; font-size: 3rem;">
   <div style="float: left;">
-    <%= DateTime.now.strftime("%A, %b. %-d") %>
+    <%= @view_object[:current_time].strftime("%A, %b. %-d") %>
   </div>
   <div style="float: right; text-align: right;">
     <%= @view_object[:current_temperature] %>
   </div>
   <div>&nbsp;</div>
 </div>
-<% unless @view_object[:private_mode] %>
-  <hr style="margin: 1rem 0 1rem; border: none; background-color: #ccc; color: #ccc; height: 2px;">
-  <%= render Devices::TimelineComponent.new(view_object: @view_object) %>
-<% end %>
+<hr style="margin: 1rem 0 1rem; border: none; background-color: #ccc; color: #ccc; height: 2px;">
+<%= render Devices::TimelineComponent.new(view_object: @view_object) %>
 
 <script>
 (function() {

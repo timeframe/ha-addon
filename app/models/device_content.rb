@@ -70,14 +70,6 @@ class DeviceContent
       raw_events << home_assistant_api.daily_events(current_time: current_time)
     end
 
-    private_mode = home_assistant_api.calendars_healthy? && home_assistant_api.private_mode?
-
-    if private_mode
-      out[:top_left] << {icon: "eye-off", label: "Private mode"}
-    end
-
-    out[:private_mode] = private_mode
-
     cal_events = home_assistant_api.calendar_events
     if device&.excluded_calendar_identifiers&.any?
       cal_events = cal_events.reject { |e| device.calendar_excluded?(e.entity_id) }
@@ -119,8 +111,8 @@ class DeviceContent
           ((day_index.zero? && !always_show_today) ? current_time : date.beginning_of_day).utc,
           date.end_of_day.utc,
           raw_events.flatten,
-          private_mode,
-          device_name: device_name
+          device_name: device_name,
+          device_id: device&.id
         )
 
         current_minutes_in_day = (current_time.hour * 60) + current_time.min
@@ -150,8 +142,8 @@ class DeviceContent
               date.beginning_of_day.utc,
               date.end_of_day.utc,
               raw_events.flatten,
-              false,
-              device_name: device_name
+              device_name: device_name,
+              device_id: device&.id
             )
             weather_events = all_day_events[:periodic].select(&:weather?)
           else
@@ -184,8 +176,8 @@ class DeviceContent
                 date.beginning_of_day.utc,
                 date.end_of_day.utc,
                 raw_events.flatten,
-                false,
-                device_name: device_name
+                device_name: device_name,
+                device_id: device&.id
               )[:periodic].select(&:weather_hourly?)
             else
               events[:periodic].select(&:weather_hourly?)
@@ -234,7 +226,7 @@ class DeviceContent
     all_events = raw_events.flatten
     banner_event = all_events.find do |e|
       e.banner? && e.start_i <= current_time.to_i && e.end_i > current_time.to_i &&
-        !e.hidden_for?(device&.name)
+        !e.hidden_for?(device&.name, device_id: device&.id)
     end
     if banner_event
       out[:banner] = {title: banner_event.banner_title, description: banner_event.banner_description}

@@ -54,7 +54,6 @@ class OneDayComponentTest < ActiveSupport::TestCase
     ApplicationController.render(
       Devices::OneDayComponent.new(
         view_object: {
-          private_mode: false,
           current_time: current_time,
           configuration: configuration,
           day_groups: [

@@ -1,9 +1,7 @@
 <%= render Devices::StatusBarComponent.new(view_object: @view_object) %>
-<% unless @view_object[:private_mode] %>
-  <style>
-    html { font-size: 16px; }
-  </style>
-  <%= render Devices::TimelineComponent.new(view_object: @view_object) %>
-<% end %>
+<style>
+  html { font-size: 16px; }
+</style>
+<%= render Devices::TimelineComponent.new(view_object: @view_object) %>
 
 <%= render Devices::AttributionComponent.new(view_object: @view_object, offset: "4px") %>

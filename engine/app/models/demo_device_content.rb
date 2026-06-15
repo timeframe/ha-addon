@@ -57,7 +57,6 @@ class DemoDeviceContent
     end
 
     out[:attribution] = "Weather"
-    out[:private_mode] = false
 
     out[:day_groups] = build_day_groups(current_time, timezone, days: days, include_wind: include_wind,
       include_temperature: include_temperature, temperature_hours: temperature_hours, use_day_names: use_day_names, weather_row: weather_row,
@@ -534,8 +533,7 @@ class DemoDeviceContent
     CalendarFeed.new.events_for(
       date.beginning_of_day.utc,
       date.end_of_day.utc,
-      daily + periodic,
-      false
+      daily + periodic
     )
   end
 

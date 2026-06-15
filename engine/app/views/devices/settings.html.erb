@@ -68,7 +68,18 @@
           <div class="tab-pane fade" id="screenshot-pane" role="tabpanel" aria-labelledby="screenshot-tab">
             <div class="card-body p-2">
               <div class="d-flex align-items-center justify-content-center" style="background: #f0f0f0; border-radius: .25rem; overflow: hidden; min-height: 100px;" id="screenshot-container">
-                <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;<%= ' transform: rotate(-90deg);' if @device.reterminal_e1003? || @device.trmnl_x? %>" id="screenshot-img">
+                <% if @device.reterminal_e1003? || @device.trmnl_x? %>
+                  <%# Portrait panel (display_width x display_height) shown rotated -90deg.
+                      CSS rotation doesn't change the layout box, so wrap the image in an
+                      aspect-ratio box sized for the rotated (landscape) result and center
+                      the rotated image inside it so nothing gets clipped. %>
+                  <% rotated_pct = (@device.display_width.to_f / @device.display_height * 100).round(2) %>
+                  <div style="position: relative; width: 100%; padding-bottom: <%= rotated_pct %>%;">
+                    <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="position: absolute; top: 50%; left: 50%; width: <%= rotated_pct %>%; height: auto; transform: translate(-50%, -50%) rotate(-90deg);" id="screenshot-img">
+                  </div>
+                <% else %>
+                  <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img">
+                <% end %>
                 <div id="screenshot-loading" style="display: none;" class="text-body-secondary small py-4">Regenerating screenshot&hellip;</div>
               </div>
             </div>

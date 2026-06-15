@@ -431,6 +431,43 @@ class DeviceEventTest < Minitest::Test
     refute(event.hidden_for?(nil))
   end
 
+  def test_hidden_for_matches_by_device_id
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "foo",
+      description: "timeframe-only:12, 15"
+    )
+
+    refute(event.hidden_for?("Kitchen", device_id: 12))
+    refute(event.hidden_for?("Kitchen", device_id: 15))
+    assert(event.hidden_for?("Kitchen", device_id: 99))
+  end
+
+  def test_hidden_for_matches_by_name_or_id
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "foo",
+      description: "timeframe-only:Kitchen, 15"
+    )
+
+    refute(event.hidden_for?("Kitchen", device_id: 99))
+    refute(event.hidden_for?("Bedroom", device_id: 15))
+    assert(event.hidden_for?("Bedroom", device_id: 99))
+  end
+
+  def test_hidden_for_returns_false_with_nil_name_and_id
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "foo",
+      description: "timeframe-only:Kitchen"
+    )
+
+    refute(event.hidden_for?(nil, device_id: nil))
+  end
+
   def test_timeframe_icon_overrides_icon_from_description
     event = DeviceEvent.new(
       starts_at: 1621288800,

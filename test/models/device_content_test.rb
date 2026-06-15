@@ -68,11 +68,9 @@ class DeviceContenttTest < Minitest::Test
         api.stub :calendar_events, [
           DeviceEvent.new(starts_at: travel_time - 1.hour, ends_at: travel_time + 1.day, summary: "test")
         ] do
-          api.stub :private_mode?, false do
-            result = DeviceContent.new.call(home_assistant_api: api)
+          result = DeviceContent.new.call(home_assistant_api: api)
 
-            assert_equal(result[:day_groups].count, 4)
-          end
+          assert_equal(result[:day_groups].count, 4)
         end
       end
     end
@@ -101,21 +99,6 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
-  def test_with_private_mode
-    travel_to DateTime.new(2023, 8, 27, 18, 15, 0, "-0600") do
-      api = new_test_api
-      api.stub :calendars_healthy?, true do
-        api.stub :private_mode?, true do
-          api.stub :calendar_events, [] do
-            result = DeviceContent.new.call(home_assistant_api: api)
-
-            assert result[:top_left].any? { it[:label] == "Private mode" }
-          end
-        end
-      end
-    end
-  end
-
   def test_with_healthy_weather_api
     travel_to DateTime.new(2023, 8, 27, 18, 15, 0, "-0600") do
       api = new_test_api
@@ -138,12 +121,10 @@ class DeviceContenttTest < Minitest::Test
         )
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            result = DeviceContent.new.call(home_assistant_api: api)
+        api.stub :calendar_events, events do
+          result = DeviceContent.new.call(home_assistant_api: api)
 
-            assert_equal 5, result[:day_groups].count
-          end
+          assert_equal 5, result[:day_groups].count
         end
       end
     end
@@ -173,15 +154,13 @@ class DeviceContenttTest < Minitest::Test
         )
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            result = DeviceContent.new.call(home_assistant_api: api)
+        api.stub :calendar_events, events do
+          result = DeviceContent.new.call(home_assistant_api: api)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert today, "expected Today to still be present"
-            assert today[:show_daily], "expected daily events to remain visible after cutoff"
-            assert today[:daily].any? { |e| e[:summary] == "All Day" }
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert today, "expected Today to still be present"
+          assert today[:show_daily], "expected daily events to remain visible after cutoff"
+          assert today[:daily].any? { |e| e[:summary] == "All Day" }
         end
       end
     end
@@ -210,14 +189,12 @@ class DeviceContenttTest < Minitest::Test
         )
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            result = DeviceContent.new.call(home_assistant_api: api)
+        api.stub :calendar_events, events do
+          result = DeviceContent.new.call(home_assistant_api: api)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert today[:daily].any? { |e| e[:summary] == "All Day" && e[:icon_class] == "cake-variant" }
-            assert today[:periodic].any? { |e| e[:summary] == "Lunch" && e[:icon_text] == "J" && e[:location] == "Room A" }
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert today[:daily].any? { |e| e[:summary] == "All Day" && e[:icon_class] == "cake-variant" }
+          assert today[:periodic].any? { |e| e[:summary] == "Lunch" && e[:icon_text] == "J" && e[:location] == "Room A" }
         end
       end
     end
@@ -237,13 +214,11 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(starts_at: DateTime.new(2023, 8, 27, 14, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 15, 0, 0, "-0600"), summary: "Skip me", entity_id: "calendar.skip", timezone: "America/Denver")
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            result = DeviceContent.new.call(home_assistant_api: api, device: device)
-            summaries = result[:day_groups].flat_map { |d| d[:periodic].map { |e| e[:summary] } }
-            assert_includes summaries, "Keep me"
-            refute_includes summaries, "Skip me"
-          end
+        api.stub :calendar_events, events do
+          result = DeviceContent.new.call(home_assistant_api: api, device: device)
+          summaries = result[:day_groups].flat_map { |d| d[:periodic].map { |e| e[:summary] } }
+          assert_includes summaries, "Keep me"
+          refute_includes summaries, "Skip me"
         end
       end
     end
@@ -269,17 +244,15 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_hour_4", starts_at: DateTime.new(2023, 8, 27, 20, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 20, 0, 0, "-0600"), summary: "60°", icon: "weather-night", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_equal 3, today[:weather_row].length
-            assert today[:weather_row].any? { |w| w[:summary] == "65°" }
-            assert today[:weather_row].any? { |w| w[:summary] == "72°" }
-            assert today[:weather_row].any? { |w| w[:summary] == "74°" }
-            assert today[:periodic].none? { |e| e[:summary] == "65°" }
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_equal 3, today[:weather_row].length
+          assert today[:weather_row].any? { |w| w[:summary] == "65°" }
+          assert today[:weather_row].any? { |w| w[:summary] == "72°" }
+          assert today[:weather_row].any? { |w| w[:summary] == "74°" }
+          assert today[:periodic].none? { |e| e[:summary] == "65°" }
         end
       end
     end
@@ -500,16 +473,14 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_day_1", starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"), summary: "85° / 65°", icon: "weather-sunny", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_equal "Shorts", today[:clothing][:summary]
-            assert_equal "shorts", today[:clothing][:icon]
-            assert_equal "T-shirt", today[:clothing][:shirt_summary]
-            assert_equal "tshirt", today[:clothing][:shirt_icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_equal "Shorts", today[:clothing][:summary]
+          assert_equal "shorts", today[:clothing][:icon]
+          assert_equal "T-shirt", today[:clothing][:shirt_summary]
+          assert_equal "tshirt", today[:clothing][:shirt_icon]
         end
       end
     end
@@ -526,16 +497,14 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_day_1", starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"), summary: "85° / 65°", icon: "weather-sunny", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: false, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: false, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_equal "Shorts", today[:clothing][:summary]
-            assert_equal "shorts", today[:clothing][:icon]
-            assert_equal "T-shirt", today[:clothing][:shirt_summary]
-            assert_equal "tshirt", today[:clothing][:shirt_icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_equal "Shorts", today[:clothing][:summary]
+          assert_equal "shorts", today[:clothing][:icon]
+          assert_equal "T-shirt", today[:clothing][:shirt_summary]
+          assert_equal "tshirt", today[:clothing][:shirt_icon]
         end
       end
     end
@@ -551,16 +520,14 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "50°", icon: "weather-cloudy", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_equal "Pants", today[:clothing][:summary]
-            assert_equal "pants", today[:clothing][:icon]
-            assert_equal "T-shirt", today[:clothing][:shirt_summary]
-            assert_equal "tshirt", today[:clothing][:shirt_icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_equal "Pants", today[:clothing][:summary]
+          assert_equal "pants", today[:clothing][:icon]
+          assert_equal "T-shirt", today[:clothing][:shirt_summary]
+          assert_equal "tshirt", today[:clothing][:shirt_icon]
         end
       end
     end
@@ -576,16 +543,14 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "50°", icon: "weather-cloudy", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_equal "Pants", today[:clothing][:summary]
-            assert_equal "pants", today[:clothing][:icon]
-            assert_equal "Long sleeves", today[:clothing][:shirt_summary]
-            assert_equal "long-sleeve-shirt", today[:clothing][:shirt_icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_equal "Pants", today[:clothing][:summary]
+          assert_equal "pants", today[:clothing][:icon]
+          assert_equal "Long sleeves", today[:clothing][:shirt_summary]
+          assert_equal "long-sleeve-shirt", today[:clothing][:shirt_icon]
         end
       end
     end
@@ -600,14 +565,12 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "80°", icon: "weather-sunny", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            # noon missing, so noon_temp falls back to morning_temp (72), which >= 65, so shorts
-            assert_equal "Shorts", today[:clothing][:summary]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          # noon missing, so noon_temp falls back to morning_temp (72), which >= 65, so shorts
+          assert_equal "Shorts", today[:clothing][:summary]
         end
       end
     end
@@ -627,15 +590,13 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_day_1", starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"), summary: "85° / 65°", icon: "weather-sunny", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: false, clothing_forecast: true, always_show_today: false)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: false, clothing_forecast: true, always_show_today: false)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert today[:clothing], "Expected clothing forecast using the full day's weather"
-            assert_equal "Shorts", today[:clothing][:summary]
-            assert_equal "shorts", today[:clothing][:icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert today[:clothing], "Expected clothing forecast using the full day's weather"
+          assert_equal "Shorts", today[:clothing][:summary]
+          assert_equal "shorts", today[:clothing][:icon]
         end
       end
     end
@@ -652,17 +613,15 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_day_1", starts_at: DateTime.new(2023, 8, 27, 0, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 28, 0, 0, 0, "-0600"), summary: "62° / 45°", icon: "weather-sunny", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            # Hourly temps say shorts, but daily high (62) < 65 threshold, so pants
-            assert_equal "Pants", today[:clothing][:summary]
-            assert_equal "pants", today[:clothing][:icon]
-            assert_equal "T-shirt", today[:clothing][:shirt_summary]
-            assert_equal "tshirt", today[:clothing][:shirt_icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          # Hourly temps say shorts, but daily high (62) < 65 threshold, so pants
+          assert_equal "Pants", today[:clothing][:summary]
+          assert_equal "pants", today[:clothing][:icon]
+          assert_equal "T-shirt", today[:clothing][:shirt_summary]
+          assert_equal "tshirt", today[:clothing][:shirt_icon]
         end
       end
     end
@@ -678,14 +637,12 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "22°", icon: "weather-sunny", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_equal "Shorts", today[:clothing][:summary]
-            assert_equal "tshirt", today[:clothing][:shirt_icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_equal "Shorts", today[:clothing][:summary]
+          assert_equal "tshirt", today[:clothing][:shirt_icon]
         end
       end
     end
@@ -701,16 +658,14 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "12°", icon: "weather-cloudy", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_equal "Pants", today[:clothing][:summary]
-            assert_equal "pants", today[:clothing][:icon]
-            assert_equal "T-shirt", today[:clothing][:shirt_summary]
-            assert_equal "tshirt", today[:clothing][:shirt_icon]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_equal "Pants", today[:clothing][:summary]
+          assert_equal "pants", today[:clothing][:icon]
+          assert_equal "T-shirt", today[:clothing][:shirt_summary]
+          assert_equal "tshirt", today[:clothing][:shirt_icon]
         end
       end
     end
@@ -726,13 +681,11 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "_ha_weather_hour_3", starts_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 16, 0, 0, "-0600"), summary: "80°", icon: "weather-sunny", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, weather_events do
-            result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: false, always_show_today: true)
+        api.stub :calendar_events, weather_events do
+          result = DeviceContent.new.call(home_assistant_api: api, weather_row: true, clothing_forecast: false, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            assert_nil today[:clothing]
-          end
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          assert_nil today[:clothing]
         end
       end
     end
@@ -747,17 +700,15 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "2", starts_at: DateTime.new(2023, 8, 27, 11, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 12, 0, 0, "-0600"), summary: "Xyzzy gibberish", icon: "calendar", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
+        api.stub :calendar_events, events do
+          result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            church_event = today[:periodic].find { |e| e[:summary] == "Church service" }
-            assert_equal "church", church_event[:icon_class]
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          church_event = today[:periodic].find { |e| e[:summary] == "Church service" }
+          assert_equal "church", church_event[:icon_class]
 
-            no_match_event = today[:periodic].find { |e| e[:summary] == "Xyzzy gibberish" }
-            assert_equal "calendar", no_match_event[:icon_class], "Non-matching event should keep original icon"
-          end
+          no_match_event = today[:periodic].find { |e| e[:summary] == "Xyzzy gibberish" }
+          assert_equal "calendar", no_match_event[:icon_class], "Non-matching event should keep original icon"
         end
       end
     end
@@ -772,17 +723,15 @@ class DeviceContenttTest < Minitest::Test
         DeviceEvent.new(id: "3", starts_at: DateTime.new(2023, 8, 27, 9, 0, 0, "-0600"), ends_at: DateTime.new(2023, 8, 27, 10, 0, 0, "-0600"), summary: "Church service", icon: "calendar", timezone: tz)
       ]
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
+        api.stub :calendar_events, events do
+          result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
 
-            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-            weather_event = today[:periodic].find { |e| e[:summary] == "72°" }
-            church_event = today[:periodic].find { |e| e[:summary] == "Church service" }
+          today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+          weather_event = today[:periodic].find { |e| e[:summary] == "72°" }
+          church_event = today[:periodic].find { |e| e[:summary] == "Church service" }
 
-            assert_equal "weather-sunny", weather_event[:icon_class]
-            assert_equal "church", church_event[:icon_class]
-          end
+          assert_equal "weather-sunny", weather_event[:icon_class]
+          assert_equal "church", church_event[:icon_class]
         end
       end
     end
@@ -799,18 +748,16 @@ class DeviceContenttTest < Minitest::Test
       matcher = ->(summary) { summary.include?("Church") ? "church" : nil }
 
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            MdiIconMatcher.stub :match, matcher do
-              result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
+        api.stub :calendar_events, events do
+          MdiIconMatcher.stub :match, matcher do
+            result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
 
-              today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-              weather_event = today[:periodic].find { |e| e[:summary] == "Church-level rain" }
-              church_event = today[:periodic].find { |e| e[:summary] == "Church service" }
+            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+            weather_event = today[:periodic].find { |e| e[:summary] == "Church-level rain" }
+            church_event = today[:periodic].find { |e| e[:summary] == "Church service" }
 
-              assert_equal "weather-rainy", weather_event[:icon_class]
-              assert_equal "church", church_event[:icon_class]
-            end
+            assert_equal "weather-rainy", weather_event[:icon_class]
+            assert_equal "church", church_event[:icon_class]
           end
         end
       end
@@ -827,16 +774,14 @@ class DeviceContenttTest < Minitest::Test
       matcher = ->(_) { "soccer" }
 
       api.stub :calendars_healthy?, false do
-        api.stub :private_mode?, false do
-          api.stub :calendar_events, events do
-            MdiIconMatcher.stub :match, matcher do
-              result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
+        api.stub :calendar_events, events do
+          MdiIconMatcher.stub :match, matcher do
+            result = DeviceContent.new.call(home_assistant_api: api, auto_icons: true, always_show_today: true)
 
-              today = result[:day_groups].find { |d| d[:day_name] == "Today" }
-              event = today[:periodic].find { |e| e[:summary] == "Church" }
-              assert_equal "church", event[:timeframe_icon]
-              assert_equal "church", event[:icon_class]
-            end
+            today = result[:day_groups].find { |d| d[:day_name] == "Today" }
+            event = today[:periodic].find { |e| e[:summary] == "Church" }
+            assert_equal "church", event[:timeframe_icon]
+            assert_equal "church", event[:icon_class]
           end
         end
       end

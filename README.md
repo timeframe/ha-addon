@@ -81,10 +81,6 @@ The following entities can be created in Home Assistant to customize behavior. I
 
 ## Calendar events
 
-### Private mode
-
-A calendar event with the description `timeframe-private` will activate private mode for the duration of the event, hiding display content.
-
 ### Hiding specific events
 
 To hide a specific event, include `timeframe-omit` in the description.

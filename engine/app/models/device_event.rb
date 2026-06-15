@@ -70,10 +70,6 @@ class DeviceEvent
     true
   end
 
-  def private?
-    @summary == "timeframe-private" || @description == "timeframe-private"
-  end
-
   def omit?
     @summary.blank? || @description&.include?("timeframe-omit") || false
   end
@@ -94,7 +90,6 @@ class DeviceEvent
     # Strip timeframe metadata tags
     text.gsub!(/timeframe-banner\s*/, "")
     text.gsub!(/#banner\s*/, "")
-    text.gsub!(/timeframe-private\s*/, "")
     text.gsub!(/timeframe-omit\s*/, "")
     text.gsub!(/timeframe-title:[^\n]+\s*/, "")
     text.gsub!(/timeframe-icon:(?:mdi-)?[a-z0-9][a-z0-9-]*\s*/i, "")
@@ -110,12 +105,14 @@ class DeviceEvent
     end
   end
 
-  def hidden_for?(device_name)
-    return false unless @description.present? && device_name.present?
+  def hidden_for?(device_name, device_id: nil)
+    return false unless @description.present?
+    return false if device_name.blank? && device_id.blank?
     match = @description.match(/timeframe-only:(.+?)(?:\n|$)/)
     return false unless match
     allowed = match[1].split(",").map(&:strip).map(&:downcase)
-    !allowed.include?(device_name.downcase)
+    identifiers = [device_name&.downcase, device_id&.to_s].compact
+    identifiers.none? { |identifier| allowed.include?(identifier) }
   end
 
   def start_i

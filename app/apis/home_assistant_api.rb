@@ -319,12 +319,6 @@ class HomeAssistantApi
     icons
   end
 
-  def private_mode?
-    current_time = DateTime.now.in_time_zone(time_zone)
-
-    calendar_events.any? { it.summary == "timeframe-private" && it.starts_at <= current_time && it.ends_at >= current_time }
-  end
-
   # --- Weather ---
 
   def fetch_weather

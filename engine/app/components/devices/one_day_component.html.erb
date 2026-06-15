@@ -19,8 +19,7 @@
   .one-day-events-dense .one-day-event-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
 </style>
 
-<% unless @view_object[:private_mode] %>
-  <% day = @view_object[:day_groups]&.first %>
+<% day = @view_object[:day_groups]&.first %>
   <% if day %>
     <% daily_weather = day[:weather_row]&.find { |w| w[:start_time] == "12p" } || day[:weather_row]&.first %>
     <% day_label = (day[:date].to_date == @view_object[:current_time].to_date) ? "Today" : "Tomorrow" %>
@@ -95,7 +94,6 @@
       <% end %>
     </div>
   <% end %>
-<% end %>
 
 <script>
   (function() {

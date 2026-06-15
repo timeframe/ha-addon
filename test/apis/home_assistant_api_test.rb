@@ -833,26 +833,6 @@ class HomeAssistantApiTest < Minitest::Test
     end
   end
 
-  def test_private_mode
-    api = new_test_api
-    api.seed_calendars([])
-    assert_equal(false, api.private_mode?)
-
-    data = [
-      DeviceEvent.new(
-        starts_at: DateTime.new(2024, 9, 5, 12, 0, 0, "-0600"),
-        ends_at: DateTime.new(2024, 9, 5, 16, 0, 0, "-0600"),
-        summary: "timeframe-private"
-      )
-    ]
-
-    travel_to DateTime.new(2024, 9, 5, 15, 15, 0, "-0600") do
-      api.stub :calendar_events, data do
-        assert(api.private_mode?)
-      end
-    end
-  end
-
   def test_fetch_calendar_icons
     VCR.use_cassette(:home_assistant_calendar_icons) do
       api = HomeAssistantApi.new

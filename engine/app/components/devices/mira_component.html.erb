@@ -89,14 +89,12 @@
 
 <hr style="margin: 1rem 0 1rem; border: none; background-color: #ccc; color: #ccc; height: 2px;">
 
-<% unless @view_object[:private_mode] %>
-  <div style="position: absolute; top: 15rem; bottom: 0; left: 2rem; right: 2rem; overflow: hidden;">
-    <%= render Devices::TimelineComponent.new(view_object: @view_object) %>
-  </div>
-<% end %>
+<div style="position: absolute; top: 15rem; bottom: 0; left: 2rem; right: 2rem; overflow: hidden;">
+  <%= render Devices::TimelineComponent.new(view_object: @view_object) %>
+</div>
 
 <% if @view_object[:attribution].present? %>
-  <div style="position: absolute; bottom: 0; right: 0; font-size: .25rem; color: #000; writing-mode: vertical-rl; text-orientation: mixed; padding: 0.25rem; z-index: 10;">
+  <div style="position: absolute; bottom: 0; right: 0; font-size: .375rem; color: #000; writing-mode: vertical-rl; text-orientation: mixed; padding: 0.25rem; z-index: 10;">
     <%= @view_object[:attribution] %>
   </div>
 <% end %>

@@ -103,7 +103,6 @@ class CompactEventTimesComponentTest < ActiveSupport::TestCase
     ApplicationController.render(
       component_class.new(
         view_object: {
-          private_mode: false,
           current_time: Time.zone.local(2026, 5, 23, 8, 0, 0),
           configuration: {
             "only_show_events_with_icons" => "true",
