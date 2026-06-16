@@ -55,19 +55,17 @@ class DeviceEvent
     else
       ends_at.in_time_zone(@timezone)
     end
+
+    @start_i = @starts_at.to_i
+    @end_i = @ends_at.to_i
+    @daily_flag = compute_daily
+    @weather_flag = id.to_s.match?(/\A_(?:ha|wk)_weather_/)
+    @weather_hourly_flag = @start_i == @end_i && @weather_flag
+    @weather_ranged_flag = id.to_s.match?(/_(precip|wind|alert)/) && @start_i != @end_i
   end
 
   def daily?
-    length_in_seconds = end_i - start_i
-
-    return false if length_in_seconds == 0
-
-    local_start = @starts_at.in_time_zone(@timezone)
-    local_end = @ends_at.in_time_zone(@timezone)
-    return false unless local_start.hour == 0 && local_start.min == 0 &&
-      local_end.hour == 0 && local_end.min == 0
-
-    true
+    @daily_flag
   end
 
   def omit?
@@ -115,13 +113,9 @@ class DeviceEvent
     identifiers.none? { |identifier| allowed.include?(identifier) }
   end
 
-  def start_i
-    @starts_at.to_i
-  end
+  attr_reader :start_i
 
-  def end_i
-    @ends_at.to_i
-  end
+  attr_reader :end_i
 
   def multi_day?
     (end_i - start_i) > if starts_at.to_time.dst? && !ends_at.to_time.dst?
@@ -132,15 +126,15 @@ class DeviceEvent
   end
 
   def weather?
-    id.to_s.match?(/\A_(?:ha|wk)_weather_/)
+    @weather_flag
   end
 
   def weather_hourly?
-    start_i == end_i && weather?
+    @weather_hourly_flag
   end
 
   def weather_ranged?
-    id.to_s.match?(/_(precip|wind|alert)/) && start_i != end_i
+    @weather_ranged_flag
   end
 
   def full_start_time
@@ -249,6 +243,15 @@ class DeviceEvent
   end
 
   private
+
+  def compute_daily
+    return false if end_i - start_i == 0
+
+    local_start = @starts_at.in_time_zone(@timezone)
+    local_end = @ends_at.in_time_zone(@timezone)
+    local_start.hour == 0 && local_start.min == 0 &&
+      local_end.hour == 0 && local_end.min == 0
+  end
 
   BANNER_SAFE_TAGS = %w[b i em strong u s br p ul ol li a span div h1 h2 h3 h4 h5 h6].freeze
   BANNER_SAFE_ATTRS = %w[href style].freeze
