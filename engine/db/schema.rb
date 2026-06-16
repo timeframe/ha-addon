@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 29) do
+ActiveRecord::Schema[8.1].define(version: 30) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -298,6 +298,24 @@ ActiveRecord::Schema[8.1].define(version: 29) do
     t.index ["claimed_device_id"], name: "index_pending_devices_on_claimed_device_id"
     t.index ["mac_address"], name: "index_pending_devices_on_mac_address", unique: true
     t.index ["pairing_code"], name: "index_pending_devices_on_pairing_code", unique: true
+  end
+
+  create_table "sent_emails", force: :cascade do |t|
+    t.text "bcc"
+    t.text "body"
+    t.text "cc"
+    t.string "content_type"
+    t.datetime "created_at", null: false
+    t.datetime "delivered_at", null: false
+    t.text "from"
+    t.string "mail_action"
+    t.string "mailer"
+    t.string "message_id"
+    t.text "subject"
+    t.text "to"
+    t.datetime "updated_at", null: false
+    t.index ["delivered_at"], name: "index_sent_emails_on_delivered_at"
+    t.index ["mailer"], name: "index_sent_emails_on_mailer"
   end
 
   create_table "uptime_checks", force: :cascade do |t|
