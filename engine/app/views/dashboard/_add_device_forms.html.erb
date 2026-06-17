@@ -34,8 +34,6 @@
           <% end %>
         </div>
         <p class="small text-muted" data-setup-note style="display: none;">On your Boox device, visit <code><%= request.base_url %>/pair</code> to get a pairing code.</p>
-        <p class="small text-muted" data-trmnl-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code. <a href="https://help.trmnl.com/en/articles/12263392-connect-your-device-to-terminus-byos" target="_blank">Learn more</a><br><em>If this device was previously paired with another server, soft reset it first so it re-enters WiFi setup mode.</em></p>
-        <p class="small text-muted" data-trmnl-x-note style="display: none;">During TRMNL WiFi setup, tap Advanced &gt; Custom Server &gt; Yes and enter <code><%= request.base_url %></code> as the API server URL. The device will register and display a pairing code. <a href="https://help.trmnl.com/en/articles/12263392-connect-your-device-to-terminus-byos" target="_blank">Learn more</a><br><em>If this device was previously paired with another server, soft reset it first so it re-enters WiFi setup mode.</em></p>
         <%= submit_tag "Add Device", class: "btn btn-primary w-100", disabled: true, id: "add-device-btn" %>
       <% end %>
     </div>
@@ -49,8 +47,6 @@
   var pairingInput = form.querySelector('[data-field="pairing"]');
   var pairingWrap = form.querySelector('[data-pairing-code]');
   var setupNote = form.querySelector('[data-setup-note]');
-  var trmnlNote = form.querySelector('[data-trmnl-note]');
-  var trmnlXNote = form.querySelector('[data-trmnl-x-note]');
   var btn = document.getElementById('add-device-btn');
 
   function needsPairing() {
@@ -65,8 +61,6 @@
     pairingWrap.style.display = showPairing ? '' : 'none';
     pairingInput.required = showPairing && !isAdmin;
     setupNote.style.display = (modelSelect.value === 'boox_mira_pro' || modelSelect.value === 'boox_mira') ? '' : 'none';
-    trmnlNote.style.display = modelSelect.value === 'trmnl_og' ? '' : 'none';
-    trmnlXNote.style.display = modelSelect.value === 'trmnl_x' ? '' : 'none';
 
     var valid = nameInput.value.trim() !== '' && modelSelect.value !== '';
     if (showPairing && !isAdmin) valid = valid && /^[0-9]{6}$/.test(pairingInput.value);
