@@ -80,6 +80,72 @@ class TwoDayVisualRegressionTest < ApplicationSystemTestCase
     assert_visual_match "two_day_dense"
   end
 
+  test "fits fourteen events when dates are shown" do
+    device = create_two_day_device("fourteen_events")
+    seed_home_assistant_calendar(
+      Array.new(9) do |index|
+        calendar_event(
+          summary: "Planning session #{index + 1} with engineering",
+          starts_at: "2026-03-19T#{format("%02d", 9 + index)}:00:00-05:00",
+          ends_at: "2026-03-19T#{format("%02d", 9 + index)}:30:00-05:00",
+          icon: "alpha-j"
+        )
+      end + Array.new(5) do |index|
+        calendar_event(
+          summary: "Customer call #{index + 1} and notes",
+          starts_at: "2026-03-20T#{format("%02d", 9 + index)}:00:00-05:00",
+          ends_at: "2026-03-20T#{format("%02d", 9 + index)}:30:00-05:00",
+          icon: "alpha-s"
+        )
+      end
+    )
+
+    visit_preview(device)
+
+    assert page.evaluate_script(<<~JS), "Every two_day event list should fit inside its visible container"
+      (function() {
+        return Array.from(document.querySelectorAll('.two-day-events')).every(function(container) {
+          return container.scrollHeight <= container.clientHeight + 1;
+        });
+      })()
+    JS
+    assert_visual_match "two_day_fourteen_events"
+  end
+
+  test "fits fourteen single-line events on a single day" do
+    device = create_two_day_device("single_day_fourteen_single_line")
+    seed_home_assistant_calendar(
+      Array.new(14) do |index|
+        calendar_event(
+          summary: "Event #{format("%02d", index + 1)}",
+          starts_at: "2026-03-19T#{format("%02d", 8 + index)}:00:00-05:00",
+          ends_at: "2026-03-19T#{format("%02d", 8 + index)}:30:00-05:00",
+          icon: "alpha-j"
+        )
+      end
+    )
+
+    visit_preview(device)
+
+    assert page.evaluate_script(<<~JS), "Every two_day event list should fit inside its visible container"
+      (function() {
+        return Array.from(document.querySelectorAll('.two-day-events')).every(function(container) {
+          return container.scrollHeight <= container.clientHeight + 1;
+        });
+      })()
+    JS
+    assert page.evaluate_script(<<~JS), "Single-line two_day event titles should stay on one line"
+      (function() {
+        return Array.from(document.querySelectorAll('.two-day-event-summary')).every(function(summary) {
+          var range = document.createRange();
+          range.selectNodeContents(summary);
+          return range.getClientRects().length <= 1;
+        });
+      })()
+    JS
+    assert_visual_match "two_day_single_day_fourteen_single_line"
+  end
+
   private
 
   def create_two_day_device(name)

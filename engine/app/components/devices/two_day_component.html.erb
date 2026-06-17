@@ -14,12 +14,12 @@
   .two-day-events table { width: 100%; border-collapse: collapse; }
   .two-day-events td { padding: .25rem 0; }
   .two-day-events td:first-child { text-align: left; }
-  .two-day-events td.two-day-event-icon { width: 3rem; text-align: center; font-size: 2.5rem; font-weight: bold; padding: .25rem .25rem .25rem 0; }
+  .two-day-events td.two-day-event-icon { width: 1.33em; text-align: center; font-size: 1em; font-weight: bold; padding: .11em .11em .11em 0; }
   .two-day-event-summary { white-space: normal; overflow-wrap: break-word; word-break: normal; }
   .two-day-events-dense .two-day-event-summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
-  .two-day-events td.two-day-event-time { white-space: nowrap; font-size: 75%; padding: 0 .6rem 0 0; width: 1%; }
+  .two-day-events td.two-day-event-time { white-space: nowrap; font-size: 75%; padding: 0 .4em 0 0; width: 1%; }
   .two-day-events-with-times { font-size: 1.5rem; }
-  .two-day-events-with-times td.two-day-event-icon { width: 2rem; font-size: 1.55rem; }
+  .two-day-events-with-times td.two-day-event-icon { width: 1.33em; font-size: 1em; }
   .two-day-clothing-large { line-height: 1; display: inline-block; }
   .two-day-clothing { text-align: center; font-size: 1.25rem; margin-bottom: .25rem; }
   .two-day-clothing-icon { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: middle; margin-right: .15em; }
@@ -115,9 +115,36 @@
 
 <script>
   (function() {
+    function hasWrappedSummary(container) {
+      return Array.from(container.querySelectorAll('.two-day-event-summary')).some(function(summary) {
+        var style = window.getComputedStyle(summary);
+        var lineHeight = parseFloat(style.lineHeight);
+
+        if (!lineHeight) {
+          lineHeight = parseFloat(style.fontSize) * 1.2;
+        }
+
+        return summary.scrollHeight > lineHeight + 1;
+      });
+    }
+
     function fitTwoDayEvents() {
       document.querySelectorAll('.two-day-events').forEach(function(container) {
         container.classList.remove('two-day-events-dense');
+        container.style.fontSize = '';
+
+        if (container.scrollHeight > container.clientHeight + 1 && hasWrappedSummary(container)) {
+          container.classList.add('two-day-events-dense');
+        }
+
+        var base = parseFloat(window.getComputedStyle(container).fontSize);
+        var size = base;
+        var min = base * 0.5;
+
+        while (container.scrollHeight > container.clientHeight + 1 && size > min) {
+          size *= 0.96;
+          container.style.fontSize = size + 'px';
+        }
 
         if (container.scrollHeight > container.clientHeight + 1) {
           container.classList.add('two-day-events-dense');
