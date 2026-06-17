@@ -54,6 +54,22 @@ class PendingDevice < ActiveRecord::Base
     device
   end
 
+  # Bind a pre-created (unpaired) device to this pending registration by copying
+  # the physical device's real credentials onto it. /api/display resolves devices
+  # strictly by mac_address, so the placeholder mac must be overwritten with the
+  # pending device's real mac_address (plus api_key/friendly_id) for the hardware
+  # to reach the existing record.
+  def link_to!(device)
+    device.update!(
+      mac_address: mac_address,
+      api_key: api_key,
+      friendly_id: friendly_id,
+      confirmed_at: Time.current
+    )
+    update!(claimed_device: device)
+    device
+  end
+
   private
 
   def generate_pairing_code

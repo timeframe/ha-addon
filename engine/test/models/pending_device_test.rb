@@ -55,4 +55,46 @@ class PendingDeviceTest < Minitest::Test
     refute pd.expired?
     refute_equal old_code, pd.pairing_code
   end
+
+  def test_link_to_copies_credentials_onto_existing_device
+    device = test_location.devices.create!(
+      name: "Pre #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    mac = "AA:BB:#{SecureRandom.hex(4).scan(/../).join(":").upcase}"
+    api_key = SecureRandom.hex(16)
+    friendly = SecureRandom.alphanumeric(6).upcase
+    pd = PendingDevice.create!(mac_address: mac, api_key: api_key, friendly_id: friendly)
+
+    pd.link_to!(device)
+    device.reload
+
+    assert_equal mac, device.mac_address
+    assert_equal api_key, device.api_key
+    assert_equal friendly, device.friendly_id
+    assert device.confirmed_at.present?
+  end
+
+  def test_link_to_sets_claimed_device_and_returns_device
+    device = test_location.devices.create!(
+      name: "Pre #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    pd = PendingDevice.create!(
+      mac_address: "CC:DD:#{SecureRandom.hex(4).scan(/../).join(":").upcase}",
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase
+    )
+
+    result = pd.link_to!(device)
+    pd.reload
+
+    assert_equal device.id, result.id
+    assert_equal device.id, pd.claimed_device_id
+    assert pd.claimed?
+  end
 end
