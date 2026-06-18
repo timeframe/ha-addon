@@ -1,5 +1,5 @@
 <div class="fade-bottom"></div>
-<div id="flash-overlay" style="display:none; position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 100"></div>
+<div id="flash-overlay" data-morph-keep style="display:none; position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 100"></div>
 <style>html { font-size: 44px; }</style>
 <%= render Devices::AttributionComponent.new(view_object: @view_object, offset: ".25rem", font_size: "12px") %>
 <%= render Devices::StatusBarComponent.new(view_object: @view_object) %>
@@ -51,7 +51,12 @@
             fetch(deviceUrl + '?layout=false')
               .then(function(r) { return r.text(); })
               .then(function(html) {
-                document.body.innerHTML = html;
+                if (window.tfMorph) {
+                  var parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html').body;
+                  window.tfMorph(document.body, parsed);
+                } else {
+                  document.body.innerHTML = html;
+                }
               })
               .catch(function(e) { console.error('[Timeframe] Refresh failed:', e); });
           }

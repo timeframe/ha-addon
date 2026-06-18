@@ -1,5 +1,5 @@
 <div class="fade-bottom"></div>
-<div id="flash-overlay" style="display:none; position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 100"></div>
+<div id="flash-overlay" data-morph-keep style="display:none; position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 100"></div>
 <style>
   html { font-size: 46px }
   body { padding: 0 2rem }
@@ -74,7 +74,7 @@
 <hr style="margin: 1rem 0 1rem; border: none; background-color: #ccc; color: #ccc; height: 2px;">
 
 <div style="margin: 1rem 0 1.5rem; display: flex; justify-content: space-between; line-height: 2rem; font-size: 2rem;">
-  <div><span id="mira-date"></span></div>
+  <div><span id="mira-date" data-morph-keep></span></div>
   <div style="white-space: nowrap;">
 <%- @view_object[:weather_status].each do |weather_status| -%>
 <span style="margin-left: .5rem;"><i class="mdi mdi-<%= weather_status[:icon] %>" style="<%= " display: inline-block; transform: rotate(#{weather_status[:rotation]}deg);" if weather_status[:rotation] %>"></i><%= weather_status[:label] %></span>
@@ -84,7 +84,7 @@
 
 <% if @view_object.dig(:configuration, "show_current_day") != "false" %>
   <div style="margin: 1rem 0 2rem; display: flex; justify-content: space-between; line-height: .7">
-    <div style="font-size: 5.5rem; margin-left: -.25rem"><span id="mira-clock"></span></div>
+    <div style="font-size: 5.5rem; margin-left: -.25rem"><span id="mira-clock" data-morph-keep></span></div>
     <div style="font-size: 5.5rem; text-align: right;"><%= @view_object[:current_temperature] %></div>
   </div>
 
@@ -165,7 +165,12 @@
             fetch(deviceUrl + '?layout=false')
               .then(function(r) { return r.text(); })
               .then(function(html) {
-                document.body.innerHTML = html;
+                if (window.tfMorph) {
+                  var parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html').body;
+                  window.tfMorph(document.body, parsed);
+                } else {
+                  document.body.innerHTML = html;
+                }
                 window.initMiraClock();
               })
               .catch(function(e) { console.error('[Timeframe] Refresh failed:', e); });

@@ -6,6 +6,46 @@
     <link rel="stylesheet" href="/css/device.css">
     <% if @refresh %>
       <%= javascript_include_tag "actioncable" %>
+      <script>
+        // Patch only the DOM nodes that actually changed instead of replacing the
+        // whole body. A wholesale innerHTML swap forces e-paper panels (Boox) into
+        // a full flashing refresh; morphing in place lets them do a partial,
+        // flash-free update. Scripts are never touched (keeps the live ActionCable
+        // subscription + clock intervals running) and nodes marked
+        // data-morph-keep (the JS-driven clock/date/flash overlay) are preserved.
+        window.tfMorph = function (fromParent, toParent) {
+          var notScript = function (n) { return !(n.nodeType === 1 && n.tagName === "SCRIPT"); };
+          var fromKids = [], toKids = [], n;
+          for (n = fromParent.firstChild; n; n = n.nextSibling) { if (notScript(n)) fromKids.push(n); }
+          for (n = toParent.firstChild; n; n = n.nextSibling) { if (notScript(n)) toKids.push(n); }
+          var max = Math.max(fromKids.length, toKids.length);
+          for (var i = 0; i < max; i++) {
+            var f = fromKids[i], t = toKids[i];
+            if (t === undefined) { if (f && f.parentNode === fromParent) fromParent.removeChild(f); continue; }
+            if (f === undefined) { fromParent.appendChild(t.cloneNode(true)); continue; }
+            if (f.nodeType !== t.nodeType || (f.nodeType === 1 && f.tagName !== t.tagName)) {
+              fromParent.replaceChild(t.cloneNode(true), f);
+              continue;
+            }
+            if (f.nodeType === 3 || f.nodeType === 8) {
+              if (f.nodeValue !== t.nodeValue) f.nodeValue = t.nodeValue;
+              continue;
+            }
+            if (f.nodeType === 1) {
+              if (f.hasAttribute("data-morph-keep")) continue;
+              var ta = t.attributes, k;
+              for (k = 0; k < ta.length; k++) {
+                if (f.getAttribute(ta[k].name) !== ta[k].value) f.setAttribute(ta[k].name, ta[k].value);
+              }
+              for (k = f.attributes.length - 1; k >= 0; k--) {
+                var nm = f.attributes[k].name;
+                if (!t.hasAttribute(nm)) f.removeAttribute(nm);
+              }
+              window.tfMorph(f, t);
+            }
+          }
+        };
+      </script>
     <% end %>
   </head>
 
