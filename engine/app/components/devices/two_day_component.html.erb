@@ -129,14 +129,24 @@
     }
 
     function fitTwoDayEvents() {
-      document.querySelectorAll('.two-day-events').forEach(function(container) {
+      var containers = Array.from(document.querySelectorAll('.two-day-events'));
+      if (!containers.length) return;
+
+      containers.forEach(function(container) {
         container.classList.remove('two-day-events-dense');
         container.style.fontSize = '';
+      });
 
+      containers.forEach(function(container) {
         if (container.scrollHeight > container.clientHeight + 1 && hasWrappedSummary(container)) {
           container.classList.add('two-day-events-dense');
         }
+      });
 
+      // Shrink each day independently to find the smallest font size any day
+      // needs, then apply that single size to every day so they match.
+      var smallest = Infinity;
+      containers.forEach(function(container) {
         var base = parseFloat(window.getComputedStyle(container).fontSize);
         var size = base;
         var min = base * 0.5;
@@ -146,6 +156,16 @@
           container.style.fontSize = size + 'px';
         }
 
+        if (size < smallest) { smallest = size; }
+      });
+
+      if (smallest !== Infinity) {
+        containers.forEach(function(container) {
+          container.style.fontSize = smallest + 'px';
+        });
+      }
+
+      containers.forEach(function(container) {
         if (container.scrollHeight > container.clientHeight + 1) {
           container.classList.add('two-day-events-dense');
         }

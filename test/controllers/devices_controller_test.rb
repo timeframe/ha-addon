@@ -200,6 +200,8 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
       d.confirmed_at = Time.current
       d.confirmation_code = nil
     end
+    # A reconnect is a device that has connected before.
+    device.update_columns(last_connection_at: 2.hours.ago)
     pending = PendingDevice.create!
 
     post repair_account_location_device_path(@account, @location, device),
@@ -210,6 +212,31 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "reconnected"
     pending.reload
     assert_equal device.id, pending.claimed_device_id
+  end
+
+  test "repair pairs a never-paired device by copying the pending credentials" do
+    device = Device.find_or_create_by!(name: "test-pair-new", model: "reterminal_e1001") do |d|
+      d.location = @location
+      d.mac_address = "PLACEHOLDER#{SecureRandom.hex(3)}"
+      d.confirmed_at = Time.current
+      d.confirmation_code = nil
+    end
+    device.update_columns(last_connection_at: nil)
+    real_mac = "AA:#{SecureRandom.hex(5).scan(/../).join(":").upcase}"
+    pending = PendingDevice.create!(
+      mac_address: real_mac,
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase
+    )
+
+    post repair_account_location_device_path(@account, @location, device),
+      params: {pairing_code: pending.pairing_code}
+
+    assert_redirected_to root_path
+    follow_redirect!
+    assert_includes response.body, "paired successfully"
+    assert_equal real_mac, device.reload.mac_address
+    assert_equal device.id, pending.reload.claimed_device_id
   end
 
   test "repair with invalid pairing code shows alert" do

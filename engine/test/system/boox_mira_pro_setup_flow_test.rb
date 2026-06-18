@@ -44,7 +44,7 @@ class BooxMiraProSetupFlowTest < ApplicationSystemTestCase
     assert device.confirmed?, "Device should be confirmed after pairing"
 
     # Step 5: Enable demo mode so the display has content (already on settings page)
-    within(first(".form-check", text: "Demo Mode")) do
+    within(first(".form-check", text: "Demo mode")) do
       find("input[type='checkbox'][role='switch']").check
     end
 

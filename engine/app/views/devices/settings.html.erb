@@ -240,12 +240,12 @@
               <% else %>
                 <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" onchange="this.form.submit()">
               <% end %>
-              <label class="form-check-label">Demo Mode</label>
+              <label class="form-check-label">Demo mode</label>
             </div>
           <% end %>
           <% if defined?(current_user) && current_user&.is_admin? %>
             <%= form_with url: reassign_account_location_device_path(@account, @location, @device), method: :patch, class: "mb-3" do %>
-              <label class="form-label small mb-1" for="reassign-location">Reassign Location</label>
+              <label class="form-label small mb-1" for="reassign-location">Reassign location</label>
               <div class="input-group input-group-sm">
                 <select name="target_location_id" id="reassign-location" class="form-select" required>
                   <% Account.includes(:locations).order(:name).each do |acct| %>

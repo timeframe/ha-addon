@@ -88,6 +88,19 @@ class DeviceTest < Minitest::Test
     assert_in_delta Time.current, device.last_connection_at, 2
   end
 
+  def test_never_paired_predicate
+    device = Device.create!(location: test_location, name: "test_never_paired", model: "visionect_13", visionect_serial: "NP#{SecureRandom.hex(3)}")
+    assert device.never_paired?
+
+    device.update_columns(last_connection_at: Time.current)
+    refute device.never_paired?
+
+    device.update_columns(last_connection_at: nil)
+    PendingDevice.create!(claimed_device: device)
+    device.reload
+    refute device.never_paired?
+  end
+
   def test_encode_visionect_image_stores_4bpp_data
     device = Device.create!(location: test_location, name: "test_encode", model: "visionect_13", visionect_serial: "ENC1")
     # Create a small white PNG via ImageMagick

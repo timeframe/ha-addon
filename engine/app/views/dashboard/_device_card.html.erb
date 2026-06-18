@@ -56,7 +56,24 @@
         <% end %>
       </div>
     </div>
-    <% if device.disconnected? %>
+    <% if device.pairing_code_device? && device.never_paired? %>
+      <div class="card-body py-2 border-top bg-info-subtle">
+        <%= form_with url: repair_account_location_device_path(account, location, device), method: :post, class: "d-flex align-items-center gap-2" do %>
+          <input type="text" name="pairing_code" class="form-control form-control-sm" placeholder="Enter pairing code" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-pair-input="<%= device.id %>" required aria-label="Pairing code for <%= device.name %>">
+          <button type="submit" class="btn btn-primary btn-sm" id="pair-btn-<%= device.id %>" disabled>Pair</button>
+        <% end %>
+      </div>
+      <script>
+        (function() {
+          var input = document.querySelector('[data-pair-input="<%= device.id %>"]');
+          var btn = document.getElementById('pair-btn-<%= device.id %>');
+          if (!input || !btn) return;
+          input.addEventListener('input', function() {
+            btn.disabled = !/^[0-9]{6}$/.test(input.value);
+          });
+        })();
+      </script>
+    <% elsif device.disconnected? %>
       <div class="card-body py-2 border-top bg-warning-subtle">
         <div class="d-flex align-items-center justify-content-between">
           <small class="text-warning-emphasis"><i class="mdi mdi-alert-circle"></i> Disconnected</small>
@@ -75,7 +92,7 @@
       <a href="<%= settings_account_location_device_path(account, location, device) %>" class="btn btn-outline-secondary btn-sm"><i class="mdi mdi-cog me-1"></i>Settings</a>
     </div>
 
-    <% if device.pairing_code_device? %>
+    <% if device.pairing_code_device? && !device.never_paired? %>
       <div class="modal fade" id="repair-device-<%= device.id %>" tabindex="-1" aria-labelledby="repair-device-label-<%= device.id %>" aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">

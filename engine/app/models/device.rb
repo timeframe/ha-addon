@@ -92,6 +92,12 @@ class Device < ActiveRecord::Base
   end
   # :nocov:
 
+  # A device that has never connected and has no claimed pending registration
+  # has never been paired to physical hardware (e.g. created during onboarding).
+  def never_paired?
+    last_connection_at.nil? && pending_device.blank?
+  end
+
   def rotate_session_token!
     update!(session_token: SecureRandom.urlsafe_base64(32))
     session_token
