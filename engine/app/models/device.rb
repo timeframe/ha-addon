@@ -260,7 +260,7 @@ class Device < ActiveRecord::Base
       always_show_today: always_show_today_value,
       hide_today_after_minutes: hide_today_minutes,
       clothing_forecast: (compact_view || active_template == "trmnl") && (one_day || configuration&.dig("clothing_forecast") == "true"),
-      auto_icons: compact_view && configuration&.dig("auto_assign_icons") != "false",
+      auto_icons: (compact_view || active_template == "trmnl") && configuration&.dig("auto_assign_icons") != "false",
       wind_gust_threshold_mph: wind_gust_threshold_mph,
       event_filters: calendar_event_filters
     }
