@@ -152,12 +152,34 @@
   <% if @refresh && @device && @device_url %>
     var knownDeployTime = '<%= DEPLOY_TIME %>';
     var deviceUrl = '<%= @device_url %>';
+    var clientLogUrl = deviceUrl + '/client_log';
+
+    function tfLog(level, message) {
+      try {
+        fetch(clientLogUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ level: level, message: String(message).slice(0, 2000) }),
+          keepalive: true
+        }).catch(function() {});
+      } catch (e) {}
+    }
+    window.tfLog = tfLog;
+
+    window.addEventListener('error', function(e) {
+      tfLog('error', 'js: ' + (e.message || e.type) + (e.filename ? ' @ ' + e.filename + ':' + e.lineno : ''));
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      tfLog('error', 'promise: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    });
+
     var cable = ActionCable.createConsumer();
     cable.subscriptions.create(
       { channel: 'DeviceChannel', device_id: '<%= @device.id %>' },
       {
         received: function(data) {
           if (data.deploy_time && data.deploy_time.toString() !== knownDeployTime) {
+            tfLog('info', 'deploy changed; full page reload');
             window.location.reload();
             return;
           }
@@ -168,12 +190,14 @@
                 if (window.tfMorph) {
                   var parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html').body;
                   window.tfMorph(document.body, parsed);
+                  tfLog('info', 'morph applied');
                 } else {
                   document.body.innerHTML = html;
+                  tfLog('warn', 'tfMorph missing; full innerHTML swap');
                 }
                 window.initMiraClock();
               })
-              .catch(function(e) { console.error('[Timeframe] Refresh failed:', e); });
+              .catch(function(e) { tfLog('error', 'refresh failed: ' + e); console.error('[Timeframe] Refresh failed:', e); });
           }
         }
       }

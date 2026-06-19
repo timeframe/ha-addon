@@ -254,6 +254,21 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Invalid or expired pairing code"
   end
 
+  # --- client_log ---
+
+  test "client_log accepts diagnostic entries and acks" do
+    device = Device.find_or_create_by!(name: "test-client-log", model: "boox_mira_pro") do |d|
+      d.location = @location
+      d.confirmed_at = Time.current
+      d.confirmation_code = nil
+    end
+
+    post client_log_account_location_device_path(@account, @location, device),
+      params: {logs: [{level: "error", message: "js: boom @ a.js:1"}, {level: "info", message: "morph applied"}]}
+
+    assert_response :no_content
+  end
+
   # --- confirmation_image ---
 
   test "confirmation_image returns png for pending device" do

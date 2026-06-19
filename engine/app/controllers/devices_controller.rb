@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 class DevicesController < ApplicationController
-  skip_before_action :authenticate_user!, raise: false, only: [:confirmation_image, :show, :screenshot]
-  before_action :set_account_and_location, except: [:confirmation_image, :show, :screenshot]
-  before_action :authorize_device_access!, only: [:show, :screenshot]
+  skip_before_action :authenticate_user!, raise: false, only: [:confirmation_image, :show, :screenshot, :client_log]
+  before_action :set_account_and_location, except: [:confirmation_image, :show, :screenshot, :client_log]
+  before_action :authorize_device_access!, only: [:show, :screenshot, :client_log]
+  skip_forgery_protection only: :client_log
   layout "device", only: [:show, :preview_frame]
   after_action(only: [:show, :screenshot]) { response.headers["X-Deploy-Time"] = DEPLOY_TIME.to_s }
 
@@ -253,6 +254,14 @@ class DevicesController < ApplicationController
     end
     device.rotate_session_token!
     redirect_back fallback_location: root_path, notice: notice
+  end
+
+  # Best-effort sink for client-side display diagnostics (tfMorph events, JS
+  # errors) posted back from realtime device pages. In the cloud app the
+  # Auditable concern persists each request (with its params) as an AuditLog
+  # via CreateAuditLogJob; self-hosted deployments simply ack it.
+  def client_log
+    head :no_content
   end
 
   def confirmation_image

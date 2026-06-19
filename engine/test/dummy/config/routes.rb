@@ -22,6 +22,7 @@ Rails.application.routes.draw do
         patch :rename, on: :member
         post :regenerate_tokens, on: :member
         post :repair, on: :member
+        post :client_log, on: :member
       end
     end
   end
