@@ -190,7 +190,6 @@
                 if (window.tfMorph) {
                   var parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html').body;
                   window.tfMorph(document.body, parsed);
-                  tfLog('info', 'morph applied');
                 } else {
                   document.body.innerHTML = html;
                   tfLog('warn', 'tfMorph missing; full innerHTML swap');
