@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 31) do
+ActiveRecord::Schema[8.1].define(version: 33) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -261,12 +261,17 @@ ActiveRecord::Schema[8.1].define(version: 31) do
 
   create_table "locations", force: :cascade do |t|
     t.bigint "account_id", null: false
+    t.text "city"
     t.string "country_code", limit: 2
     t.datetime "created_at", null: false
     t.text "ha_sync_api_key"
     t.text "latitude", null: false
+    t.text "line1"
+    t.text "line2"
     t.text "longitude", null: false
     t.text "name", null: false
+    t.text "postal_code"
+    t.text "state"
     t.string "time_zone", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_locations_on_account_id"
@@ -286,6 +291,50 @@ ActiveRecord::Schema[8.1].define(version: 31) do
     t.index ["account_id"], name: "index_microsoft_accounts_on_account_id"
   end
 
+  create_table "order_items", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "order_id", null: false
+    t.bigint "product_id", null: false
+    t.string "product_name", null: false
+    t.integer "quantity", default: 1, null: false
+    t.integer "unit_price_cents", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_order_items_on_order_id"
+    t.index ["product_id"], name: "index_order_items_on_product_id"
+  end
+
+  create_table "orders", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", default: "usd", null: false
+    t.text "email", null: false
+    t.datetime "fulfilled_at"
+    t.datetime "paid_at"
+    t.boolean "payment_method_saved", default: false, null: false
+    t.text "ship_city"
+    t.text "ship_country"
+    t.text "ship_line1"
+    t.text "ship_line2"
+    t.text "ship_name"
+    t.text "ship_postal_code"
+    t.text "ship_state"
+    t.integer "shipping_cents", default: 0, null: false
+    t.string "shipping_method"
+    t.string "status", default: "pending", null: false
+    t.string "stripe_payment_intent_id"
+    t.string "stripe_tax_calculation_id"
+    t.integer "subtotal_cents", default: 0, null: false
+    t.integer "tax_cents", default: 0, null: false
+    t.integer "total_cents", default: 0, null: false
+    t.string "tracking_number"
+    t.datetime "updated_at", null: false
+    t.bigint "user_id"
+    t.index ["account_id"], name: "index_orders_on_account_id"
+    t.index ["status"], name: "index_orders_on_status"
+    t.index ["stripe_payment_intent_id"], name: "index_orders_on_stripe_payment_intent_id", unique: true
+    t.index ["user_id"], name: "index_orders_on_user_id"
+  end
+
   create_table "pending_devices", force: :cascade do |t|
     t.text "api_key"
     t.bigint "claimed_device_id"
@@ -297,6 +346,20 @@ ActiveRecord::Schema[8.1].define(version: 31) do
     t.index ["claimed_device_id"], name: "index_pending_devices_on_claimed_device_id"
     t.index ["mac_address"], name: "index_pending_devices_on_mac_address", unique: true
     t.index ["pairing_code"], name: "index_pending_devices_on_pairing_code", unique: true
+  end
+
+  create_table "products", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.integer "price_cents", null: false
+    t.string "slug", null: false
+    t.string "stripe_tax_code", default: "txcd_99999999", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_products_on_active"
+    t.index ["slug"], name: "index_products_on_slug", unique: true
   end
 
   create_table "sent_emails", force: :cascade do |t|
@@ -363,6 +426,10 @@ ActiveRecord::Schema[8.1].define(version: 31) do
   add_foreign_key "ha_syncs", "locations"
   add_foreign_key "locations", "accounts"
   add_foreign_key "microsoft_accounts", "accounts"
+  add_foreign_key "order_items", "orders", on_delete: :cascade
+  add_foreign_key "order_items", "products"
+  add_foreign_key "orders", "accounts", on_delete: :cascade
+  add_foreign_key "orders", "users", on_delete: :nullify
   add_foreign_key "pending_devices", "devices", column: "claimed_device_id"
   add_foreign_key "weather_syncs", "locations"
 end
