@@ -176,6 +176,12 @@ class Device < ActiveRecord::Base
     !%w[one_day two_day].include?(active_template)
   end
 
+  # The Home Assistant status bar (top-left/right, weather status, now playing)
+  # can be toggled on every template. It defaults ON.
+  def ha_status_enabled?
+    configuration&.dig("show_ha_status") != "false"
+  end
+
   DEFAULT_TEMPERATURE_HOURS = [8, 12, 16, 20].freeze
   COMPACT_TEMPERATURE_HOURS = [8, 12, 16].freeze
 

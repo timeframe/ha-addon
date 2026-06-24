@@ -21,6 +21,10 @@
     <% options << {key: "show_wind_events", on_label: "Wind events", off_label: "Wind events", default_on: true} %>
   <% end %>
   <% options << {key: "show_weather_alerts", on_label: "Weather alerts", off_label: "Weather alerts", default_on: !%w[one_day two_day].include?(device.active_template)} %>
+  <% ha_sync_present = device.location.respond_to?(:ha_sync) && device.location.ha_sync&.synced_at.present? %>
+  <% if ha_sync_present %>
+    <% options << {key: "show_ha_status", on_label: "Home Assistant status", off_label: "Home Assistant status", default_on: true} %>
+  <% end %>
   <% if trmnl_template %>
     <% options << {key: "auto_assign_icons", on_label: "Auto-assign icons based on event title", off_label: "Auto-assign icons based on event title", default_on: true} %>
     <% options << {key: "show_dates", on_label: "Dates", off_label: "Dates", default_on: false} %>

@@ -558,6 +558,18 @@ class DeviceTest < Minitest::Test
     refute Device.new(display_template: "three_day", configuration: {"show_weather_alerts" => "false"}).weather_alerts_enabled?
   end
 
+  def test_ha_status_enabled_defaults_on_and_respects_setting
+    # Defaults on when unset.
+    assert Device.new.ha_status_enabled?
+    assert Device.new(configuration: {"show_ha_status" => "true"}).ha_status_enabled?
+    refute Device.new(configuration: {"show_ha_status" => "false"}).ha_status_enabled?
+
+    # A nil configuration still defaults on.
+    nil_config = Device.new
+    nil_config.configuration = nil
+    assert nil_config.ha_status_enabled?
+  end
+
   def test_wind_gust_threshold_mph_defaults_and_overrides
     device = Device.new
     device.configuration = nil
