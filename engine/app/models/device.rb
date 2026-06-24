@@ -167,6 +167,15 @@ class Device < ActiveRecord::Base
     true
   end
 
+  # Weather alerts can be toggled on every template. They default ON, except for
+  # the compact one-day / two-day layouts which default OFF.
+  def weather_alerts_enabled?
+    value = configuration&.dig("show_weather_alerts")
+    return value != "false" unless value.nil?
+
+    !%w[one_day two_day].include?(active_template)
+  end
+
   DEFAULT_TEMPERATURE_HOURS = [8, 12, 16, 20].freeze
   COMPACT_TEMPERATURE_HOURS = [8, 12, 16].freeze
 
@@ -258,7 +267,7 @@ class Device < ActiveRecord::Base
         end,
       include_precip: include_precip_events,
       include_wind: include_wind_events,
-      include_weather_alerts: include_ranged_weather_events && (include_temperature_events || include_precip_events || include_wind_events),
+      include_weather_alerts: weather_alerts_enabled?,
       include_temperature: include_temperature_events,
       temperature_hours: temperature_hours,
       use_day_names: compact_view, include_daily_weather: !compact_view,

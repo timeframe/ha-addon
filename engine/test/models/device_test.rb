@@ -541,6 +541,23 @@ class DeviceTest < Minitest::Test
     assert device.weather_event_enabled?("show_precip_events")
   end
 
+  def test_weather_alerts_enabled_defaults_per_template_and_overrides
+    # Defaults: on for most templates, off for the compact one/two-day layouts.
+    assert Device.new(display_template: "three_day").weather_alerts_enabled?
+    assert Device.new(display_template: "trmnl").weather_alerts_enabled?
+    refute Device.new(display_template: "one_day").weather_alerts_enabled?
+    refute Device.new(display_template: "two_day").weather_alerts_enabled?
+
+    # A nil configuration falls back to the template default.
+    nil_config = Device.new(display_template: "trmnl")
+    nil_config.configuration = nil
+    assert nil_config.weather_alerts_enabled?
+
+    # Explicit setting wins regardless of template.
+    assert Device.new(display_template: "two_day", configuration: {"show_weather_alerts" => "true"}).weather_alerts_enabled?
+    refute Device.new(display_template: "three_day", configuration: {"show_weather_alerts" => "false"}).weather_alerts_enabled?
+  end
+
   def test_wind_gust_threshold_mph_defaults_and_overrides
     device = Device.new
     device.configuration = nil
