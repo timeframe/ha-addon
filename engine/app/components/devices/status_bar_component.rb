@@ -6,6 +6,6 @@ class Devices::StatusBarComponent < ViewComponent::Base
   end
 
   def render?
-    @view_object[:top_left].any? || @view_object[:top_right].any? || @view_object[:weather_status].any?
+    @view_object[:top_left].any? || @view_object[:top_right].any? || @view_object[:weather_status].any? || @view_object[:battery].present?
   end
 end

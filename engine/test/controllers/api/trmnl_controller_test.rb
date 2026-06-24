@@ -154,6 +154,74 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "display prefers Percent-Charged and records charging state" do
+    device = create_trmnl_device!
+
+    ScreenshotService.stub :capture, "fakeimagedatabase64" do
+      get "/api/display", headers: {
+        "ID" => device.mac_address,
+        "ACCESS_TOKEN" => device.api_key,
+        "Battery-Voltage" => "3.6",
+        "Percent-Charged" => "63",
+        "Battery-Charging" => "1"
+      }
+    end
+
+    device.reload
+    assert_equal 63, device.battery_level
+    assert device.charging?
+    refute device.low_battery_warning?
+  end
+
+  test "display sets low battery warning when discharging below threshold" do
+    device = create_trmnl_device!
+
+    ScreenshotService.stub :capture, "fakeimagedatabase64" do
+      get "/api/display", headers: {
+        "ID" => device.mac_address,
+        "ACCESS_TOKEN" => device.api_key,
+        "Percent-Charged" => "20",
+        "USB-Connected" => "false"
+      }
+    end
+
+    device.reload
+    assert_equal 20, device.battery_level
+    refute device.charging?
+    assert device.low_battery_warning?
+  end
+
+  test "display clears low battery warning once charging" do
+    device = create_trmnl_device!
+    device.update!(low_battery_warning: true)
+
+    ScreenshotService.stub :capture, "fakeimagedatabase64" do
+      get "/api/display", headers: {
+        "ID" => device.mac_address,
+        "ACCESS_TOKEN" => device.api_key,
+        "Percent-Charged" => "20",
+        "Battery-Charging" => "true"
+      }
+    end
+
+    device.reload
+    assert device.charging?
+    refute device.low_battery_warning?
+  end
+
+  test "display clears the offline notification flag on reconnect" do
+    device = create_trmnl_device!
+    device.update!(device_offline_notified_at: 2.days.ago)
+
+    ScreenshotService.stub :capture, "fakeimagedatabase64" do
+      get "/api/display", headers: {"ID" => device.mac_address, "ACCESS_TOKEN" => device.api_key}
+    end
+
+    device.reload
+    assert device.last_connection_at.present?
+    assert_nil device.device_offline_notified_at
+  end
+
   # --- /api/log ---
 
   test "log returns 204 with valid credentials" do

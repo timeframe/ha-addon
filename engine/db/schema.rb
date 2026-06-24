@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 34) do
+ActiveRecord::Schema[8.1].define(version: 36) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -126,11 +126,13 @@ ActiveRecord::Schema[8.1].define(version: 34) do
     t.boolean "billing_exempt", default: false, null: false
     t.text "cached_image"
     t.datetime "cached_image_at"
+    t.boolean "charging", default: false, null: false
     t.jsonb "configuration", default: {}, null: false
     t.string "confirmation_code"
     t.datetime "confirmed_at"
     t.datetime "created_at", null: false
     t.boolean "demo_mode_enabled", default: false, null: false
+    t.datetime "device_offline_notified_at"
     t.text "display_key"
     t.bigint "display_state_crc"
     t.string "display_template", default: "default", null: false
@@ -139,6 +141,7 @@ ActiveRecord::Schema[8.1].define(version: 34) do
     t.string "friendly_id"
     t.datetime "last_connection_at"
     t.bigint "location_id"
+    t.boolean "low_battery_warning", default: false, null: false
     t.text "mac_address"
     t.string "model", null: false
     t.string "name", null: false

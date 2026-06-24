@@ -34,6 +34,24 @@ class DemoDeviceContentTest < Minitest::Test
     end
   end
 
+  def test_battery_omitted_when_full_and_not_charging
+    result = DemoDeviceContent.new.call(timezone: "America/Chicago", battery_level: 100)
+    assert_nil result[:battery]
+  end
+
+  def test_battery_low_warning_included
+    result = DemoDeviceContent.new.call(timezone: "America/Chicago", battery_level: 15)
+    assert result[:battery]
+    assert_equal true, result[:battery][:low]
+    assert_equal 15, result[:battery][:level]
+  end
+
+  def test_battery_charging_included
+    result = DemoDeviceContent.new.call(timezone: "America/Chicago", battery_level: 60, charging: true)
+    assert result[:battery]
+    assert_equal true, result[:battery][:charging]
+  end
+
   def test_day_groups_have_required_structure
     travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
       result = DemoDeviceContent.new.call(timezone: "America/Chicago")

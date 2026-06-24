@@ -8,23 +8,8 @@
         <% end %>
       </h5>
       <% if device.battery_level.present? %>
-        <%
-          bl = device.battery_level.to_i
-          battery_icon = if bl > 90 then "battery"
-            elsif bl > 70 then "battery-80"
-            elsif bl > 50 then "battery-60"
-            elsif bl > 30 then "battery-40"
-            elsif bl > 10 then "battery-20"
-            elsif bl > 0  then "battery-10"
-            else "battery-outline"
-            end
-          battery_color = if bl <= 5 then "text-danger"
-            elsif bl <= 20 then "text-warning"
-            else "text-body-tertiary"
-            end
-        %>
-        <span class="<%= battery_color %>" style="font-size: 0.85rem; white-space: nowrap;">
-          <i class="mdi mdi-<%= battery_icon %>"></i> <%= bl %>%
+        <span class="<%= device.battery_color_class %>" style="font-size: 0.85rem; white-space: nowrap;">
+          <i class="mdi mdi-<%= device.battery_icon %>"></i> <%= device.battery_level.to_i %>%<% if device.battery_status == :charging %> <span style="font-size: 0.7rem;">charging</span><% end %>
         </span>
       <% end %>
     </div>

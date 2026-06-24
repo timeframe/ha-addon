@@ -5,13 +5,16 @@ class DemoDeviceContent
     include_weather_alerts: true, include_temperature: true, temperature_hours: nil,
     use_day_names: false, include_daily_weather: true, weather_row: false, start_time_only: false,
     always_show_today: false, hide_today_after_minutes: 1200, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filters: {},
-    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0)
+    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0, battery_level: nil, charging: false)
     current_time ||= Time.now.utc.in_time_zone(timezone)
 
     out = {}
     out[:current_temperature] = "72°"
     out[:timestamp] = current_time.strftime("%-l:%M %p")
     out[:current_time] = current_time
+
+    battery = Device.battery_descriptor(level: battery_level, charging: charging)
+    out[:battery] = battery if battery && (battery[:low] || battery[:charging])
 
     out[:top_left] = [
       {icon: "door-open", label: "Front Door"}

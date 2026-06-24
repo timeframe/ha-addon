@@ -6,6 +6,13 @@ class Device < ActiveRecord::Base
   REFRESH_RATE_SECONDS = 900
   TWO_DAY_DEFAULT_ROLLOVER_TIME = "18:00"
 
+  # Battery hysteresis: turn the on-screen recharge warning ON at/below
+  # LOW_BATTERY_THRESHOLD and only clear it once charge recovers to/above
+  # LOW_BATTERY_CLEAR_THRESHOLD. The gap prevents the warning from flickering
+  # for a device hovering around the threshold.
+  LOW_BATTERY_THRESHOLD = 25
+  LOW_BATTERY_CLEAR_THRESHOLD = 30
+
   SUPPORTED_MODELS = {
     "visionect_13" => {name: "Visionect Place & Play 13\"", template: "thirteen", width: 1200, height: 1600},
     "boox_mira_pro" => {name: "Boox Mira Pro 25.3\"", template: "mira", width: 1800, height: 3200, realtime: true},
@@ -96,6 +103,94 @@ class Device < ActiveRecord::Base
   # has never been paired to physical hardware (e.g. created during onboarding).
   def never_paired?
     last_connection_at.nil? && pending_device.blank?
+  end
+
+  # Resolves the next value of the persisted low-battery warning flag from a new
+  # reading, applying hysteresis. Charging always clears the warning; a nil
+  # level (no reading) leaves the flag untouched.
+  def self.next_low_battery_warning(level:, charging:, current:)
+    return false if charging
+    return current if level.nil?
+
+    if level <= LOW_BATTERY_THRESHOLD
+      true
+    elsif level >= LOW_BATTERY_CLEAR_THRESHOLD
+      false
+    else
+      current
+    end
+  end
+
+  # Builds the battery indicator hash shown on the device screen from a raw
+  # level/charging pair (used by the admin layout preview, which has no
+  # persisted device). Returns nil when there is no reading.
+  def self.battery_descriptor(level:, charging:)
+    return nil if level.nil?
+
+    new(battery_level: level, charging: charging).battery_descriptor(
+      low: next_low_battery_warning(level: level, charging: charging, current: false)
+    )
+  end
+
+  # Next value for the persisted low_battery_warning flag given a fresh reading.
+  def battery_warning_for(level:, charging:)
+    self.class.next_low_battery_warning(level: level, charging: charging, current: low_battery_warning?)
+  end
+
+  # Coarse battery state used for color coding and screen logic.
+  def battery_status
+    return :unknown if battery_level.nil?
+    return :charging if charging? && battery_level < 100
+
+    level = battery_level.to_i
+    if level <= 10
+      :critical
+    elsif level <= LOW_BATTERY_THRESHOLD
+      :low
+    elsif level <= 50
+      :medium
+    else
+      :good
+    end
+  end
+
+  # Material Design Icons glyph name for the current battery level/charging state.
+  def battery_icon
+    return "battery-unknown" if battery_level.nil?
+
+    level = battery_level.to_i.clamp(0, 100)
+    if charging? && level < 100
+      "battery-charging-#{[(level / 10) * 10, 10].max}"
+    elsif level < 10
+      "battery-outline"
+    elsif level >= 100
+      "battery"
+    else
+      "battery-#{(level / 10) * 10}"
+    end
+  end
+
+  # Bootstrap text color class matching the battery status.
+  def battery_color_class
+    case battery_status
+    when :charging then "text-info"
+    when :critical then "text-danger"
+    when :low then "text-warning"
+    else "text-body-tertiary"
+    end
+  end
+
+  # Battery indicator hash for the device screen status bar, or nil when there
+  # is no reading. `low` defaults to the persisted hysteresis flag.
+  def battery_descriptor(low: low_battery_warning?)
+    return nil if battery_level.nil?
+
+    {
+      level: battery_level.to_i,
+      charging: charging? && battery_level < 100,
+      low: low,
+      icon: battery_icon
+    }
   end
 
   def rotate_session_token!

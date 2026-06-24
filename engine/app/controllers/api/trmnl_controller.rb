@@ -76,7 +76,9 @@ module Api
       update_device_from_headers(@device)
 
       @device.refresh_screenshot!(request.base_url) if @device.cached_image.blank? || params[:force].present?
-      @device.update_column(:last_connection_at, Time.current)
+      # Reconnecting clears any pending "offline for a day" alert so a future
+      # outage re-notifies the owner.
+      @device.update_columns(last_connection_at: Time.current, device_offline_notified_at: nil)
 
       RefreshDeviceScreenshotJob.set(wait: (@device.refresh_rate - 60).seconds).perform_later(@device.id)
 
@@ -135,12 +137,45 @@ module Api
     def update_device_from_headers(device)
       attrs = {}
       attrs[:firmware_version] = request.headers["FW-Version"] if request.headers["FW-Version"].present?
+
+      level = battery_level_from_headers
+      attrs[:battery_level] = level unless level.nil?
+
+      charging = charging_from_headers
+      attrs[:charging] = charging unless charging.nil?
+
+      attrs[:rssi] = request.headers["RSSI"].to_i if request.headers["RSSI"].present?
+
+      effective_level = level.nil? ? device.battery_level : level
+      effective_charging = charging.nil? ? device.charging? : charging
+      attrs[:low_battery_warning] = device.battery_warning_for(level: effective_level, charging: effective_charging)
+
+      device.update_columns(attrs) if attrs.any?
+    end
+
+    # Prefers the firmware's fuel-gauge Percent-Charged reading (TRMNL-X) and
+    # falls back to a linear voltage-to-percent estimate for simpler hardware.
+    def battery_level_from_headers
+      if request.headers["Percent-Charged"].present?
+        return request.headers["Percent-Charged"].to_f.clamp(0, 100).round
+      end
       if request.headers["Battery-Voltage"].present?
         voltage = request.headers["Battery-Voltage"].to_f
-        attrs[:battery_level] = ((voltage - 3.0) / 1.2 * 100).clamp(0, 100).round
+        return ((voltage - 3.0) / 1.2 * 100).clamp(0, 100).round
       end
-      attrs[:rssi] = request.headers["RSSI"].to_i if request.headers["RSSI"].present?
-      device.update_columns(attrs) if attrs.any?
+      nil
+    end
+
+    # Charging if the gauge reports it or USB power is connected. Returns nil
+    # when the device sent no charging-related headers.
+    def charging_from_headers
+      if request.headers["Battery-Charging"].present?
+        return %w[1 true].include?(request.headers["Battery-Charging"].to_s.strip.downcase)
+      end
+      if request.headers["USB-Connected"].present?
+        return request.headers["USB-Connected"].to_s.strip.downcase == "true"
+      end
+      nil
     end
 
     def log_response_status

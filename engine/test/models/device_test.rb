@@ -742,6 +742,117 @@ class DeviceTest < Minitest::Test
     assert_equal 14, result[:day_groups].size
   end
 
+  def test_battery_status
+    device = Device.new(name: "test", model: "trmnl_og")
+    assert_nil device.battery_level
+    assert_equal :unknown, device.battery_status
+
+    device.battery_level = 80
+    device.charging = true
+    assert_equal :charging, device.battery_status
+
+    device.charging = false
+    device.battery_level = 100
+    assert_equal :good, device.battery_status
+
+    device.battery_level = 8
+    assert_equal :critical, device.battery_status
+
+    device.battery_level = 20
+    assert_equal :low, device.battery_status
+
+    device.battery_level = 40
+    assert_equal :medium, device.battery_status
+
+    device.battery_level = 60
+    assert_equal :good, device.battery_status
+  end
+
+  def test_battery_status_full_while_charging_reports_good
+    device = Device.new(name: "test", model: "trmnl_og", battery_level: 100, charging: true)
+    assert_equal :good, device.battery_status
+  end
+
+  def test_battery_icon
+    device = Device.new(name: "test", model: "trmnl_og")
+    assert_equal "battery-unknown", device.battery_icon
+
+    device.battery_level = 45
+    device.charging = true
+    assert_equal "battery-charging-40", device.battery_icon
+
+    device.charging = false
+    device.battery_level = 5
+    assert_equal "battery-outline", device.battery_icon
+
+    device.battery_level = 100
+    assert_equal "battery", device.battery_icon
+
+    device.battery_level = 45
+    assert_equal "battery-40", device.battery_icon
+  end
+
+  def test_battery_color_class
+    device = Device.new(name: "test", model: "trmnl_og", battery_level: 50, charging: true)
+    assert_equal "text-info", device.battery_color_class
+
+    device.charging = false
+    device.battery_level = 5
+    assert_equal "text-danger", device.battery_color_class
+
+    device.battery_level = 20
+    assert_equal "text-warning", device.battery_color_class
+
+    device.battery_level = 80
+    assert_equal "text-body-tertiary", device.battery_color_class
+  end
+
+  def test_next_low_battery_warning_hysteresis
+    # Charging always clears the warning.
+    refute Device.next_low_battery_warning(level: 10, charging: true, current: true)
+    # No reading keeps the previous state.
+    assert Device.next_low_battery_warning(level: nil, charging: false, current: true)
+    refute Device.next_low_battery_warning(level: nil, charging: false, current: false)
+    # At/below the low threshold turns the warning on.
+    assert Device.next_low_battery_warning(level: 25, charging: false, current: false)
+    # At/above the clear threshold turns it off.
+    refute Device.next_low_battery_warning(level: 30, charging: false, current: true)
+    # In the hysteresis band the previous state is held.
+    assert Device.next_low_battery_warning(level: 27, charging: false, current: true)
+    refute Device.next_low_battery_warning(level: 27, charging: false, current: false)
+  end
+
+  def test_battery_warning_for_uses_persisted_flag
+    device = Device.new(name: "test", model: "trmnl_og", low_battery_warning: true)
+    # In the hysteresis band, the current persisted flag is preserved.
+    assert device.battery_warning_for(level: 28, charging: false)
+  end
+
+  def test_battery_descriptor_instance
+    device = Device.new(name: "test", model: "trmnl_og")
+    assert_nil device.battery_descriptor
+
+    device.battery_level = 15
+    device.low_battery_warning = true
+    descriptor = device.battery_descriptor
+    assert_equal 15, descriptor[:level]
+    assert_equal false, descriptor[:charging]
+    assert_equal true, descriptor[:low]
+    assert_equal "battery-10", descriptor[:icon]
+  end
+
+  def test_battery_descriptor_class_helper
+    assert_nil Device.battery_descriptor(level: nil, charging: false)
+
+    low = Device.battery_descriptor(level: 20, charging: false)
+    assert_equal true, low[:low]
+    refute low[:charging]
+
+    charging = Device.battery_descriptor(level: 50, charging: true)
+    assert_equal true, charging[:charging]
+    refute charging[:low]
+  end
+
   private
 
   def generate_test_png

@@ -5,6 +5,9 @@
 <%- end -%>
   </div>
   <div style="float: right; text-align: right;">
+<%- if (battery = @view_object[:battery]) -%>
+<span style="margin-left: .5rem;"><i class="mdi mdi-<%= battery[:icon] %>" style="margin-right: .1rem;"></i><%= battery[:charging] ? "Charging #{battery[:level]}%" : "Recharge battery: #{battery[:level]}%" %></span>
+<%- end -%>
 <%- @view_object[:top_right].each do |top_right| -%>
 <span><i class="mdi mdi-<%= top_right[:icon] %>" style="margin-right: .1rem;"></i><%= top_right[:label] %></span>
 <%- end -%>
