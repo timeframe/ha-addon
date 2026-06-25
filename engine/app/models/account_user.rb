@@ -3,6 +3,7 @@
 class AccountUser < ActiveRecord::Base
   ROLES = %w[owner member].freeze
   OWNER = "owner"
+  MEMBER = "member"
 
   belongs_to :account
   belongs_to :user
