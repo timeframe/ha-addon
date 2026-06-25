@@ -14,7 +14,7 @@ class MdiIconMatcherTest < Minitest::Test
   end
 
   def test_match_custom_mapping_nap
-    assert_equal "power-sleep", MdiIconMatcher.match("Nap")
+    assert_equal "bed", MdiIconMatcher.match("Nap")
   end
 
   def test_match_custom_mapping_playground
@@ -22,11 +22,32 @@ class MdiIconMatcherTest < Minitest::Test
   end
 
   def test_match_custom_mapping_school
-    assert_equal "school", MdiIconMatcher.match("School")
+    assert_equal "bag-personal", MdiIconMatcher.match("School")
   end
 
   def test_match_custom_mapping_grocery
     assert_equal "cart", MdiIconMatcher.match("Grocery pickup")
+  end
+
+  def test_match_custom_mapping_farmers_market
+    assert_equal "tractor", MdiIconMatcher.match("Farmer's market")
+  end
+
+  def test_match_custom_mapping_facetime
+    assert_equal "video-account", MdiIconMatcher.match("Facetime with Grandma")
+  end
+
+  def test_match_custom_mapping_doctor_and_pediatrician
+    assert_equal "stethoscope", MdiIconMatcher.match("Doctor")
+    assert_equal "stethoscope", MdiIconMatcher.match("Pediatrician")
+  end
+
+  def test_match_custom_mapping_birthday_party
+    assert_equal "cake-variant", MdiIconMatcher.match("Jack's birthday party")
+  end
+
+  def test_match_custom_mapping_swim_lessons
+    assert_equal "swim", MdiIconMatcher.match("Swim lessons")
   end
 
   def test_match_climbing_and_mountain_custom_mapping
