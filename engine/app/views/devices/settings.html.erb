@@ -4,7 +4,7 @@
     <% if defined?(current_user) && current_user&.is_admin? %>
       <% admin_user = @device.account&.users&.first %>
       <% if admin_user %>
-        <p class="mb-1"><%= link_to "← Back to #{admin_user.email}", admin_user_path(admin_user), class: "text-decoration-none small" %></p>
+        <p class="mb-1"><%= link_to "← Back to #{admin_user.email}", admin_account_path(@device.account), class: "text-decoration-none small" %></p>
       <% end %>
     <% end %>
     <div class="d-flex align-items-center mb-4">
