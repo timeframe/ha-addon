@@ -151,14 +151,17 @@ class DeviceContent
           end
           periodic_events = periodic_events.reject(&:weather?)
           weather_row_hours = temperature_hours || [8, 12, 16]
-          weather_events = weather_events.select { |e| e.weather_hourly? && weather_row_hours.include?(e.starts_at.hour) }
-          weather_row_data = include_temperature ? weather_events.map { |e| e.as_json(date: date.to_date) } : []
+          # All hourly readings for the day; the clothing forecast needs the 8am
+          # "morning" reading regardless of which hours the weather row displays.
+          hourly_weather_events = weather_events.select(&:weather_hourly?)
+          displayed_weather_events = hourly_weather_events.select { |e| weather_row_hours.include?(e.starts_at.hour) }
+          weather_row_data = include_temperature ? displayed_weather_events.map { |e| e.as_json(date: date.to_date) } : []
 
           if clothing_forecast && clothing_threshold
             daily_weather = events[:daily].find(&:weather?)
             daily_high = daily_weather ? daily_weather.summary.to_i : nil
             clothing_data = clothing_recommendation(
-              weather_events, daily_high,
+              hourly_weather_events, daily_high,
               threshold: clothing_threshold,
               noon_threshold: clothing_noon_threshold,
               shirt_threshold: clothing_shirt_threshold
