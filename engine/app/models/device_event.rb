@@ -35,6 +35,9 @@ class DeviceEvent
     @timeframe_icon = @description&.match(TIMEFRAME_ICON_PATTERN)&.captures&.first
     @icon = @timeframe_icon if @timeframe_icon.present?
 
+    # Keep the underlying (un-overridden) title so auto icon matching can fall
+    # back to it when the overwritten title doesn't match an icon.
+    @base_summary = @summary
     title_override = @description&.match(/timeframe-title:(.+?)(?:\n|$)/)&.captures&.first&.strip
     @summary = title_override if title_override.present?
 
@@ -207,10 +210,8 @@ class DeviceEvent
   end
 
   def summary(as_of = nil)
-    if (1900..2100).cover?(@description.to_s.to_i)
-      counter = Date.today.year - @description.to_s.to_i
-
-      "#{@summary} (#{counter})"
+    if (count = self.class.year_count(@description))
+      "#{@summary} (#{count})"
     elsif multi_day? && as_of
       numerator = (as_of.to_date - @starts_at.to_date).to_i + 1
       denominator = (@ends_at.to_date - @starts_at.to_date).to_i
@@ -220,6 +221,14 @@ class DeviceEvent
     else
       @summary
     end.gsub(/\p{Emoji_Presentation}/, "").strip
+  end
+
+  # The "(N)" count shown after a summary whose description is a 4-digit year
+  # (e.g. a birthday's original year): the current year minus that year, or nil
+  # when the description isn't such a year.
+  def self.year_count(description)
+    year = description.to_s.to_i
+    (1900..2100).cover?(year) ? Date.today.year - year : nil
   end
 
   def as_json(date: nil)
@@ -237,6 +246,7 @@ class DeviceEvent
       weather: weather?,
       attachment_image: attachment_image,
       timeframe_icon: @timeframe_icon,
+      auto_icon_titles: [@summary, @base_summary].compact.uniq,
       precip: precip,
       wind_gust: wind_gust
     }

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 36) do
+ActiveRecord::Schema[8.1].define(version: 38) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -29,6 +29,7 @@ ActiveRecord::Schema[8.1].define(version: 36) do
 
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.jsonb "dismissed_calendar_suggestions", default: [], null: false
     t.text "name", null: false
     t.string "precipitation_unit", default: "in", null: false
     t.string "speed_unit", default: "mph", null: false

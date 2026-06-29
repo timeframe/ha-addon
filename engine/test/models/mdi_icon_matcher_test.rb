@@ -50,6 +50,11 @@ class MdiIconMatcherTest < Minitest::Test
     assert_equal "swim", MdiIconMatcher.match("Swim lessons")
   end
 
+  def test_match_custom_mapping_pool
+    assert_equal "swim", MdiIconMatcher.match("Pool")
+    assert_equal "swim", MdiIconMatcher.match("Pool party")
+  end
+
   def test_match_climbing_and_mountain_custom_mapping
     assert_equal "image-filter-hdr", MdiIconMatcher.match("Rock climbing")
     assert_equal "image-filter-hdr", MdiIconMatcher.match("Mountain summit")

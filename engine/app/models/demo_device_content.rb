@@ -84,7 +84,12 @@ class DemoDeviceContent
       out[:day_groups].each do |day|
         (day[:daily] + day[:periodic]).each do |event|
           next if event[:weather]
-          matched = MdiIconMatcher.match(event[:summary])
+          titles = event[:auto_icon_titles].presence || [event[:summary]]
+          matched = nil
+          titles.each do |title|
+            matched = MdiIconMatcher.match(title)
+            break if matched
+          end
           if matched
             event[:icon_class] = matched
             event[:icon_text] = nil

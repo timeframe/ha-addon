@@ -506,6 +506,37 @@ class DeviceEventTest < Minitest::Test
     assert_equal("Custom Title", event.as_json[:summary])
   end
 
+  def test_auto_icon_titles_include_override_then_underlying
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "Original Title",
+      description: "timeframe-title:Custom Title"
+    )
+
+    assert_equal(["Custom Title", "Original Title"], event.as_json[:auto_icon_titles])
+  end
+
+  def test_auto_icon_titles_without_override
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "Original Title"
+    )
+
+    assert_equal(["Original Title"], event.as_json[:auto_icon_titles])
+  end
+
+  def test_year_count_for_a_year_description
+    assert_equal Date.today.year - 1990, DeviceEvent.year_count("1990")
+  end
+
+  def test_year_count_nil_for_non_year_description
+    assert_nil DeviceEvent.year_count("just a note")
+    assert_nil DeviceEvent.year_count(nil)
+    assert_nil DeviceEvent.year_count("1850")
+  end
+
   def test_title_override_not_applied_without_tag
     event = DeviceEvent.new(
       starts_at: 1621288800,
