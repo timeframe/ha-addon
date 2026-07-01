@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 41) do
+ActiveRecord::Schema[8.1].define(version: 43) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -42,7 +42,6 @@ ActiveRecord::Schema[8.1].define(version: 41) do
     t.string "subscription_status"
     t.datetime "support_access_at"
     t.string "temperature_unit", default: "F", null: false
-    t.date "trial_ends_on"
     t.datetime "updated_at", null: false
     t.index ["stripe_customer_id"], name: "index_accounts_on_stripe_customer_id", unique: true
     t.index ["stripe_subscription_id"], name: "index_accounts_on_stripe_subscription_id", unique: true
@@ -148,9 +147,11 @@ ActiveRecord::Schema[8.1].define(version: 41) do
     t.text "mac_address"
     t.string "model", null: false
     t.string "name", null: false
+    t.datetime "purchased_at"
     t.integer "rssi"
     t.text "session_token"
     t.float "temperature"
+    t.date "trial_ends_on"
     t.datetime "updated_at", null: false
     t.text "visionect_serial"
     t.index ["api_key"], name: "index_devices_on_api_key", unique: true
