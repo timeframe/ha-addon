@@ -33,11 +33,14 @@ class UptimeCheck < ActiveRecord::Base
   end
 
   # Records (or updates) the heartbeat for the current minute. Idempotent: the
-  # unique index on recorded_at means at most one row exists per minute.
-  def self.record!(healthy: true, at: Time.current)
+  # unique index on recorded_at means at most one row exists per minute. The
+  # optional status snapshot (e.g. SystemStatus.compute) is stored so the admin
+  # status page can show which checks were failing for an unhealthy minute.
+  def self.record!(healthy: true, status: nil, at: Time.current)
     minute = at.utc.beginning_of_minute
     check = find_or_initialize_by(recorded_at: minute)
     check.healthy = healthy
+    check.status_data = status if status
     check.save!
     check
   rescue ActiveRecord::RecordNotUnique

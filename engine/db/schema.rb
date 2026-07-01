@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 38) do
+ActiveRecord::Schema[8.1].define(version: 41) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -86,6 +86,7 @@ ActiveRecord::Schema[8.1].define(version: 38) do
     t.string "location"
     t.string "provider_etag"
     t.string "provider_url"
+    t.string "recurrence_rule"
     t.string "start_timezone"
     t.datetime "starts_at", null: false
     t.string "title"
@@ -107,6 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 38) do
     t.datetime "last_synced_at"
     t.bigint "microsoft_account_id"
     t.string "name", null: false
+    t.boolean "provider_deletable", default: true, null: false
     t.string "source_type", null: false
     t.datetime "updated_at", null: false
     t.string "url"
@@ -389,6 +391,7 @@ ActiveRecord::Schema[8.1].define(version: 38) do
     t.datetime "created_at", null: false
     t.boolean "healthy", default: true, null: false
     t.datetime "recorded_at", null: false
+    t.jsonb "status_data"
     t.datetime "updated_at", null: false
     t.index ["recorded_at"], name: "index_uptime_checks_on_recorded_at", unique: true
   end

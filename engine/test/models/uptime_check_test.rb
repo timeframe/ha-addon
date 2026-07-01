@@ -27,6 +27,14 @@ class UptimeCheckTest < Minitest::Test
     end
   end
 
+  def test_record_stores_status_snapshot
+    travel_to Time.utc(2026, 6, 12, 10, 30, 45) do
+      check = UptimeCheck.record!(healthy: false, status: {"status" => "error", "checks" => {"job_queue" => {"status" => "error"}}})
+      assert_equal "error", check.status_data["status"]
+      assert_equal "error", check.reload.status_data.dig("checks", "job_queue", "status")
+    end
+  end
+
   def test_record_is_idempotent_within_a_minute
     travel_to Time.utc(2026, 6, 12, 10, 30, 10) do
       UptimeCheck.record!(healthy: true)

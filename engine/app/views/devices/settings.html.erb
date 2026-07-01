@@ -226,6 +226,15 @@
       })();
     </script>
 
+    <%# Device-scoped calendar creation modal + event card (cloud only). Rendered
+        outside the options form so their own forms aren't nested. %>
+    <% if lookup_context.template_exists?("create_calendar_modal", "devices", true) %>
+      <%= render "devices/create_calendar_modal" %>
+    <% end %>
+    <% if lookup_context.template_exists?("event_icons", "devices", true) %>
+      <%= render "devices/event_icons" %>
+    <% end %>
+
     <% admin_context = !defined?(current_user) || current_user&.is_admin? %>
     <% if admin_context %>
       <div class="card mb-3 border-warning">
@@ -253,9 +262,9 @@
                     <optgroup label="<%= acct.name %>">
                       <% acct.locations.order(:name).each do |loc| %>
                         <% if loc.id == @device.location_id %>
-                          <option value="<%= loc.id %>" selected><%= loc.name %> (current)</option>
+                          <option value="<%= loc.id %>" selected><%= loc.display_address %> (current)</option>
                         <% else %>
-                          <option value="<%= loc.id %>"><%= loc.name %></option>
+                          <option value="<%= loc.id %>"><%= loc.display_address %></option>
                         <% end %>
                       <% end %>
                     </optgroup>
