@@ -23,7 +23,11 @@
     <div class="card-body p-0">
       <% aspect_ratio = (device.display_height.to_f / device.display_width * 100).round(2) %>
       <div style="position: relative; width: 100%; padding-bottom: <%= aspect_ratio %>%; overflow: hidden; background: white;">
-        <% if device.cached_image.present? %>
+        <% if !local_assigns.fetch(:show_preview, true) %>
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+            <span class="text-muted"><i class="mdi mdi-lock-outline me-1"></i>Support access not granted</span>
+          </div>
+        <% elsif device.cached_image.present? %>
           <% if device.reterminal_e1003? || device.trmnl_x? %>
             <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; transform: translate(-50%, -50%) rotate(-90deg);">
           <% elsif device.portrait? %>
