@@ -7,11 +7,18 @@
           <span class="badge text-bg-secondary align-middle" style="font-size: 0.6rem;">ID #<%= device.id %></span>
         <% end %>
       </h5>
-      <% if device.battery_level.present? %>
-        <span class="<%= device.battery_color_class %>" style="font-size: 0.85rem; white-space: nowrap;">
-          <i class="mdi mdi-<%= device.battery_icon %>"></i> <%= device.battery_level.to_i %>%<% if device.battery_status == :charging %> <span style="font-size: 0.7rem;">charging</span><% end %>
-        </span>
-      <% end %>
+      <div class="d-flex align-items-center gap-2">
+        <% if device.respond_to?(:trial_active?) && device.trial_active? %>
+          <span class="badge text-bg-info" style="font-size: 0.7rem; white-space: nowrap;" title="Free trial ends <%= device.trial_ends_on.strftime("%b %-d, %Y") %>">
+            <%= device.trial_days_remaining %> day<%= "s" unless device.trial_days_remaining == 1 %> left
+          </span>
+        <% end %>
+        <% if device.battery_level.present? %>
+          <span class="<%= device.battery_color_class %>" style="font-size: 0.85rem; white-space: nowrap;">
+            <i class="mdi mdi-<%= device.battery_icon %>"></i> <%= device.battery_level.to_i %>%<% if device.battery_status == :charging %> <span style="font-size: 0.7rem;">charging</span><% end %>
+          </span>
+        <% end %>
+      </div>
     </div>
     <div class="card-body p-0">
       <% aspect_ratio = (device.display_height.to_f / device.display_width * 100).round(2) %>

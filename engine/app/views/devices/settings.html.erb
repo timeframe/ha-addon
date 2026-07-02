@@ -1,4 +1,8 @@
 <% content_for :title, @device.name %>
+<%# An admin viewing an account they don't belong to only sees calendar-derived
+    content (device preview/screenshot, upcoming events) when the account has
+    granted support access. Account members always see their own data. %>
+<% hide_support_content = defined?(current_user) && current_user.present? && !@account.users.include?(current_user) && !@account.support_access? %>
 <div class="row justify-content-center">
   <div class="col-md-8 col-lg-6">
     <% if defined?(current_user) && current_user&.is_admin? %>
@@ -18,6 +22,7 @@
     </div>
 
     <%# Preview + Screenshot %>
+    <% unless hide_support_content %>
     <% has_screenshot = @device.screenshotted? && @device.cached_image.present? %>
     <div class="card mb-3">
       <div class="card-header preview-tabs-header">
@@ -165,6 +170,7 @@
         </script>
       <% end %>
     </div>
+    <% end %>
 
     <%# Options %>
     <div class="card mb-3">
@@ -232,7 +238,13 @@
       <%= render "devices/create_calendar_modal" %>
     <% end %>
     <% if lookup_context.template_exists?("event_icons", "devices", true) %>
-      <%= render "devices/event_icons" %>
+      <% if hide_support_content %>
+        <div class="card mb-3">
+          <div class="card-body text-muted">User has not provided support access.</div>
+        </div>
+      <% else %>
+        <%= render "devices/event_icons" %>
+      <% end %>
     <% end %>
 
     <% admin_context = !defined?(current_user) || current_user&.is_admin? %>
@@ -274,14 +286,132 @@
               </div>
               <p class="form-text mb-0">Move this device to a different account or location.</p>
             <% end %>
-            <div class="d-flex gap-2">
-              <% if respond_to?(:admin_device_path) %>
-                <%= link_to "Audit Log", admin_device_path(@device), class: "btn btn-outline-secondary btn-sm" %>
+            <div class="d-flex flex-wrap gap-2">
+              <% if respond_to?(:export_snapshot_admin_device_path) %>
+                <%= link_to "Export Debug Snapshot", export_snapshot_admin_device_path(@device), class: "btn btn-outline-secondary btn-sm" %>
               <% end %>
               <% if @device.screenshotted? %>
                 <a href="<%= screenshot_account_location_device_path(@account, @location, @device) %>" class="btn btn-outline-secondary btn-sm">Screenshot</a>
               <% end %>
             </div>
+
+            <% if respond_to?(:admin_device_path) %>
+              <%# Billing %>
+              <div class="mt-3">
+                <label class="form-label small mb-1"><strong>Billing</strong></label>
+                <div class="text-muted small mb-2">
+                  <% if @device.billing_exempt? %>
+                    Exempt from billing — not counted toward the account's subscription.
+                  <% elsif @device.purchased? %>
+                    Purchased — billed on the account's subscription.
+                  <% elsif @device.trial_active? %>
+                    On free trial — <%= @device.trial_days_remaining %> day<%= "s" unless @device.trial_days_remaining == 1 %> left (ends <%= @device.trial_ends_on.strftime("%b %-d, %Y") %>).
+                  <% elsif @device.trial_ends_on.present? %>
+                    Trial ended <%= @device.trial_ends_on.strftime("%b %-d, %Y") %> — not purchased.
+                  <% else %>
+                    Not purchased.
+                  <% end %>
+                </div>
+                <%= form_with url: admin_device_path(@device), method: :patch, class: "d-flex gap-1 mb-2" do |f| %>
+                  <%= f.date_field "device[trial_ends_on]", value: @device.trial_ends_on, class: "form-control form-control-sm" %>
+                  <%= f.submit "Save", class: "btn btn-sm btn-outline-secondary flex-shrink-0" %>
+                <% end %>
+                <div class="d-flex flex-wrap gap-2">
+                  <%= button_to(
+                    @device.purchased? ? "Mark not purchased" : "Mark purchased",
+                    admin_device_path(@device),
+                    method: :patch,
+                    params: {device: {purchased: @device.purchased? ? "0" : "1"}},
+                    class: "btn btn-sm #{@device.purchased? ? "btn-outline-warning" : "btn-outline-success"}"
+                  ) %>
+                  <%= button_to(
+                    @device.billing_exempt? ? "Remove exemption" : "Exempt from billing",
+                    admin_device_path(@device),
+                    method: :patch,
+                    params: {device: {billing_exempt: @device.billing_exempt? ? "0" : "1"}},
+                    class: "btn btn-sm #{@device.billing_exempt? ? "btn-outline-warning" : "btn-outline-success"}"
+                  ) %>
+                </div>
+              </div>
+
+              <%# Battery %>
+              <div class="mt-3">
+                <label class="form-label small mb-1"><strong>Battery</strong></label>
+                <div>
+                  <% if @device.battery_level.present? %>
+                    <span class="<%= @device.battery_color_class %> fs-5">
+                      <i class="mdi mdi-<%= @device.battery_icon %>"></i>
+                      <%= @device.battery_level.to_i %>%
+                    </span>
+                    <span class="badge text-bg-secondary text-uppercase ms-1"><%= @device.battery_status %></span>
+                    <% if @device.charging? %><span class="badge text-bg-info ms-1">Charging</span><% end %>
+                    <% if @device.low_battery_warning? %><span class="badge text-bg-warning ms-1">Recharge warning</span><% end %>
+                  <% else %>
+                    <span class="text-muted">No battery reading yet.</span>
+                  <% end %>
+                </div>
+                <div class="text-muted small mt-1">
+                  Last connected:
+                  <% if @device.last_connection_at %>
+                    <%= @device.last_connection_at.in_time_zone(@timezone).strftime("%b %-d %-l:%M %p") %>
+                  <% else %>
+                    never
+                  <% end %>
+                  <% if @device.rssi.present? %> &middot; WiFi RSSI <%= @device.rssi %> dBm<% end %>
+                </div>
+              </div>
+
+              <%# Audit Log %>
+              <div class="mt-3">
+                <label class="form-label small mb-1"><strong>Audit Log</strong></label>
+                <% if @audit_logs&.any? %>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Event</th>
+                          <th>Result</th>
+                          <th>Cache Age</th>
+                          <th>Duration</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% @audit_logs.each do |log| %>
+                          <tr>
+                            <td class="text-nowrap"><%= log.created_at.in_time_zone(@timezone).strftime("%b %-d %-l:%M:%S%P") %></td>
+                            <td><code><%= log.event_type %></code></td>
+                            <td>
+                              <% if log.result_type == "error" %>
+                                <span class="text-danger fw-bold">error</span>
+                              <% elsif log.result_type %>
+                                <%= log.result_type %>
+                              <% end %>
+                            </td>
+                            <td>
+                              <% if log.metadata&.dig("cache_age_seconds") %>
+                                <% age = log.metadata["cache_age_seconds"] %>
+                                <span class="<%= age > 900 ? "text-danger fw-bold" : "" %>">
+                                  <%= age %>s
+                                  <% if age > 60 %><small class="text-muted">(<%= (age / 60.0).round(1) %>m)</small><% end %>
+                                </span>
+                              <% end %>
+                            </td>
+                            <td>
+                              <% if log.metadata&.dig("duration_ms") %>
+                                <%= log.metadata["duration_ms"] %>ms
+                              <% end %>
+                            </td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% else %>
+                  <p class="text-muted small mb-0">No audit log entries yet.</p>
+                <% end %>
+              </div>
+            <% end %>
           <% end %>
         </div>
       </div>

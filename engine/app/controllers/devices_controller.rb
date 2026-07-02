@@ -4,6 +4,7 @@ class DevicesController < ApplicationController
   skip_before_action :authenticate_user!, raise: false, only: [:confirmation_image, :show, :screenshot, :client_log]
   before_action :set_account_and_location, except: [:confirmation_image, :show, :screenshot, :client_log]
   before_action :authorize_device_access!, only: [:show, :screenshot, :client_log]
+  before_action :require_support_access!, only: [:show, :preview_frame, :screenshot]
   skip_forgery_protection only: :client_log
   layout "device", only: [:show, :preview_frame]
   after_action(only: [:show, :screenshot]) { response.headers["X-Deploy-Time"] = DEPLOY_TIME.to_s }
@@ -64,6 +65,10 @@ class DevicesController < ApplicationController
     @device = @location.devices.find(params[:id])
     @preview_tz = @device.location&.time_zone.presence || "America/Denver"
     @preview_now = Time.current.in_time_zone(@preview_tz)
+    if current_user&.is_admin? && defined?(AuditLog)
+      @timezone = @device.location&.time_zone || "UTC"
+      @audit_logs = AuditLog.where(subject: @device).recent.limit(200)
+    end
   end
 
   def screenshot
@@ -346,6 +351,28 @@ class DevicesController < ApplicationController
     end
 
     render plain: "Not authorized", status: :unauthorized
+  end
+
+  # Gate calendar-derived device content (live display, preview, screenshot) so
+  # that an admin viewing an account they don't belong to can only see it when
+  # the account has granted support access. The physical device (authenticating
+  # with its own session token) and account members are always allowed.
+  def require_support_access!
+    device = @device || @location&.devices&.find_by(id: params[:id])
+    return unless device
+
+    account = device.account
+    return unless account
+
+    if session[:device_session_token].present? && device.session_token.present? &&
+        ActiveSupport::SecurityUtils.secure_compare(device.session_token, session[:device_session_token])
+      return
+    end
+
+    return if current_user && account.users.exists?(id: current_user.id)
+    return if account.support_access?
+
+    render plain: "Support access not granted", status: :forbidden
   end
 
   def build_device_component(template, view_object, refresh: false, device: nil)
