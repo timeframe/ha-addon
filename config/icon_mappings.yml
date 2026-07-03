@@ -74,3 +74,186 @@ teeth: "tooth"
 dressed: "tshirt-crew"
 hamper: "hanger"
 backpack: "bag-personal"
+
+# Holidays (Google built-in holiday calendars).
+# Only distinctive, holiday-specific keywords are used here so these mappings
+# never fire on ordinary events. Generic words that also appear in holiday
+# names (day, eve, good, friday, labor, memorial, king, queen, new, year) are
+# deliberately omitted.
+
+# Christmas / winter
+christmas: "pine-tree"
+xmas: "pine-tree"
+noel: "pine-tree"
+yule: "pine-tree"
+yuletide: "pine-tree"
+nativity: "pine-tree"
+santa: "gift"
+advent: "candle"
+epiphany: "star"
+candlemas: "candle"
+
+# New Year (Hogmanay is Scotland's; "year" covers New Year's Day/Eve)
+hogmanay: "firework"
+year: "firework"
+
+# Halloween / autumn
+halloween: "halloween"
+samhain: "halloween"
+pumpkin: "pumpkin"
+thanksgiving: "turkey"
+
+# Easter / Christian observances
+easter: "egg-easter"
+lent: "cross"
+pentecost: "cross"
+ascension: "church"
+assumption: "church"
+michaelmas: "church"
+
+# Valentine's Day
+valentine: "heart"
+
+# St. Patrick's Day
+patrick: "clover"
+shamrock: "clover"
+
+# Jewish holidays
+hanukkah: "menorah"
+chanukah: "menorah"
+hanukah: "menorah"
+passover: "star-david"
+pesach: "star-david"
+purim: "star-david"
+sukkot: "star-david"
+shavuot: "star-david"
+rosh: "star-david"
+hashanah: "star-david"
+yom: "star-david"
+kippur: "star-david"
+
+# Islamic holidays
+ramadan: "star-crescent"
+ramzan: "star-crescent"
+eid: "mosque"
+hajj: "mosque"
+muharram: "mosque"
+mawlid: "mosque"
+ashura: "mosque"
+
+# Hindu / Indian holidays
+diwali: "candle"
+deepavali: "candle"
+navratri: "candle"
+dussehra: "candle"
+ganesh: "candle"
+holi: "flower"
+onam: "flower"
+raksha: "ribbon"
+rakhi: "ribbon"
+pongal: "sprout"
+
+# Buddhist holidays
+vesak: "candle"
+buddha: "candle"
+
+# Kwanzaa
+kwanzaa: "candelabra"
+
+# East Asian lunar new year
+lunar: "firework"
+
+# Carnival / Mardi Gras
+mardi: "party-popper"
+gras: "party-popper"
+carnival: "party-popper"
+carnaval: "party-popper"
+
+# Oktoberfest
+oktoberfest: "beer"
+
+# Cinco de Mayo
+cinco: "party-popper"
+
+# Earth Day
+earth: "earth"
+
+# Remembrance / veterans / military
+remembrance: "flower-poppy"
+armistice: "flower-poppy"
+anzac: "flower-poppy"
+poppy: "flower-poppy"
+veterans: "medal"
+
+# Guy Fawkes / Bonfire Night
+fawkes: "guy-fawkes-mask"
+bonfire: "campfire"
+
+# Civil rights / observances
+juneteenth: "flag"
+luther: "peace"
+indigenous: "feather"
+aboriginal: "feather"
+
+# National / independence days
+independence: "flag"
+republic: "flag"
+constitution: "flag"
+federation: "flag"
+sovereignty: "flag"
+unification: "flag"
+nationhood: "flag"
+presidents: "flag"
+washington: "flag"
+columbus: "flag"
+
+# Royal occasions
+coronation: "crown"
+jubilee: "crown"
+
+# Spanish holiday names (Google holiday calendars for Spain, Mexico, and
+# Latin America). Only accent-free tokens are used because the matcher strips
+# accents (ñ/á/é/í/ó/ú), which would split accented words apart.
+
+# Navidad / winter
+navidad: "pine-tree"
+nochebuena: "pine-tree"
+posadas: "pine-tree"
+nochevieja: "firework"
+
+# Reyes Magos / Epiphany
+reyes: "crown"
+magos: "crown"
+
+# Pascua / Semana Santa
+pascua: "egg-easter"
+ceniza: "cross"
+corpus: "cross"
+
+# Día de (los) Muertos / Difuntos
+muertos: "skull"
+muerto: "skull"
+difuntos: "skull"
+
+# San Valentín / Día de los Enamorados
+enamorados: "heart"
+valent: "heart"
+
+# Día de la Madre
+madre: "heart"
+
+# Día de Acción de Gracias
+gracias: "turkey"
+
+# Marian / saints' feast days
+virgen: "church"
+guadalupe: "church"
+inmaculada: "church"
+candelaria: "candle"
+
+# National / civic days
+independencia: "flag"
+hispanidad: "flag"
+bandera: "flag"
+raza: "flag"
+malvinas: "medal"
