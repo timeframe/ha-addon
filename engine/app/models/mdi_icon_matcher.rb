@@ -8,6 +8,12 @@ class MdiIconMatcher
   MAPPINGS_PATH = File.join(APP_ROOT, "config", "icon_mappings.yml")
   META_PATH = File.join(APP_ROOT, "engine", "public", "data", "mdi_meta.json")
 
+  # Curated multi-word phrase overrides matched against the whole title (before
+  # tokenized matching) for holidays/phrases that don't map to a single token.
+  CURATED_PHRASES = [
+    [/\b(independence day|fourth of july|4th of july)\b/, "firework"]
+  ].freeze
+
   class << self
     def instance
       @instance ||= new
@@ -37,6 +43,10 @@ class MdiIconMatcher
   # Returns icon name (without mdi- prefix) or nil.
   def match(text)
     return nil if text.nil? || text.strip.empty?
+
+    # 0. Curated phrase overrides (e.g. "Independence Day" -> firework).
+    lower = text.downcase
+    CURATED_PHRASES.each { |pattern, icon| return icon if lower.match?(pattern) }
 
     words = tokenize(text)
 

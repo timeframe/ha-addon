@@ -13,6 +13,12 @@ class MdiIconMatcherTest < Minitest::Test
     assert_equal "church", MdiIconMatcher.match("Church")
   end
 
+  def test_match_curated_phrase_independence_day
+    assert_equal "firework", MdiIconMatcher.match("Independence Day")
+    assert_equal "firework", MdiIconMatcher.match("4th of July BBQ")
+    assert_equal "firework", MdiIconMatcher.match("Fourth of July")
+  end
+
   def test_match_custom_mapping_nap
     assert_equal "bed", MdiIconMatcher.match("Nap")
   end
@@ -27,6 +33,11 @@ class MdiIconMatcherTest < Minitest::Test
 
   def test_match_custom_mapping_grocery
     assert_equal "cart", MdiIconMatcher.match("Grocery pickup")
+  end
+
+  def test_match_custom_mapping_dog_uses_dog_side
+    assert_equal "dog-side", MdiIconMatcher.match("Dog")
+    assert_equal "dog-side", MdiIconMatcher.match("Dog park")
   end
 
   def test_match_custom_mapping_farmers_market

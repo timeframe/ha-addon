@@ -36,6 +36,9 @@
     <% end %>
     <% options << {key: "show_icons", on_label: "Icons", off_label: "Icons", default_on: true} %>
     <% options << {key: "auto_assign_icons", on_label: "Auto-assign icons based on event title", off_label: "Auto-assign icons based on event title", default_on: true, depends_on: "show_icons"} %>
+    <% if device.active_template == "three_day" %>
+      <% options << {key: "show_dates", on_label: "Dates", off_label: "Dates", default_on: true} %>
+    <% end %>
     <% if device.active_template == "two_day" %>
       <% options << {key: "show_dates", on_label: "Dates", off_label: "Dates", default_on: true} %>
       <% options << {key: "show_event_times", on_label: "Event times", off_label: "Event times", default_on: true} %>

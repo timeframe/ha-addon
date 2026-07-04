@@ -210,7 +210,9 @@ class DeviceEvent
   end
 
   def summary(as_of = nil)
-    if (count = self.class.year_count(@description))
+    if (rendered = self.class.title_with_year_count(@summary))
+      rendered
+    elsif (count = self.class.year_count(@description))
       "#{@summary} (#{count})"
     elsif multi_day? && as_of
       numerator = (as_of.to_date - @starts_at.to_date).to_i + 1
@@ -229,6 +231,19 @@ class DeviceEvent
   def self.year_count(description)
     year = description.to_s.to_i
     (1900..2100).cover?(year) ? Date.today.year - year : nil
+  end
+
+  # Replaces a trailing "(YYYY)" year in a title (e.g. a birthday/anniversary
+  # stored as "Ada (1990)") with the number of years elapsed, giving
+  # "Ada (35)". Returns nil when the title has no such trailing 4-digit year.
+  def self.title_with_year_count(title)
+    match = title.to_s.match(/\A(.*?)\s*\((\d{4})\)\z/)
+    return nil unless match
+
+    year = match[2].to_i
+    return nil unless (1900..2100).cover?(year)
+
+    "#{match[1]} (#{Date.today.year - year})"
   end
 
   def as_json(date: nil)

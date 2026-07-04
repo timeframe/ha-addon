@@ -537,6 +537,32 @@ class DeviceEventTest < Minitest::Test
     assert_nil DeviceEvent.year_count("1850")
   end
 
+  def test_summary_renders_trailing_year_in_title_as_a_count
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "Ada (1990)"
+    )
+
+    assert_equal "Ada (#{Date.today.year - 1990})", event.summary
+    assert_equal "Ada (#{Date.today.year - 1990})", event.as_json[:summary]
+  end
+
+  def test_summary_leaves_non_year_parentheticals_alone
+    unchanged = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400, summary: "Team (12)")
+    assert_equal "Team (12)", unchanged.summary
+
+    out_of_range = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400, summary: "Old (1850)")
+    assert_equal "Old (1850)", out_of_range.summary
+  end
+
+  def test_title_with_year_count_helper
+    assert_equal "Ada (#{Date.today.year - 2000})", DeviceEvent.title_with_year_count("Ada (2000)")
+    assert_nil DeviceEvent.title_with_year_count("No year here")
+    assert_nil DeviceEvent.title_with_year_count("Old (1850)")
+    assert_nil DeviceEvent.title_with_year_count(nil)
+  end
+
   def test_title_override_not_applied_without_tag
     event = DeviceEvent.new(
       starts_at: 1621288800,

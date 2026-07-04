@@ -2,7 +2,7 @@
   html, body { margin: 0; padding: 0; font-size: 16px; }
   .three-day-columns { display: flex; height: 100vh; gap: .35rem; padding: 1rem; box-sizing: border-box; }
   .three-day-col { flex: 1; padding: .35rem .5rem; overflow: hidden; border: 2px solid #000; border-radius: .35rem; align-self: stretch; }
-  .three-day-col-other { border-color: #ccc; }
+  .three-day-col-other { border-color: transparent; }
   .three-day-header { text-align: left; font-weight: 700; font-size: 1.875rem; line-height: 1.2; margin-bottom: .25rem; }
   .three-day-date { font-size: 1.5rem; font-weight: 400; line-height: 1.2; }
   .three-day-weather-row { display: flex; justify-content: space-between; margin-bottom: .25rem; }
@@ -30,7 +30,9 @@
       <div class="three-day-col<%= ' three-day-col-other' unless day[:date].to_date == @view_object[:current_time].to_date %>">
         <div class="three-day-header">
           <div style="display: flex; justify-content: space-between; align-items: center;"><%= day[:day_name] %><% if day[:clothing] %><span class="three-day-clothing-icons"><span class="three-day-clothing-icon three-day-clothing-icon-<%= day[:clothing][:shirt_icon] %>"></span><span class="three-day-clothing-icon three-day-clothing-icon-<%= day[:clothing][:icon] %>"></span></span><% end %></div>
-          <div class="three-day-date"><%= day[:date].strftime("%B %-d") %></div>
+          <% if @view_object.dig(:configuration, "show_dates") != "false" %>
+            <div class="three-day-date"><%= day[:date].strftime("%B %-d") %></div>
+          <% end %>
         </div>
 
         <% if day[:weather_row]&.any? %>

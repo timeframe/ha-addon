@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 43) do
+ActiveRecord::Schema[8.1].define(version: 45) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -108,6 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 43) do
     t.bigint "microsoft_account_id"
     t.string "name", null: false
     t.boolean "provider_deletable", default: true, null: false
+    t.boolean "provider_writable", default: true, null: false
     t.string "source_type", null: false
     t.datetime "updated_at", null: false
     t.string "url"
@@ -381,11 +382,13 @@ ActiveRecord::Schema[8.1].define(version: 43) do
     t.string "mail_action"
     t.string "mailer"
     t.string "message_id"
+    t.bigint "receiving_user_id"
     t.text "subject"
     t.text "to"
     t.datetime "updated_at", null: false
     t.index ["delivered_at"], name: "index_sent_emails_on_delivered_at"
     t.index ["mailer"], name: "index_sent_emails_on_mailer"
+    t.index ["receiving_user_id"], name: "index_sent_emails_on_receiving_user_id"
   end
 
   create_table "uptime_checks", force: :cascade do |t|
@@ -440,5 +443,6 @@ ActiveRecord::Schema[8.1].define(version: 43) do
   add_foreign_key "orders", "accounts", on_delete: :cascade
   add_foreign_key "orders", "users", on_delete: :nullify
   add_foreign_key "pending_devices", "devices", column: "claimed_device_id"
+  add_foreign_key "sent_emails", "users", column: "receiving_user_id", on_delete: :nullify
   add_foreign_key "weather_syncs", "locations"
 end
