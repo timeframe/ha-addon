@@ -13,14 +13,19 @@ class Device < ActiveRecord::Base
   LOW_BATTERY_THRESHOLD = 25
   LOW_BATTERY_CLEAR_THRESHOLD = 30
 
+  # Templates that render without the top status bar (the compact day layouts).
+  # A low battery can't be shown up top on these, so it's surfaced as a bottom
+  # banner instead (see Device.low_battery_banner).
+  NO_STATUS_BAR_TEMPLATES = %w[one_day two_day three_day].freeze
+
   SUPPORTED_MODELS = {
     "visionect_13" => {name: "Visionect Place & Play 13\"", template: "thirteen", width: 1200, height: 1600},
     "boox_mira_pro" => {name: "Boox Mira Pro 25.3\"", template: "mira", width: 1800, height: 3200, realtime: true},
     "boox_mira" => {name: "Boox Mira 13.3\"", template: "boox_mira", width: 1650, height: 2200, realtime: true},
     "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
     "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true, product_slug: "timeframe-7"},
-    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1404, height: 1872, screenshotted: true, product_slug: "timeframe-10"},
-    "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, screenshotted: true}
+    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true, product_slug: "timeframe-10"},
+    "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true}
   }.freeze
 
   REALTIME_MODELS = SUPPORTED_MODELS.select { |_, v| v[:realtime] }.keys.freeze
@@ -60,10 +65,12 @@ class Device < ActiveRecord::Base
   end
 
   def display_width
+    return SUPPORTED_MODELS.dig(model, :height) if landscape_template?
     portrait? ? SUPPORTED_MODELS.dig(model, :height) : SUPPORTED_MODELS.dig(model, :width)
   end
 
   def display_height
+    return SUPPORTED_MODELS.dig(model, :width) if landscape_template?
     portrait? ? SUPPORTED_MODELS.dig(model, :width) : SUPPORTED_MODELS.dig(model, :height)
   end
 
@@ -134,6 +141,17 @@ class Device < ActiveRecord::Base
     new(battery_level: level, charging: charging).battery_descriptor(
       low: next_low_battery_warning(level: level, charging: charging, current: false)
     )
+  end
+
+  # The battery indicator to surface as a bottom banner for templates that have
+  # no top status bar (the compact day layouts). Returns the battery descriptor
+  # when it is low, otherwise nil.
+  def self.low_battery_banner(template, view_object)
+    battery = view_object[:battery]
+    return nil unless battery && battery[:low]
+    return nil unless NO_STATUS_BAR_TEMPLATES.include?(template.to_s)
+
+    battery
   end
 
   # Next value for the persisted low_battery_warning flag given a fresh reading.
@@ -236,6 +254,13 @@ class Device < ActiveRecord::Base
     false
   end
 
+  # The reTerminal 10" / TRMNL X panels can be mounted landscape. When the
+  # landscape template is active the display is rendered at swapped (landscape)
+  # dimensions and the previews skip the portrait -90deg rotation.
+  def landscape_template?
+    active_template == "reterminal_landscape"
+  end
+
   def template_options
     SUPPORTED_MODELS.dig(model, :templates)
   end
@@ -305,7 +330,7 @@ class Device < ActiveRecord::Base
   end
 
   HIDE_CURRENT_DAY_DEFAULT_TIME = "18:00"
-  HIDE_CURRENT_DAY_TEMPLATES = %w[trmnl three_day thirteen mira boox_mira reterminal].freeze
+  HIDE_CURRENT_DAY_TEMPLATES = %w[trmnl three_day thirteen mira boox_mira reterminal reterminal_landscape].freeze
 
   def hide_current_day_supported?
     HIDE_CURRENT_DAY_TEMPLATES.include?(active_template)
@@ -328,10 +353,23 @@ class Device < ActiveRecord::Base
   # :nocov:
   def device_content(timezone: nil, current_time: nil)
     tz = timezone || location&.time_zone || "UTC"
+    args = content_args(timezone: tz, current_time: current_time)
+    if demo_mode_enabled?
+      DemoDeviceContent.new.call(timezone: tz, **args)
+    else
+      DeviceContent.new.call(device: self, timezone: tz, **args)
+    end
+  end
+
+  # The DeviceContent/DemoDeviceContent arguments derived from this device's
+  # active template and configuration. Extracted so the admin templates preview
+  # renders through the same per-template rules as real devices instead of a
+  # duplicated copy that drifts.
+  def content_args(timezone: nil, current_time: nil)
+    tz = timezone || location&.time_zone || "UTC"
     compact_view = %w[three_day two_day one_day].include?(active_template)
     two_day = active_template == "two_day"
     one_day = active_template == "one_day"
-    configuration&.dig("only_show_events_with_icons")
     include_ranged_weather_events = !one_day
     include_temperature_events = if two_day || one_day
       true
@@ -357,7 +395,7 @@ class Device < ActiveRecord::Base
           1
         elsif active_template == "trmnl"
           14
-        elsif active_template == "reterminal"
+        elsif active_template == "reterminal" || active_template == "reterminal_landscape"
           12
         else
           (compact_view ? 3 : 5)
@@ -379,17 +417,13 @@ class Device < ActiveRecord::Base
       weather_row: compact_view, start_time_only: compact_view,
       always_show_today: always_show_today_value,
       hide_today_after_minutes: hide_today_minutes,
-      clothing_forecast: (compact_view || active_template == "trmnl") && (one_day || configuration&.dig("clothing_forecast") == "true"),
+      clothing_forecast: (compact_view || active_template == "trmnl" || active_template == "reterminal_landscape") && (one_day || configuration&.dig("clothing_forecast") == "true"),
       auto_icons: (compact_view || active_template == "trmnl") && configuration&.dig("auto_assign_icons") != "false",
       wind_gust_threshold_mph: wind_gust_threshold_mph,
       event_filters: calendar_event_filters
     }
     args[:current_time] = current_time if current_time
-    if demo_mode_enabled?
-      DemoDeviceContent.new.call(timezone: tz, **args)
-    else
-      DeviceContent.new.call(device: self, timezone: tz, **args)
-    end
+    args
   end
 
   def two_day_start_offset(current_time, timezone: nil)
@@ -448,7 +482,23 @@ class Device < ActiveRecord::Base
     base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
     url = token_device_url(host: base_url)
 
-    self.cached_image = if visionect?
+    self.cached_image = capture_screenshot(url)
+    self.cached_image_at = Time.current
+    save!
+
+    encode_visionect_image! if visionect?
+  end
+
+  # Captures the display as it will look at a future moment (used by the daily
+  # screenshot reminder email) without touching the persisted cached_image.
+  def screenshot_at(current_time, base_url = nil)
+    base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
+    url = "#{token_device_url(host: base_url)}&at=#{CGI.escape(current_time.iso8601)}"
+    capture_screenshot(url)
+  end
+
+  def capture_screenshot(url)
+    if visionect?
       ScreenshotService.capture(
         url,
         width: display_width, height: display_height,
@@ -465,11 +515,6 @@ class Device < ActiveRecord::Base
     else
       ScreenshotService.capture(url, width: display_width, height: display_height)
     end
-
-    self.cached_image_at = Time.current
-    save!
-
-    encode_visionect_image! if visionect?
   end
 
   def encode_visionect_image!

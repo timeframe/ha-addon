@@ -65,6 +65,20 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
+  test "setup records the firmware model on a new pending device" do
+    get "/api/setup", headers: {"ID" => "11:22:33:44:55:66", "Model" => "og"}
+    assert_equal "trmnl_og", PendingDevice.find_by(mac_address: "11:22:33:44:55:66").model
+  end
+
+  test "setup backfills the model for a pending device created without one" do
+    get "/api/setup", headers: {"ID" => "22:33:44:55:66:77"}
+    pending = PendingDevice.find_by(mac_address: "22:33:44:55:66:77")
+    assert_nil pending.model
+
+    get "/api/setup", headers: {"ID" => "22:33:44:55:66:77", "Model" => "x"}
+    assert_equal "trmnl_x", pending.reload.model
+  end
+
   # --- /api/display ---
 
   test "display succeeds without access token" do

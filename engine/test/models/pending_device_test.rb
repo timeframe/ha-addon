@@ -8,6 +8,38 @@ class PendingDeviceTest < Minitest::Test
     refute pd.claimed?
   end
 
+  def test_model_key_for_firmware_maps_known_models
+    assert_equal "trmnl_og", PendingDevice.model_key_for_firmware("og")
+    assert_equal "trmnl_x", PendingDevice.model_key_for_firmware("X")
+    assert_nil PendingDevice.model_key_for_firmware("waveshare")
+    assert_nil PendingDevice.model_key_for_firmware(nil)
+    assert_nil PendingDevice.model_key_for_firmware("")
+  end
+
+  def test_resolved_model_only_returns_supported_models
+    assert_equal "trmnl_x", PendingDevice.new(model: "trmnl_x").resolved_model
+    assert_nil PendingDevice.new(model: "bogus").resolved_model
+    assert_nil PendingDevice.new(model: nil).resolved_model
+  end
+
+  def test_claim_uses_the_captured_model_when_none_passed
+    mac = "AB:#{SecureRandom.hex(5).scan(/../).join(":").upcase}"
+    pd = PendingDevice.create!(mac_address: mac, api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, model: "trmnl_x")
+    device = pd.claim!(location: test_location, name: "Claimed #{SecureRandom.hex(4)}")
+    assert_equal "trmnl_x", device.model
+  end
+
+  def test_link_to_adopts_the_captured_model
+    mac = "AC:#{SecureRandom.hex(5).scan(/../).join(":").upcase}"
+    pd = PendingDevice.create!(mac_address: mac, api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, model: "trmnl_x")
+    device = test_location.devices.create!(name: "Placeholder #{SecureRandom.hex(4)}", model: "reterminal_e1001", mac_address: SecureRandom.hex(6), confirmed_at: Time.current)
+
+    pd.link_to!(device)
+
+    assert_equal "trmnl_x", device.reload.model
+    assert_equal mac, device.mac_address
+  end
+
   def test_claimed_returns_true_when_claimed
     mac = "EE:FF:#{SecureRandom.hex(4).scan(/../).join(":").upcase}"
     pd = PendingDevice.create!(mac_address: mac, api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase)

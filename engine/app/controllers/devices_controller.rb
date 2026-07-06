@@ -15,6 +15,7 @@ class DevicesController < ApplicationController
     "two_day" => "Devices::TwoDayComponent",
     "one_day" => "Devices::OneDayComponent",
     "reterminal" => "Devices::ReterminalComponent",
+    "reterminal_landscape" => "Devices::ReterminalLandscapeComponent",
     "boox_mira" => "Devices::BooxMiraComponent",
     "thirteen" => "Devices::ThirteenComponent",
     "mira" => "Devices::MiraComponent"
@@ -35,6 +36,7 @@ class DevicesController < ApplicationController
     view_object = @device.device_content
     view_object[:configuration] = @device.try(:configuration) || {}
     @banner = view_object[:banner] unless template == "mira"
+    @low_battery_banner = Device.low_battery_banner(template, view_object)
 
     component = build_device_component(template, view_object, refresh: refresh, device: @device)
     render component, layout: params[:layout] != "false"
@@ -54,6 +56,7 @@ class DevicesController < ApplicationController
     view_object = device.device_content(current_time: current_time)
     view_object[:configuration] = device.try(:configuration) || {}
     @banner = view_object[:banner] unless template == "mira"
+    @low_battery_banner = Device.low_battery_banner(template, view_object)
 
     component = build_device_component(template, view_object)
     render component, layout: "device"

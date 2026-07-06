@@ -1,12 +1,12 @@
 <div style="min-width: 300px;">
   <div class="card h-100">
     <div class="card-header d-flex justify-content-between align-items-center">
-      <h5 class="mb-0">
+      <span>
         <%= device.name %>
         <% if defined?(current_user) && current_user&.is_admin? %>
           <span class="badge text-bg-secondary align-middle" style="font-size: 0.6rem;">ID #<%= device.id %></span>
         <% end %>
-      </h5>
+      </span>
       <div class="d-flex align-items-center gap-2">
         <% if device.respond_to?(:trial_active?) && device.trial_active? %>
           <span class="badge text-bg-info" style="font-size: 0.7rem; white-space: nowrap;" title="Free trial ends <%= device.trial_ends_on.strftime("%b %-d, %Y") %>">
@@ -28,7 +28,7 @@
             <span class="text-muted"><i class="mdi mdi-lock-outline me-1"></i>Support access not granted</span>
           </div>
         <% elsif device.cached_image.present? %>
-          <% if device.reterminal_e1003? || device.trmnl_x? %>
+          <% if (device.reterminal_e1003? || device.trmnl_x?) && !device.landscape_template? %>
             <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; transform: translate(-50%, -50%) rotate(-90deg);">
           <% elsif device.portrait? %>
             <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; transform: translate(-50%, -50%) rotate(-90deg);">

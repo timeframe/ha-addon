@@ -1,13 +1,13 @@
 <div style="clear: both; line-height: .7; margin-bottom: 1rem;">
   <div style="float: left;">
+<%- if (battery = @view_object[:battery]) -%>
+<span style="margin-right: .5rem;"><i class="mdi mdi-<%= battery[:icon] %>" style="margin-right: .1rem;"></i><%= battery[:charging] ? "Charging #{battery[:level]}%" : "Recharge battery: #{battery[:level]}%" %></span>
+<%- end -%>
 <%- (@view_object[:top_left] + @view_object[:weather_status]).each do |top_left| -%>
 <span style="margin-right: .5rem;"><i class="mdi mdi-<%= top_left[:icon] %>" style="margin-right: .1rem;<%= " display: inline-block; transform: rotate(#{top_left[:rotation]}deg);" if top_left[:rotation] %>"></i><%= top_left[:label] %></span>
 <%- end -%>
   </div>
   <div style="float: right; text-align: right;">
-<%- if (battery = @view_object[:battery]) -%>
-<span style="margin-left: .5rem;"><i class="mdi mdi-<%= battery[:icon] %>" style="margin-right: .1rem;"></i><%= battery[:charging] ? "Charging #{battery[:level]}%" : "Recharge battery: #{battery[:level]}%" %></span>
-<%- end -%>
 <%- @view_object[:top_right].each do |top_right| -%>
 <span><i class="mdi mdi-<%= top_right[:icon] %>" style="margin-right: .1rem;"></i><%= top_right[:label] %></span>
 <%- end -%>

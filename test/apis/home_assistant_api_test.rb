@@ -938,7 +938,7 @@ class HomeAssistantApiTest < Minitest::Test
     api = HomeAssistantApi.new
     assert_equal "cloud", api.icon_for("cloudy")
     assert_equal "weather-sunny", api.icon_for("sunny")
-    assert_equal "weather-rainy", api.icon_for("rainy")
+    assert_equal "water", api.icon_for("rainy")
     assert_equal "snowflake", api.icon_for("snowy")
     assert_equal "help-circle", api.icon_for("unknown-condition")
   end
@@ -999,7 +999,7 @@ class HomeAssistantApiTest < Minitest::Test
       events = api.daily_calendar_events
       assert_equal 1, events.length
       assert_equal 1, events.first.precip.length
-      # rainy maps to weather-rainy which matches precip icon — should be suppressed
+      # rainy maps to water which matches the precip icon, so it should be suppressed
       assert_nil events.first.precip.first[:icon]
       assert_includes events.first.precip.first[:label], "\""
     end
@@ -1038,7 +1038,7 @@ class HomeAssistantApiTest < Minitest::Test
     ] do
       events = api.daily_calendar_events
       assert_equal 1, events.first.precip.length
-      assert_equal "weather-rainy", events.first.precip.first[:icon]
+      assert_equal "water", events.first.precip.first[:icon]
       assert_includes events.first.precip.first[:label], "mm"
     end
   end

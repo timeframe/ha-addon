@@ -18,7 +18,7 @@ class DemoDeviceContentTest < Minitest::Test
       assert result[:now_playing].is_a?(Hash)
       assert result[:day_groups].is_a?(Array)
       assert result[:minutely_weather_minutes].is_a?(Array)
-      assert_equal "weather-rainy", result[:minutely_weather_minutes_icon]
+      assert_equal "water", result[:minutely_weather_minutes_icon]
       assert result[:minutely_precipitation_bars].is_a?(Array)
       assert_equal "Weather", result[:attribution]
     end
@@ -301,6 +301,19 @@ class DemoDeviceContentTest < Minitest::Test
       assert_equal "Shorts", today[:clothing][:summary]
       assert_equal "tshirt", today[:clothing][:shirt_icon]
       assert_equal "T-shirt", today[:clothing][:shirt_summary]
+    end
+  end
+
+  def test_clothing_forecast_on_timeline_layout_without_weather_row
+    travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
+      # Timeline layouts (trmnl/reterminal) keep hourly weather in the periodic
+      # list rather than a weather row, so clothing must still be computed.
+      result = DemoDeviceContent.new.call(timezone: "America/Chicago", weather_row: false, clothing_forecast: true, fill_hourly_weather: true)
+
+      today = result[:day_groups][0]
+      assert today[:clothing], "Expected clothing forecast data on the timeline layout"
+      assert_equal "shorts", today[:clothing][:icon]
+      assert_equal "tshirt", today[:clothing][:shirt_icon]
     end
   end
 

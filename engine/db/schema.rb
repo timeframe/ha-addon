@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 45) do
+ActiveRecord::Schema[8.1].define(version: 46) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -350,6 +350,7 @@ ActiveRecord::Schema[8.1].define(version: 45) do
     t.datetime "created_at", null: false
     t.string "friendly_id"
     t.text "mac_address"
+    t.string "model"
     t.text "pairing_code", null: false
     t.datetime "updated_at", null: false
     t.index ["claimed_device_id"], name: "index_pending_devices_on_claimed_device_id"

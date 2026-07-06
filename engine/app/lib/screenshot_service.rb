@@ -10,8 +10,8 @@ class ScreenshotService
   PROCESS_TIMEOUT = 20
 
   # Hard wall-clock ceiling for a single capture. If a capture exceeds this we
-  # force-kill the browser process — the only reliable way to unblock a thread
-  # parked in a corrupted/deadlocked CDP websocket read — so a job can never
+  # force-kill the browser process - the only reliable way to unblock a thread
+  # parked in a corrupted/deadlocked CDP websocket read - so a job can never
   # wedge indefinitely the way RefreshDeviceScreenshotJob did in production.
   CAPTURE_DEADLINE = 20
 

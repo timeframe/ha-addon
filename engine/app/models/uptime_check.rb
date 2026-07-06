@@ -22,9 +22,9 @@ class UptimeCheck < ActiveRecord::Base
   scope :within, ->(range) { where(recorded_at: range) }
 
   # Current operational state for the status banner:
-  #   :operational — recent heartbeat, all checks healthy
-  #   :degraded    — recent heartbeat, but last check unhealthy
-  #   :down        — no heartbeat in the last LIVE_THRESHOLD
+  #   :operational - recent heartbeat, all checks healthy
+  #   :degraded    - recent heartbeat, but last check unhealthy
+  #   :down        - no heartbeat in the last LIVE_THRESHOLD
   def self.current_state
     last = order(recorded_at: :desc).first
     return :down if last.nil? || last.recorded_at < LIVE_THRESHOLD.ago

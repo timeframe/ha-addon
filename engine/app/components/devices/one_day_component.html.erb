@@ -42,8 +42,10 @@
         <% end %>
       </div>
 
-      <% daily_visual = day[:show_daily] && day[:daily].any? ? (only_icons ? day[:daily].select { |e| e[:timeframe_icon] } : day[:daily]) : [] %>
-      <% visual_periodic = only_icons ? (day[:periodic] || []).select { |e| e[:timeframe_icon] } : (day[:periodic] || []) %>
+      <%# only_icons filters calendar events only; weather/alerts always stay. %>
+      <% keep_only_icons = ->(e) { e[:timeframe_icon] || e[:weather] || e[:weather_ranged] } %>
+      <% daily_visual = day[:show_daily] && day[:daily].any? ? (only_icons ? day[:daily].select(&keep_only_icons) : day[:daily]) : [] %>
+      <% visual_periodic = only_icons ? (day[:periodic] || []).select(&keep_only_icons) : (day[:periodic] || []) %>
       <% if daily_visual.any? || visual_periodic.any? %>
         <div class="one-day-events">
           <table>

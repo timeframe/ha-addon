@@ -21,10 +21,12 @@ class DeviceEvent
     precip: nil,
     wind_gust: nil,
     entity_id: nil,
+    yearly_recurring: false,
     id: SecureRandom.hex
   )
     @id, @icon, @icon_rotation, @summary, @description, @location, @daily, @timezone, @attachment_image, @wind_gust, @entity_id =
       id, icon, icon_rotation, summary.gsub(/[^a-zA-Z0-9.\-"\  _°\/\\&:+,?()<>'@#%\u2019]/, ""), description, location, daily, timezone, attachment_image, wind_gust, entity_id
+    @yearly_recurring = yearly_recurring
 
     @precip = if precip
       precip
@@ -210,7 +212,7 @@ class DeviceEvent
   end
 
   def summary(as_of = nil)
-    if (rendered = self.class.title_with_year_count(@summary))
+    if @yearly_recurring && (rendered = self.class.title_with_year_count(@summary))
       rendered
     elsif (count = self.class.year_count(@description))
       "#{@summary} (#{count})"
@@ -225,12 +227,16 @@ class DeviceEvent
     end.gsub(/\p{Emoji_Presentation}/, "").strip
   end
 
-  # The "(N)" count shown after a summary whose description is a 4-digit year
-  # (e.g. a birthday's original year): the current year minus that year, or nil
-  # when the description isn't such a year.
+  # The "(N)" count shown after a summary whose description contains a 4-digit
+  # year (e.g. a birthday/anniversary's original year written in the notes of a
+  # yearly recurring event): the current year minus that year, or nil when the
+  # description has no such year. The first standalone 1900-2100 year wins.
   def self.year_count(description)
-    year = description.to_s.to_i
-    (1900..2100).cover?(year) ? Date.today.year - year : nil
+    description.to_s.scan(/\b(\d{4})\b/).flatten.each do |token|
+      year = token.to_i
+      return Date.today.year - year if (1900..2100).cover?(year)
+    end
+    nil
   end
 
   # Replaces a trailing "(YYYY)" year in a title (e.g. a birthday/anniversary

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Identifies the running release. It MUST be identical across every process of a
-# single deploy (web, worker, etc.) and change when new code ships — it's what
+# single deploy (web, worker, etc.) and change when new code ships - it's what
 # tells long-lived realtime display pages to reload after a deploy.
 #
 # It must NOT be derived from per-process boot time: the web and worker

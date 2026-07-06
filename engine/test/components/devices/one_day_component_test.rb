@@ -48,6 +48,20 @@ class OneDayComponentTest < ActiveSupport::TestCase
     assert_includes html, "Plain Event"
   end
 
+  test "only_show_events_with_icons keeps weather and alert events" do
+    html = render_one_day(
+      periodic: [
+        {summary: "Plain Event", timeframe_icon: nil},
+        {summary: "72 degrees", weather: true, icon_class: "weather-sunny"},
+        {summary: "Wind Advisory", weather_ranged: true, icon_class: "weather-windy"}
+      ],
+      configuration: {"only_show_events_with_icons" => "true"}
+    )
+    refute_includes html, "Plain Event"
+    assert_includes html, "72 degrees"
+    assert_includes html, "Wind Advisory"
+  end
+
   private
 
   def render_one_day(date: Date.new(2026, 5, 23), current_time: Time.zone.local(2026, 5, 23, 8, 0, 0), weather_row: [], periodic: [], configuration: {})

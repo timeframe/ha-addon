@@ -35,9 +35,16 @@ module Api
       pending = PendingDevice.find_or_create_by!(mac_address: mac_address) do |pd|
         pd.api_key = SecureRandom.hex(16)
         pd.friendly_id = SecureRandom.alphanumeric(6).upcase
+        pd.model = PendingDevice.model_key_for_firmware(request.headers["Model"])
       end
 
       pending.refresh! if pending.expired?
+
+      # Backfill the model for pending registrations created before we captured
+      # it, so pairing can still create the right device model.
+      if pending.model.blank? && (model_key = PendingDevice.model_key_for_firmware(request.headers["Model"]))
+        pending.update!(model: model_key)
+      end
 
       render json: {
         status: 200,

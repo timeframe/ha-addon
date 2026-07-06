@@ -6,13 +6,13 @@ class HomeAssistantApi
     "partlycloudy" => "weather-partly-cloudy",
     "sunny" => "weather-sunny",
     "clear-night" => "weather-night",
-    "rainy" => "weather-rainy",
-    "pouring" => "weather-rainy",
+    "rainy" => "water",
+    "pouring" => "water",
     "snowy" => "snowflake",
     "snowy-rainy" => "snowflake",
     "hail" => "weather-hail",
-    "lightning" => "weather-lightning",
-    "lightning-rainy" => "weather-lightning-rainy",
+    "lightning" => "lightning-bolt",
+    "lightning-rainy" => "lightning-bolt",
     "windy" => "weather-windy",
     "windy-variant" => "weather-windy-variant",
     "fog" => "weather-fog",
@@ -497,7 +497,7 @@ class HomeAssistantApi
         else
           is_snow ? "cm" : "mm"
         end
-        precip_icon = is_snow ? "snowflake" : "weather-rainy"
+        precip_icon = is_snow ? "snowflake" : "water"
         formatted = format_precipitation(convert_precipitation(precip_mm, target_unit), target_unit)
         precip_parts = [{icon: precip_icon, label: formatted}] unless formatted.start_with?("0.0")
       end

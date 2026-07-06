@@ -531,28 +531,54 @@ class DeviceEventTest < Minitest::Test
     assert_equal Date.today.year - 1990, DeviceEvent.year_count("1990")
   end
 
+  def test_year_count_finds_a_year_anywhere_in_the_description
+    assert_equal Date.today.year - 1990, DeviceEvent.year_count("Born 1990")
+    assert_equal Date.today.year - 2000, DeviceEvent.year_count("married in 2000, still going")
+  end
+
   def test_year_count_nil_for_non_year_description
     assert_nil DeviceEvent.year_count("just a note")
     assert_nil DeviceEvent.year_count(nil)
     assert_nil DeviceEvent.year_count("1850")
+    # A 4-digit run inside a longer number is not a standalone year.
+    assert_nil DeviceEvent.year_count("id 1234567")
   end
 
-  def test_summary_renders_trailing_year_in_title_as_a_count
+  def test_summary_renders_a_description_year_as_a_count
     event = DeviceEvent.new(
       starts_at: 1621288800,
       ends_at: 1621292400,
-      summary: "Ada (1990)"
+      summary: "Anniversary",
+      description: "Married in 2000"
+    )
+
+    assert_equal "Anniversary (#{Date.today.year - 2000})", event.summary
+  end
+
+  def test_summary_renders_trailing_year_in_title_as_a_count_for_yearly_events
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "Ada (1990)",
+      yearly_recurring: true
     )
 
     assert_equal "Ada (#{Date.today.year - 1990})", event.summary
     assert_equal "Ada (#{Date.today.year - 1990})", event.as_json[:summary]
   end
 
+  def test_summary_leaves_title_year_alone_for_non_yearly_events
+    # The title "(YYYY)" -> count only applies to yearly recurring events; a
+    # one-off event keeps its parenthetical year as written.
+    event = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400, summary: "Ada (1990)")
+    assert_equal "Ada (1990)", event.summary
+  end
+
   def test_summary_leaves_non_year_parentheticals_alone
-    unchanged = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400, summary: "Team (12)")
+    unchanged = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400, summary: "Team (12)", yearly_recurring: true)
     assert_equal "Team (12)", unchanged.summary
 
-    out_of_range = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400, summary: "Old (1850)")
+    out_of_range = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400, summary: "Old (1850)", yearly_recurring: true)
     assert_equal "Old (1850)", out_of_range.summary
   end
 

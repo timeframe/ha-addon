@@ -53,7 +53,7 @@ class DemoDeviceContent
 
       {precipitationChance: chance.clamp(0.0, 1.0), precipitationIntensity: intensity.clamp(0.0, 3.0)}
     end
-    out[:minutely_weather_minutes_icon] = "weather-rainy"
+    out[:minutely_weather_minutes_icon] = "water"
 
     out[:minutely_precipitation_bars] = out[:minutely_weather_minutes].map do |minute|
       (minute[:precipitationChance] * minute[:precipitationIntensity] * 50).clamp(3, 100).round
@@ -105,6 +105,29 @@ class DemoDeviceContent
 
   private
 
+  # Clothing recommendation from a day's hourly weather readings (uses the 8am
+  # and noon temps, capped by the daily high when available). Returns nil when
+  # there is no morning reading.
+  def clothing_for(hourly_weather_events, daily_events)
+    morning = hourly_weather_events.find { |e| e.starts_at.hour == 8 }
+    return nil unless morning
+
+    morning_temp = morning.summary.to_i
+    noon = hourly_weather_events.find { |e| e.starts_at.hour == 12 }
+    noon_temp = noon ? noon.summary.to_i : morning_temp
+    daily_weather = daily_events.find(&:weather?)
+    daily_high = daily_weather ? daily_weather.summary.to_i : nil
+    is_shorts = morning_temp >= 55 && noon_temp >= 65
+    is_shorts = false if daily_high && daily_high < 65
+    short_sleeves = is_shorts || noon_temp > 50
+    {
+      icon: is_shorts ? "shorts" : "pants",
+      summary: is_shorts ? "Shorts" : "Pants",
+      shirt_icon: short_sleeves ? "tshirt" : "long-sleeve-shirt",
+      shirt_summary: short_sleeves ? "T-shirt" : "Long sleeves"
+    }
+  end
+
   def build_day_groups(current_time, timezone, days: 5, include_wind: true, include_temperature: true, temperature_hours: nil, use_day_names: false, weather_row: false, start_offset: 0, clothing_forecast: false, fill_hourly_weather: false)
     today = current_time.to_date
     tz = ActiveSupport::TimeZone[timezone]
@@ -144,28 +167,13 @@ class DemoDeviceContent
           .select { |e| e.weather_hourly? && weather_row_hours.include?(e.starts_at.hour) }
           .sort_by { |e| e.starts_at.hour }
         weather_row_data = include_temperature ? weather_events.map { |e| e.as_json(date: date.to_date) } : []
+        clothing_data = clothing_for(weather_events, events[:daily]) if clothing_forecast
+      end
 
-        if clothing_forecast
-          morning = weather_events.find { |e| e.starts_at.hour == 8 }
-          noon = weather_events.find { |e| e.starts_at.hour == 12 }
-          if morning
-            morning_temp = morning.summary.to_i
-            noon_temp = noon ? noon.summary.to_i : morning_temp
-            # :nocov:
-            daily_weather = events[:daily].find(&:weather?)
-            daily_high = daily_weather ? daily_weather.summary.to_i : nil
-            # :nocov:
-            is_shorts = morning_temp >= 55 && noon_temp >= 65
-            is_shorts = false if daily_high && daily_high < 65
-            short_sleeves = is_shorts || noon_temp > 50
-            clothing_data = {
-              icon: is_shorts ? "shorts" : "pants",
-              summary: is_shorts ? "Shorts" : "Pants",
-              shirt_icon: short_sleeves ? "tshirt" : "long-sleeve-shirt",
-              shirt_summary: short_sleeves ? "T-shirt" : "Long sleeves"
-            }
-          end
-        end
+      # Timeline layouts (trmnl / reterminal) keep the hourly weather in the
+      # periodic list rather than a weather row, so compute clothing from there.
+      if clothing_forecast && !weather_row
+        clothing_data = clothing_for(periodic_events.select(&:weather_hourly?), events[:daily])
       end
 
       if temperature_hours && !weather_row

@@ -12,7 +12,7 @@
       <% end %>
     <% end %>
     <div class="d-flex align-items-center mb-4">
-      <h3 class="mb-0"><%= @device.name %></h3>
+      <h3 class="mb-0" id="device-title"><%= @device.name %></h3>
       <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
         <span class="text-body-tertiary ms-2" style="font-size: 0.85rem;"><%= @device.model_name_label %></span>
       <% end %>
@@ -73,7 +73,7 @@
           <div class="tab-pane fade" id="screenshot-pane" role="tabpanel" aria-labelledby="screenshot-tab">
             <div class="card-body p-2">
               <div class="d-flex align-items-center justify-content-center" style="background: #f0f0f0; border-radius: .25rem; overflow: hidden; min-height: 100px;" id="screenshot-container">
-                <% if @device.reterminal_e1003? || @device.trmnl_x? %>
+                <% if (@device.reterminal_e1003? || @device.trmnl_x?) && !@device.landscape_template? %>
                   <%# Portrait panel (display_width x display_height) shown rotated -90deg.
                       CSS rotation doesn't change the layout box, so wrap the image in an
                       aspect-ratio box sized for the rotated (landscape) result and center
@@ -172,26 +172,28 @@
     </div>
     <% end %>
 
-    <%# Options %>
+    <%# Options. Wrapped in a Turbo Frame and auto-saved on any change so edits
+        (including the layout/template) persist without a hard page refresh. %>
+    <turbo-frame id="device-options">
     <div class="card mb-3">
       <%= form_with url: update_options_account_location_device_path(@account, @location, @device), method: :patch, id: "device-options-form" do %>
         <div class="card-header d-flex align-items-center justify-content-between py-2">
-          <span class="small text-body-secondary">Options</span>
-          <%= submit_tag "Save", class: "btn btn-primary btn-sm" %>
+          <span>Options</span>
+          <span class="small text-body-tertiary" data-save-status aria-live="polite"></span>
         </div>
         <div class="card-body">
         <%# Name %>
         <label class="form-label small fw-bold mb-1" for="device-name">Name</label>
         <input type="text" id="device-name" name="name" value="<%= @device.name %>" class="form-control form-control-sm mb-3" required>
 
-        <%# Template selection (applies on change) %>
+        <%# Template selection (auto-saves on change) %>
         <% if @device.template_options %>
           <label class="form-label small fw-bold mb-1">Layout</label>
           <div class="list-group list-group-flush border rounded mb-3">
             <% @device.template_options.each do |tmpl| %>
               <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center<%= ' active' if @device.active_template == tmpl[:name] %>" style="cursor: pointer;">
                 <span class="d-flex align-items-center gap-2">
-                  <%= radio_button_tag "display_template", tmpl[:name], @device.active_template == tmpl[:name], class: "form-check-input mt-0", onchange: "this.form.submit()" %>
+                  <%= radio_button_tag "display_template", tmpl[:name], @device.active_template == tmpl[:name], class: "form-check-input mt-0" %>
                   <%= tmpl[:label] %>
                 </span>
                 <% if @device.active_template == tmpl[:name] %>
@@ -229,7 +231,64 @@
           cb.addEventListener('change', syncDependents);
         });
         syncDependents();
+
+        // Keep the heading above the preview tabs and the page <title> in sync
+        // with the name field as it is edited.
+        var nameInput = document.getElementById('device-name');
+        var titleEl = document.getElementById('device-title');
+        if (nameInput && titleEl) {
+          nameInput.addEventListener('input', function() {
+            var v = nameInput.value.trim();
+            titleEl.textContent = v;
+            document.title = (v ? v + ' \u00b7 ' : '') + 'Timeframe';
+          });
+        }
+
+        var status = form.querySelector('[data-save-status]');
+        function setStatus(text) { if (status) { status.textContent = text; } }
+        function flashSaved() {
+          setStatus('Saved');
+          setTimeout(function() { if (status && status.textContent === 'Saved') { setStatus(''); } }, 2000);
+        }
+        function reloadPreview() {
+          var iframe = document.getElementById('preview-iframe');
+          if (iframe) { iframe.src = iframe.src; }
+        }
+        // Auto-save on any change. Changing the layout re-renders the available
+        // options, so it goes through the enclosing Turbo Frame (swaps this pane
+        // in place). Every other change saves via fetch so the field keeps focus
+        // and nothing reloads. No hard page refresh either way.
+        form.addEventListener('change', function(e) {
+          if (form.checkValidity && !form.checkValidity()) { return; }
+          if (e.target && e.target.name === 'display_template') {
+            setStatus('Saving\u2026');
+            form.requestSubmit();
+            return;
+          }
+          setStatus('Saving\u2026');
+          fetch(form.action, {method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: {"Accept": "text/html"}})
+            .then(function(r) { if (!r.ok) { throw new Error("save failed"); } flashSaved(); reloadPreview(); })
+            .catch(function() { setStatus('Save failed'); });
+        });
       })();
+    </script>
+    </turbo-frame>
+    <script>
+      // Bound once (outside the Turbo Frame): after each options save, reload the
+      // device preview and flash a "Saved" indicator.
+      if (!window.__tfSettingsSaveBound) {
+        window.__tfSettingsSaveBound = true;
+        document.addEventListener('turbo:frame-render', function(e) {
+          if (!e.target || e.target.id !== 'device-options') { return; }
+          var iframe = document.getElementById('preview-iframe');
+          if (iframe) { iframe.src = iframe.src; }
+          var status = document.querySelector('#device-options [data-save-status]');
+          if (status) {
+            status.textContent = 'Saved';
+            setTimeout(function() { if (status.textContent === 'Saved') { status.textContent = ''; } }, 2000);
+          }
+        });
+      }
     </script>
 
     <%# Device-scoped calendar creation modal + event card (cloud only). Rendered
@@ -251,7 +310,7 @@
     <% if admin_context %>
       <div class="card mb-3 border-warning">
         <div class="card-header py-2 bg-warning-subtle">
-          <span class="small text-body-secondary">Admin</span>
+          <span>Admin</span>
         </div>
         <div class="card-body">
           <%= form_with url: account_location_device_path(@account, @location, @device), method: :patch do %>
@@ -301,13 +360,13 @@
                 <label class="form-label small mb-1"><strong>Billing</strong></label>
                 <div class="text-muted small mb-2">
                   <% if @device.billing_exempt? %>
-                    Exempt from billing — not counted toward the account's subscription.
+                    Exempt from billing - not counted toward the account's subscription.
                   <% elsif @device.purchased? %>
-                    Purchased — billed on the account's subscription.
+                    Purchased - billed on the account's subscription.
                   <% elsif @device.trial_active? %>
-                    On free trial — <%= @device.trial_days_remaining %> day<%= "s" unless @device.trial_days_remaining == 1 %> left (ends <%= @device.trial_ends_on.strftime("%b %-d, %Y") %>).
+                    On free trial - <%= @device.trial_days_remaining %> day<%= "s" unless @device.trial_days_remaining == 1 %> left (ends <%= @device.trial_ends_on.strftime("%b %-d, %Y") %>).
                   <% elsif @device.trial_ends_on.present? %>
-                    Trial ended <%= @device.trial_ends_on.strftime("%b %-d, %Y") %> — not purchased.
+                    Trial ended <%= @device.trial_ends_on.strftime("%b %-d, %Y") %> - not purchased.
                   <% else %>
                     Not purchased.
                   <% end %>
@@ -421,7 +480,7 @@
     <% if @device.visionect? && @device.display_key.present? %>
       <div class="card mb-3">
         <div class="card-header py-2">
-          <span class="small text-body-secondary">Token URL</span>
+          <span>Token URL</span>
         </div>
         <div class="card-body">
           <div class="input-group mb-2">
@@ -455,7 +514,7 @@
     <% if @device.pairing_code_device? && @device.disconnected? %>
       <div class="card mb-3">
         <div class="card-header py-2">
-          <span class="small text-body-secondary">Reconnect</span>
+          <span>Reconnect</span>
         </div>
         <div class="card-body">
           <% if @device.trmnl? || @device.reterminal_e1001? %>
@@ -485,7 +544,7 @@
     <%# Danger zone %>
     <div class="card mb-3 border-danger">
       <div class="card-header py-2 border-danger">
-        <span class="small text-danger">Delete Device</span>
+          <span>Delete Device</span>
       </div>
       <div class="card-body">
         <p class="small text-muted">Type <strong><%= @device.name %></strong> to confirm deletion.</p>

@@ -236,10 +236,59 @@ class DeviceTest < Minitest::Test
     assert_equal "reTerminal E1003 10.3\"", device.model_name_label
   end
 
+  def test_low_battery_banner_only_for_low_battery_on_status_barless_templates
+    low = {level: 15, low: true, charging: false}
+
+    # Shown on the compact day layouts that have no top status bar.
+    assert_equal low, Device.low_battery_banner("three_day", {battery: low})
+    assert_equal low, Device.low_battery_banner("one_day", {battery: low})
+
+    # Not shown on templates that render the status bar (it appears up top).
+    assert_nil Device.low_battery_banner("trmnl", {battery: low})
+    assert_nil Device.low_battery_banner("reterminal", {battery: low})
+
+    # Not shown when the battery is fine or missing.
+    assert_nil Device.low_battery_banner("three_day", {battery: {level: 80, low: false}})
+    assert_nil Device.low_battery_banner("three_day", {})
+  end
+
   def test_reterminal_e1003_display_dimensions
     device = Device.new(name: "test", model: "reterminal_e1003")
     assert_equal 1404, device.display_width
     assert_equal 1872, device.display_height
+  end
+
+  def test_reterminal_e1003_landscape_template_options
+    device = Device.new(name: "test", model: "reterminal_e1003")
+    labels = device.template_options.map { |t| t[:label] }
+    names = device.template_options.map { |t| t[:name] }
+    assert_equal ["Portrait", "Landscape"], labels
+    assert_equal ["reterminal", "reterminal_landscape"], names
+  end
+
+  def test_trmnl_x_landscape_template_options
+    device = Device.new(name: "test", model: "trmnl_x")
+    labels = device.template_options.map { |t| t[:label] }
+    assert_equal ["Portrait", "Landscape"], labels
+  end
+
+  def test_landscape_template_swaps_display_dimensions
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal_landscape")
+    assert device.landscape_template?
+    assert_equal 1872, device.display_width
+    assert_equal 1404, device.display_height
+  end
+
+  def test_portrait_reterminal_is_not_landscape
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal")
+    refute device.landscape_template?
+    assert_equal 1404, device.display_width
+    assert_equal 1872, device.display_height
+  end
+
+  def test_reterminal_landscape_supports_hide_current_day
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal_landscape")
+    assert device.hide_current_day_supported?
   end
 
   def test_boox_mira_model_name_label
@@ -332,6 +381,42 @@ class DeviceTest < Minitest::Test
     device = Device.new(model: "trmnl_og", display_template: "two_day")
     device.configuration = {"one_day_rollover_enabled" => "true", "one_day_rollover_time" => "18:00"}
     assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 20, 0))
+  end
+
+  def test_two_day_start_offset_returns_zero_when_rollover_disabled
+    device = Device.new(model: "trmnl_og", display_template: "two_day")
+    device.configuration = {"two_day_rollover_enabled" => "false"}
+    assert_equal 0, device.two_day_start_offset(Time.utc(2026, 1, 1, 23, 0))
+  end
+
+  def test_two_day_start_offset_rolls_over_after_configured_time
+    device = Device.new(model: "trmnl_og", display_template: "two_day")
+    device.configuration = {"two_day_rollover_enabled" => "true", "two_day_rollover_time" => "18:00"}
+    assert_equal 0, device.two_day_start_offset(Time.utc(2026, 1, 1, 17, 59), timezone: "UTC")
+    assert_equal 1, device.two_day_start_offset(Time.utc(2026, 1, 1, 18, 0), timezone: "UTC")
+  end
+
+  def test_two_day_start_offset_only_applies_when_template_is_two_day
+    device = Device.new(model: "trmnl_og", display_template: "one_day")
+    assert_equal 0, device.two_day_start_offset(Time.utc(2026, 1, 1, 20, 0))
+  end
+
+  def test_calendar_excluded_checks_the_excluded_identifiers_list
+    device = Device.new(model: "trmnl_og")
+    refute device.calendar_excluded?("cal-1")
+    device.excluded_calendar_identifiers = ["cal-1"]
+    assert device.calendar_excluded?("cal-1")
+    refute device.calendar_excluded?("cal-2")
+  end
+
+  def test_calendar_event_filters_ignores_blank_and_non_filter_keys
+    device = Device.new(model: "trmnl_og")
+    device.configuration = {
+      "event_filter_cal-1" => "standup",
+      "event_filter_cal-2" => "",
+      "show_precip_events" => "true"
+    }
+    assert_equal({"cal-1" => "standup"}, device.calendar_event_filters)
   end
 
   def test_one_day_device_content_populates_weather_row_for_daily_icon

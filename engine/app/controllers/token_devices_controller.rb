@@ -16,15 +16,18 @@ class TokenDevicesController < ApplicationController
       return
     end
 
-    @device.update_column(:last_connection_at, Time.current)
+    @device.update_column(:last_connection_at, Time.current) unless params[:at].present?
 
     template = @device.active_template
     refresh = @device.realtime_display? && params[:refresh] != "false"
     @refresh = refresh
 
-    view_object = @device.device_content
+    tz = @device.location&.time_zone.presence || "UTC"
+    current_time = params[:at].present? ? ActiveSupport::TimeZone[tz].parse(params[:at]) : nil
+    view_object = @device.device_content(current_time: current_time)
     view_object[:configuration] = @device.try(:configuration) || {}
     @banner = view_object[:banner] unless template == "mira"
+    @low_battery_banner = Device.low_battery_banner(template, view_object)
 
     component = DevicesController::TEMPLATE_COMPONENTS[template].constantize.new(view_object: view_object)
     render component, layout: params[:layout] != "false"

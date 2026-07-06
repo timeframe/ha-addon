@@ -33,7 +33,7 @@ class DeviceSettingsDeleteTest < ApplicationSystemTestCase
 
     assert_current_path "/"
     assert_no_text "Routing Error"
-    assert_no_selector "h5", text: device_name
+    assert_no_selector ".card-header", text: device_name
   end
 
   test "fresh device cards show concise updated copy" do

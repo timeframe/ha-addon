@@ -243,7 +243,7 @@ module VisionectProtocol
           client.write(build_image_packet(serial, previous, buffer_index: 1, image_crc: previous_crc))
         else
           # First image or refresh (no previous): send same image as both buffers.
-          # VSS always sends dual buffers — the EPD needs old+new for waveform
+          # VSS always sends dual buffers - the EPD needs old+new for waveform
           # computation. For initial delivery, both buffers carry the same image.
           @logger.info "[Visionect] #{remote}: Sending dual buffer (same image, full refresh)"
           client.write(build_image_packet(serial, current, buffer_index: 1, image_crc: current_crc))
