@@ -24,7 +24,7 @@ class Device < ActiveRecord::Base
     "boox_mira" => {name: "Boox Mira 13.3\"", template: "boox_mira", width: 1650, height: 2200, realtime: true},
     "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
     "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true, product_slug: "timeframe-7"},
-    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true, product_slug: "timeframe-10"},
+    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1414, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true, product_slug: "timeframe-10"},
     "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true}
   }.freeze
 
@@ -508,7 +508,8 @@ class Device < ActiveRecord::Base
       ScreenshotService.capture(
         url,
         width: display_width, height: display_height,
-        grayscale_only: true
+        grayscale_only: true,
+        rotate: !landscape_template?
       )
     elsif trmnl? || reterminal_e1001?
       ScreenshotService.capture(url, width: display_width, height: display_height, rotate: portrait?)

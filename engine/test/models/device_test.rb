@@ -254,7 +254,7 @@ class DeviceTest < Minitest::Test
 
   def test_reterminal_e1003_display_dimensions
     device = Device.new(name: "test", model: "reterminal_e1003")
-    assert_equal 1404, device.display_width
+    assert_equal 1414, device.display_width
     assert_equal 1872, device.display_height
   end
 
@@ -276,19 +276,49 @@ class DeviceTest < Minitest::Test
     device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal_landscape")
     assert device.landscape_template?
     assert_equal 1872, device.display_width
-    assert_equal 1404, device.display_height
+    assert_equal 1414, device.display_height
   end
 
   def test_portrait_reterminal_is_not_landscape
     device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal")
     refute device.landscape_template?
-    assert_equal 1404, device.display_width
+    assert_equal 1414, device.display_width
     assert_equal 1872, device.display_height
   end
 
   def test_reterminal_landscape_supports_hide_current_day
     device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal_landscape")
     assert device.hide_current_day_supported?
+  end
+
+  def test_reterminal_e1003_landscape_capture_skips_rotation
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal_landscape")
+    captured = nil
+    ScreenshotService.stub(:capture, ->(_url, **opts) {
+      captured = opts
+      "img"
+    }) do
+      device.send(:capture_screenshot, "http://example.test")
+    end
+    assert_equal false, captured[:rotate]
+    assert captured[:grayscale_only]
+    assert_equal 1872, captured[:width]
+    assert_equal 1414, captured[:height]
+  end
+
+  def test_reterminal_e1003_portrait_capture_rotates
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal")
+    captured = nil
+    ScreenshotService.stub(:capture, ->(_url, **opts) {
+      captured = opts
+      "img"
+    }) do
+      device.send(:capture_screenshot, "http://example.test")
+    end
+    assert_equal true, captured[:rotate]
+    assert captured[:grayscale_only]
+    assert_equal 1414, captured[:width]
+    assert_equal 1872, captured[:height]
   end
 
   def test_boox_mira_model_name_label

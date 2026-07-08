@@ -29,7 +29,7 @@ class ScreenshotService
           png_base64
         elsif grayscale_only
           image = MiniMagick::Image.read(Base64.decode64(png_base64), ".png")
-          image.rotate "90"
+          image.rotate "90" if rotate
           image.combine_options do |c|
             c.colorspace "Gray"
             c.dither("None")
