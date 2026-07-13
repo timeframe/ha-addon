@@ -9,7 +9,9 @@ class PendingDevice < ActiveRecord::Base
   # flow falls back to a default or lets the user choose).
   FIRMWARE_MODEL_MAP = {
     "og" => "trmnl_og",
-    "x" => "trmnl_x"
+    "x" => "trmnl_x",
+    "reterminal e1001" => "reterminal_e1001",
+    "reterminal e1003" => "reterminal_e1003"
   }.freeze
 
   belongs_to :claimed_device, class_name: "Device", optional: true

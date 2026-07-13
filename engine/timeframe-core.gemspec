@@ -19,13 +19,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "extlz4"
   spec.add_dependency "view_component"
 
-  # Bootstrap/dartsass are only needed by hosts that still render the engine's
-  # remaining Bootstrap views (ha-addon's device setup + device-facing pages),
-  # which declare them in their own Gemfile. Cloud is fully Tailwind and must
-  # not pull them in, so they are dev-only here (kept for engine-standalone
-  # tests) rather than runtime dependencies.
-  spec.add_development_dependency "bootstrap", "~> 5.3"
-  spec.add_development_dependency "dartsass-rails"
   spec.add_development_dependency "minitest"
   spec.add_development_dependency "minitest-mock"
   spec.add_development_dependency "overcommit"

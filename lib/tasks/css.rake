@@ -1,23 +1,19 @@
 # frozen_string_literal: true
 
-# Builds ha-addon's Tailwind bundle. Kept separate from the (legacy) dartsass
-# pipeline that compiles Bootstrap into application.css, so the migrated
-# Tailwind layout can load only Tailwind. Hooks into assets:precompile.
+# Builds ha-addon's Tailwind bundle (the app's only stylesheet). Hooks into
+# assets:precompile.
 namespace :css do
-  INPUT = "application.tailwind.css"
-  OUTPUT = "application_tailwind.css"
-
   def tailwind_command(*extra)
     require "tailwindcss/ruby"
 
-    input = Rails.root.join("app/assets/stylesheets", INPUT)
-    output = Rails.root.join("app/assets/builds", OUTPUT)
+    input = Rails.root.join("app/assets/stylesheets/application.tailwind.css")
+    output = Rails.root.join("app/assets/builds/application_tailwind.css")
     [Tailwindcss::Ruby.executable.to_s, "--input", input.to_s, "--output", output.to_s, *extra]
   end
 
   desc "Build the Tailwind stylesheet"
   task build: :environment do
-    puts "Building #{OUTPUT} with Tailwind..."
+    puts "Building application_tailwind.css with Tailwind..."
     system(*tailwind_command("--minify"), exception: true)
   end
 

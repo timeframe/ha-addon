@@ -4,7 +4,7 @@
     granted support access. Account members always see their own data. %>
 <% hide_support_content = defined?(current_user) && current_user.present? && !@account.users.include?(current_user) && !@account.support_access? %>
 <style>
-  .tf-tab { border-bottom: 2px solid transparent; }
+  .tf-tab { appearance: none; -webkit-appearance: none; background: transparent; border: 0; border-bottom: 2px solid transparent; color: inherit; cursor: pointer; }
   .tf-tab-active { border-bottom-color: var(--color-ink); font-weight: 500; }
 </style>
 <div class="flex justify-center">
@@ -53,13 +53,13 @@
           </div>
           <div class="border-t border-ink/10 px-3 py-2">
             <div class="flex flex-wrap items-center gap-1">
-              <div class="inline-flex divide-x divide-ink/30 overflow-hidden rounded-md border border-ink/30 text-sm">
-                <button type="button" class="px-2 py-1 hover:bg-ink/5" id="preview-prev" title="Previous day">&larr;</button>
-                <button type="button" class="px-2 py-1 hover:bg-ink/5" id="preview-today">Today</button>
-                <button type="button" class="px-2 py-1 hover:bg-ink/5" id="preview-next" title="Next day">&rarr;</button>
+              <div class="inline-flex h-11 divide-x divide-ink/30 overflow-hidden rounded-md border border-ink/30 text-sm">
+                <button type="button" class="inline-flex h-full items-center justify-center px-3 hover:bg-ink/5" id="preview-prev" title="Previous day">&larr;</button>
+                <button type="button" class="inline-flex h-full items-center justify-center px-3 hover:bg-ink/5" id="preview-today">Today</button>
+                <button type="button" class="inline-flex h-full items-center justify-center px-3 hover:bg-ink/5" id="preview-next" title="Next day">&rarr;</button>
               </div>
-              <input type="date" class="tf-input-sm w-auto flex-shrink-0" id="preview-date" value="<%= @preview_now.to_date.to_s %>">
-              <input type="time" class="tf-input-sm w-auto flex-shrink-0" id="preview-time" value="<%= @preview_now.strftime("%H:%M") %>">
+              <input type="date" class="tf-input-sm h-11 w-auto flex-shrink-0" id="preview-date" value="<%= @preview_now.to_date.to_s %>">
+              <input type="time" class="tf-input-sm h-11 w-auto flex-shrink-0" id="preview-time" value="<%= @preview_now.strftime("%H:%M") %>">
             </div>
           </div>
         </div>
@@ -126,8 +126,12 @@
           timeInput.addEventListener('change', updatePreview);
           function scaleToFit() {
             var availWidth = container.parentElement.clientWidth;
-            var scale = availWidth / deviceWidth;
+            // Never upscale past the device's native size (on wide layouts like
+            // the cloud settings page the container is far wider than a small
+            // device, which would blow the preview up huge).
+            var scale = Math.min(availWidth / deviceWidth, 1);
             iframe.style.transform = 'scale(' + scale + ')';
+            container.style.width = Math.floor(deviceWidth * scale) + 'px';
             container.style.height = Math.floor(deviceHeight * scale) + 'px';
           }
           scaleToFit();
@@ -183,17 +187,12 @@
         <%# Template selection (auto-saves on change) %>
         <% if @device.template_options %>
           <label class="mb-1 block text-sm font-bold">Layout</label>
-          <div class="mb-3 divide-y divide-ink/10 overflow-hidden rounded-md border border-ink/10">
+          <div class="mb-3 flex flex-wrap gap-x-5 gap-y-1">
             <% @device.template_options.each do |tmpl| %>
               <% active = @device.active_template == tmpl[:name] %>
-              <label class="flex cursor-pointer items-center justify-between px-3 py-2 <%= "bg-ink/5" if active %>">
-                <span class="flex items-center gap-2">
-                  <%= radio_button_tag "display_template", tmpl[:name], active, class: "tf-check" %>
-                  <%= tmpl[:label] %>
-                </span>
-                <% if active %>
-                  <i class="mdi mdi-check"></i>
-                <% end %>
+              <label class="inline-flex min-h-11 cursor-pointer items-center gap-2">
+                <%= radio_button_tag "display_template", tmpl[:name], active, class: "tf-check" %>
+                <span><%= tmpl[:label] %></span>
               </label>
             <% end %>
           </div>

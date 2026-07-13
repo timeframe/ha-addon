@@ -15,7 +15,7 @@ class BooxMiraProSetupFlowTest < ApplicationSystemTestCase
     assert_text "Timeframe"
     assert_text "Enter this pairing code on your Timeframe dashboard"
 
-    pairing_code = find(".display-1").text.strip
+    pairing_code = find("#pairing-code").text.strip
 
     # Step 2: Sign in as a user (creates test user, account, and location)
     visit "/test_sign_in"
@@ -44,9 +44,7 @@ class BooxMiraProSetupFlowTest < ApplicationSystemTestCase
     assert device.confirmed?, "Device should be confirmed after pairing"
 
     # Step 5: Enable demo mode so the display has content (already on settings page)
-    within(first(".form-check", text: "Demo mode")) do
-      find("input[type='checkbox'][role='switch']").check
-    end
+    find("label", text: "Demo mode").find("input[type='checkbox']").check
 
     device.reload
     assert device.demo_mode_enabled?, "Device should be in demo mode"

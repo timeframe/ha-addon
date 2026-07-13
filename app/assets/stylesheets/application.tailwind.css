@@ -1,17 +1,13 @@
 /* ha-addon Tailwind bundle.
  *
  * Built by `rails css:build` into app/assets/builds/application_tailwind.css.
- * Mirrors the cloud app's Tailwind setup. During the Bootstrap -> Tailwind
- * migration this bundle is loaded ONLY by the Tailwind-only layout
- * (application_tw.html.erb); the legacy Bootstrap layout keeps application.css.
- *
- * Preflight is intentionally OMITTED while Bootstrap still exists (its reset
- * would fight Bootstrap's Reboot on the legacy layout's shared engine views).
- * Add `@import "tailwindcss/preflight.css" layer(base);` once Bootstrap is gone.
+ * Mirrors the cloud app's Tailwind setup. This is the app's only CSS bundle
+ * (Bootstrap has been fully removed).
  */
 @layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
 @import "tailwindcss/utilities.css" layer(utilities);
 
 /* Scan ha-addon's own views + helpers + JS, AND the shared engine views

@@ -34,9 +34,7 @@ class VisionectDisplayFlowTest < ApplicationSystemTestCase
     assert device.display_key.present?, "Visionect device should have a display key"
 
     # Already on the settings page; enable demo mode
-    within(first(".form-check", text: "Demo mode")) do
-      find("input[type='checkbox'][role='switch']").check
-    end
+    find("label", text: "Demo mode").find("input[type='checkbox']").check
 
     # Should redirect back, device now in demo mode
     device.reload

@@ -11,41 +11,38 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
     <meta name="theme-color" content="#f1f3f5">
-    <%= stylesheet_link_tag "application" %>
+    <%= stylesheet_link_tag "application_tailwind" %>
     <link rel="stylesheet" href="/css/mdi/materialdesignicons.css">
     <%= javascript_importmap_tags %>
   </head>
-  <body>
-    <nav class="navbar navbar-expand-md app-header mb-3">
-      <div class="container">
-        <a class="navbar-brand app-logo" href="/">
-          <i class="mdi mdi-sun-angle-outline app-logo__icon" aria-hidden="true"></i>
+  <body class="bg-white font-body text-ink antialiased">
+    <nav class="mb-4 bg-surface">
+      <div class="mx-auto flex w-full max-w-[1140px] items-center px-3 py-2">
+        <a class="inline-flex items-center gap-1.5 text-xl font-bold leading-none text-black no-underline" style="font-family: 'Lato', system-ui, sans-serif" href="/">
+          <i class="mdi mdi-sun-angle-outline text-2xl leading-none" aria-hidden="true"></i>
           <span>timeframe</span>
         </a>
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="/status">Status</a>
+        <ul class="ml-auto flex items-center gap-2">
+          <li>
+            <a class="block px-2 py-1 text-black no-underline hover:opacity-70" href="/status">Status</a>
           </li>
         </ul>
       </div>
     </nav>
 
-    <div class="container">
+    <div class="mx-auto w-full max-w-[1140px] px-3">
       <% flash.each do |key, value| %>
-        <div class="alert alert-<%= key == 'notice' ? 'success' : 'danger' %> alert-dismissible fade show" role="alert">
-          <%= value %>
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="relative mb-3 flex items-center gap-3 rounded-md border py-3 pl-4 pr-10 <%= key == 'notice' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800' %>" role="alert" data-controller="alert">
+          <span class="mr-auto"><%= value %></span>
+          <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-xl leading-none opacity-60 hover:opacity-100" data-action="alert#dismiss" aria-label="Close">&times;</button>
         </div>
       <% end %>
 
       <%= yield %>
     </div>
 
-    <footer class="container mt-4 mb-3 text-center text-muted small">
-      <a href="https://github.com/timeframe/timeframe" class="text-muted" target="_blank">GitHub</a>
+    <footer class="mx-auto mb-3 mt-4 w-full max-w-[1140px] px-3 text-center text-sm text-gray-500">
+      <a href="https://github.com/timeframe/timeframe" class="text-gray-500 no-underline hover:underline" target="_blank" rel="noopener">GitHub</a>
     </footer>
-
-    <%= javascript_include_tag "popper.min" %>
-    <%= javascript_include_tag "bootstrap.min" %>
   </body>
 </html>

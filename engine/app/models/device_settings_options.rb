@@ -121,18 +121,18 @@ class DeviceSettingsOptions
     if two_day?
       switch("show_dates", "Dates", default_on: true)
       switch("show_event_times", "Event times", default_on: true)
-      switch("two_day_rollover_enabled", "Hide current day after time if no more events", default_on: true)
+      switch("two_day_rollover_enabled", "Hide current day if no events after", default_on: true)
     end
     if one_day?
       switch("show_event_times", "Event times", default_on: false)
-      switch("one_day_rollover_enabled", "Hide current day after time if no more events", default_on: true)
+      switch("one_day_rollover_enabled", "Hide current day if no events after", default_on: true)
     end
   end
 
   def hide_current_day_option
     return unless Device::HIDE_CURRENT_DAY_TEMPLATES.include?(template)
 
-    switch("hide_current_day_enabled", "Hide current day after time if no more events", default_on: device.hide_current_day_default_on?)
+    switch("hide_current_day_enabled", "Hide current day if no events after", default_on: device.hide_current_day_default_on?)
   end
 
   def time_inputs

@@ -11,37 +11,32 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
     <meta name="theme-color" content="#f1f3f5">
-    <%= stylesheet_link_tag "application" %>
     <link rel="stylesheet" href="/css/mdi/materialdesignicons.css">
   </head>
-  <body>
-    <nav class="navbar navbar-expand-md app-header mb-3">
-      <div class="container">
-        <a class="navbar-brand app-logo" href="/">
-          <i class="mdi mdi-sun-angle-outline app-logo__icon" aria-hidden="true"></i>
+  <body class="bg-white text-ink antialiased">
+    <nav class="mb-4 bg-surface">
+      <div class="mx-auto flex w-full max-w-[1140px] items-center px-3 py-2">
+        <a class="inline-flex items-center gap-1.5 text-xl font-bold leading-none text-black no-underline" href="/">
+          <i class="mdi mdi-sun-angle-outline text-2xl leading-none" aria-hidden="true"></i>
           <span>timeframe</span>
         </a>
         <%= yield :navbar %>
       </div>
     </nav>
 
-    <div class="container">
+    <div class="mx-auto w-full max-w-[1140px] px-3">
       <% flash.each do |key, value| %>
-        <div class="alert alert-<%= key == 'notice' ? 'success' : 'danger' %> alert-dismissible fade show" role="alert">
+        <div class="mb-3 rounded-md border px-4 py-3 <%= key == 'notice' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800' %>" role="alert">
           <%= value %>
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
       <% end %>
 
       <%= yield %>
     </div>
 
-    <footer class="container mt-4 mb-3 text-center text-muted small">
-      <a href="https://github.com/timeframe/timeframe" class="text-muted" target="_blank">GitHub</a>
+    <footer class="mx-auto mb-3 mt-4 w-full max-w-[1140px] px-3 text-center text-sm text-gray-500">
+      <a href="https://github.com/timeframe/timeframe" class="text-gray-500 no-underline hover:underline" target="_blank" rel="noopener">GitHub</a>
       <%= yield :footer %>
     </footer>
-
-    <%= javascript_include_tag "popper.min" %>
-    <%= javascript_include_tag "bootstrap.min" %>
   </body>
 </html>

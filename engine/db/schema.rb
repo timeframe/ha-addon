@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 46) do
+ActiveRecord::Schema[8.1].define(version: 47) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -320,6 +320,7 @@ ActiveRecord::Schema[8.1].define(version: 46) do
     t.datetime "fulfilled_at"
     t.datetime "paid_at"
     t.boolean "payment_method_saved", default: false, null: false
+    t.datetime "refunded_at"
     t.text "ship_city"
     t.text "ship_country"
     t.text "ship_line1"
@@ -332,6 +333,7 @@ ActiveRecord::Schema[8.1].define(version: 46) do
     t.string "status", default: "pending", null: false
     t.string "stripe_payment_intent_id"
     t.string "stripe_tax_calculation_id"
+    t.string "stripe_tax_transaction_id"
     t.integer "subtotal_cents", default: 0, null: false
     t.integer "tax_cents", default: 0, null: false
     t.integer "total_cents", default: 0, null: false

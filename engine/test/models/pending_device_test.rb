@@ -11,6 +11,8 @@ class PendingDeviceTest < Minitest::Test
   def test_model_key_for_firmware_maps_known_models
     assert_equal "trmnl_og", PendingDevice.model_key_for_firmware("og")
     assert_equal "trmnl_x", PendingDevice.model_key_for_firmware("X")
+    assert_equal "reterminal_e1001", PendingDevice.model_key_for_firmware("reTerminal E1001")
+    assert_equal "reterminal_e1003", PendingDevice.model_key_for_firmware("reTerminal E1003")
     assert_nil PendingDevice.model_key_for_firmware("waveshare")
     assert_nil PendingDevice.model_key_for_firmware(nil)
     assert_nil PendingDevice.model_key_for_firmware("")

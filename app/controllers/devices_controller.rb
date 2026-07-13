@@ -5,9 +5,9 @@ require_dependency TimeframeCore::Engine.root.join("app", "controllers", "device
 class DevicesController
   skip_before_action :auto_sign_in_default_user!, raise: false, only: [:confirmation_image]
 
-  # The admin settings page uses the Tailwind layout; device-facing actions
-  # (preview/screenshot/confirmation) keep their existing layouts.
-  layout -> { (action_name == "settings") ? "application_tw" : "application" }
+  # Admin-facing pages use the app (Tailwind) layout; device-facing actions
+  # (show/preview_frame) render with the "device" layout at render time.
+  layout "application"
 
   private
 

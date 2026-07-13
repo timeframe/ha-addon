@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class StatusController < ApplicationController
-  layout "application_tw"
+  layout "application"
 
   def index
     @state = UptimeCheck.current_state

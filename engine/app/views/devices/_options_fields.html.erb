@@ -2,54 +2,63 @@
     and the onboarding "Configure" step. Expects a `device` local. Render inside
     a form that posts to update_options (or the onboarding equivalent). %>
 <% if device.active_template.present? %>
-  <% DeviceSettingsOptions.call(device).each do |opt| %>
-    <% if opt[:type] == :time %>
-      <div class="mt-3" data-depends-on="<%= opt[:depends_on] %>">
-        <input type="time" id="<%= opt[:key].tr("_", "-") %>" name="configuration[<%= opt[:key] %>]" value="<%= device.configuration&.dig(opt[:key]).presence || opt[:default] %>" class="tf-input-sm max-w-[10rem]">
-      </div>
-    <% else %>
-      <%
-        current_value = device.configuration&.dig(opt[:key])
-        is_on = opt[:default_on] ? current_value != "false" : current_value == "true"
-      %>
-      <div class="mb-2" data-depends-on="<%= opt[:depends_on] %>">
-        <label class="flex items-center gap-2">
-          <input type="hidden" name="configuration[<%= opt[:key] %>]" value="false">
-          <%= check_box_tag "configuration[#{opt[:key]}]", "true", is_on, class: "tf-check", data: {"option-key": opt[:key]} %>
-          <span><%= opt[:label] %></span>
-        </label>
-        <% if opt[:description].present? %>
-          <div class="mt-0.5 text-sm text-gray-500"><%= opt[:description] %></div>
-        <% end %>
-      </div>
-      <% if opt[:key] == "show_temperature_events" %>
+  <% all_opts = DeviceSettingsOptions.call(device) %>
+  <%# Companion time inputs (e.g. the "hide current day" rollover time) render
+      INLINE with their switch, so index them by the switch they depend on and
+      skip them in the main loop. %>
+  <% time_by_switch = all_opts.select { |o| o[:type] == :time }.index_by { |o| o[:depends_on] } %>
+  <% all_opts.each do |opt| %>
+    <% next if opt[:type] == :time %>
+    <%
+      current_value = device.configuration&.dig(opt[:key])
+      is_on = opt[:default_on] ? current_value != "false" : current_value == "true"
+      is_wind = opt[:key] == "show_wind_events"
+      time_opt = time_by_switch[opt[:key]]
+      if is_wind
+        display_unit = (device.account&.respond_to?(:speed_unit) && device.account&.speed_unit == "kph") ? "kph" : "mph"
+        threshold_mph = device.wind_gust_threshold_mph
+        display_value = (display_unit == "kph") ? (threshold_mph * 1.609344).round : threshold_mph.round
+      end
+    %>
+    <div class="mb-2 <%= "flex flex-wrap items-center gap-2" if is_wind || time_opt %>" data-depends-on="<%= opt[:depends_on] %>">
+      <label class="flex items-center gap-2">
+        <input type="hidden" name="configuration[<%= opt[:key] %>]" value="false">
+        <%= check_box_tag "configuration[#{opt[:key]}]", "true", is_on, class: "tf-check", data: {"option-key": opt[:key]} %>
+        <span><%= opt[:label] %><% if is_wind %> for gusts of at least<% end %></span>
+      </label>
+      <% if is_wind %>
+        <%# The gust input is always shown (not gated by the checkbox) so the
+            value is always visible. %>
+        <div class="flex max-w-[8rem]">
+          <input type="number" min="1" step="1" id="wind-gust-threshold" name="configuration[wind_gust_threshold_mph]" value="<%= display_value %>" class="tf-input-sm rounded-r-none" aria-label="Gust threshold">
+          <input type="hidden" name="units[wind_gust_threshold_mph]" value="<%= display_unit %>">
+          <span class="inline-flex items-center rounded-r-md border border-l-0 border-ink/20 bg-ink/5 px-2 text-sm"><%= display_unit %></span>
+        </div>
+      <% elsif time_opt %>
+        <%# The rollover time reads "…if no events after [TIME]"; always shown. %>
+        <input type="time" id="<%= time_opt[:key].tr("_", "-") %>" name="configuration[<%= time_opt[:key] %>]" value="<%= device.configuration&.dig(time_opt[:key]).presence || time_opt[:default] %>" class="tf-input-sm h-11 w-auto flex-shrink-0" aria-label="<%= opt[:label] %>">
+      <% elsif opt[:description].present? %>
+        <div class="mt-0.5 text-sm text-gray-500"><%= opt[:description] %></div>
+      <% end %>
+    </div>
+    <% if opt[:key] == "show_temperature_events" %>
         <% selected_hours = device.temperature_event_hours %>
         <div class="mb-2 ml-4" data-depends-on="show_temperature_events">
           <input type="hidden" name="temperature_hours_present" value="1">
           <div class="flex flex-wrap gap-1">
             <% (0..23).each do |hour| %>
               <% label = Time.new(2000, 1, 1, hour).strftime("%-l%P") %>
-              <%= check_box_tag "temperature_hours[]", hour, selected_hours.include?(hour), id: "temp-hour-#{hour}", class: "peer sr-only", autocomplete: "off" %>
-              <label class="min-w-[2.5rem] cursor-pointer rounded border border-ink/30 px-1.5 py-0.5 text-center text-xs peer-checked:border-ink peer-checked:bg-ink peer-checked:text-white" for="temp-hour-<%= hour %>"><%= label %></label>
+              <%# Each checkbox is scoped INSIDE its own label so the checked
+                  styling (has-[:checked]) applies only to this hour. The old
+                  peer pattern leaked via the `~` sibling combinator, lighting
+                  up every hour after the one tapped. %>
+              <label class="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded border border-ink/30 px-2 text-xs has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white">
+                <%= check_box_tag "temperature_hours[]", hour, selected_hours.include?(hour), id: "temp-hour-#{hour}", class: "sr-only", autocomplete: "off" %>
+                <span><%= label %></span>
+              </label>
             <% end %>
           </div>
         </div>
       <% end %>
-      <% if opt[:key] == "show_wind_events" %>
-        <%
-          display_unit = (device.account&.respond_to?(:speed_unit) && device.account&.speed_unit == "kph") ? "kph" : "mph"
-          threshold_mph = device.wind_gust_threshold_mph
-          display_value = (display_unit == "kph") ? (threshold_mph * 1.609344).round : threshold_mph.round
-        %>
-        <div class="mb-2 ml-4 flex items-center gap-2" data-depends-on="show_wind_events">
-          <label class="mb-0 text-sm" for="wind-gust-threshold">Gust threshold</label>
-          <div class="flex max-w-[8rem]">
-            <input type="number" min="1" step="1" id="wind-gust-threshold" name="configuration[wind_gust_threshold_mph]" value="<%= display_value %>" class="tf-input-sm rounded-r-none">
-            <input type="hidden" name="units[wind_gust_threshold_mph]" value="<%= display_unit %>">
-            <span class="inline-flex items-center rounded-r-md border border-l-0 border-ink/20 bg-ink/5 px-2 text-sm"><%= display_unit %></span>
-          </div>
-        </div>
-      <% end %>
-    <% end %>
   <% end %>
 <% end %>
