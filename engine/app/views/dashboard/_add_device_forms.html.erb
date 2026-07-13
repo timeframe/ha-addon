@@ -1,21 +1,21 @@
 <div style="min-width: 300px; max-width: 300px;">
-  <div class="card h-100">
-    <div class="card-header">
+  <div class="flex h-full flex-col rounded-lg border border-ink/10 bg-white shadow-sm">
+    <div class="border-b border-ink/10 px-3 py-2 font-semibold">
       <span>Add Device</span>
     </div>
-    <div class="card-body">
+    <div class="p-4">
       <%= form_tag(account_location_devices_path(account, location), method: :post, id: "add-device-form") do %>
         <div class="mb-3">
-          <label class="form-label">Name</label>
-          <input type="text" name="device_name" class="form-control" placeholder="e.g. Kitchen Display" required data-field="name">
+          <label class="tf-label">Name</label>
+          <input type="text" name="device_name" class="tf-input" placeholder="e.g. Kitchen Display" required data-field="name">
         </div>
         <% restrict_models = defined?(current_user) && current_user && !current_user.is_admin? %>
         <% if restrict_models %>
           <input type="hidden" name="device_model" value="reterminal_e1001" data-field="model">
         <% else %>
           <div class="mb-3">
-            <label class="form-label">Device</label>
-            <select name="device_model" class="form-select" required data-field="model">
+            <label class="tf-label">Device</label>
+            <select name="device_model" class="tf-select" required data-field="model">
               <% Device::SUPPORTED_MODELS.sort_by { |_, info| info[:name].to_s.downcase }.each do |key, info| %>
                 <% if key == "reterminal_e1001" %>
                   <option value="<%= key %>" selected><%= info[:name] %></option>
@@ -27,14 +27,14 @@
           </div>
         <% end %>
         <div class="mb-3" data-pairing-code style="display: none;">
-          <label class="form-label">Pairing Code</label>
-          <input type="text" name="pairing_code" class="form-control" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-field="pairing">
+          <label class="tf-label">Pairing Code</label>
+          <input type="text" name="pairing_code" class="tf-input" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-field="pairing">
           <% if defined?(current_user) && current_user&.is_admin? %>
-            <small class="text-muted">Optional for admins</small>
+            <small class="text-sm text-gray-500">Optional for admins</small>
           <% end %>
         </div>
-        <p class="small text-muted" data-setup-note style="display: none;">On your Boox device, visit <code><%= request.base_url %>/pair</code> to get a pairing code.</p>
-        <%= submit_tag "Add Device", class: "btn btn-primary w-100", disabled: true, id: "add-device-btn" %>
+        <p class="text-sm text-gray-500" data-setup-note style="display: none;">On your Boox device, visit <code><%= request.base_url %>/pair</code> to get a pairing code.</p>
+        <%= submit_tag "Add Device", class: "tf-btn tf-btn-primary w-full", disabled: true, id: "add-device-btn" %>
       <% end %>
     </div>
   </div>

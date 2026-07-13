@@ -1,0 +1,163 @@
+/* ha-addon Tailwind bundle.
+ *
+ * Built by `rails css:build` into app/assets/builds/application_tailwind.css.
+ * Mirrors the cloud app's Tailwind setup. During the Bootstrap -> Tailwind
+ * migration this bundle is loaded ONLY by the Tailwind-only layout
+ * (application_tw.html.erb); the legacy Bootstrap layout keeps application.css.
+ *
+ * Preflight is intentionally OMITTED while Bootstrap still exists (its reset
+ * would fight Bootstrap's Reboot on the legacy layout's shared engine views).
+ * Add `@import "tailwindcss/preflight.css" layer(base);` once Bootstrap is gone.
+ */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Scan ha-addon's own views + helpers + JS, AND the shared engine views
+   (rendered by this app) so their Tailwind classes survive purge. */
+@source "../../views";
+@source "../../helpers";
+@source "../../javascript";
+@source "../../../engine/app/views";
+
+@theme {
+  --color-paper: #f7f6f2;
+  --color-ink: #1a1a1a;
+  --color-cta: #ffd400;
+  --color-cta-hover: #f0c800;
+  --color-surface: #f1f3f5;
+  --font-display: "Lato", system-ui, sans-serif;
+  --font-body: "Montserrat", system-ui, sans-serif;
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/lato-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/lato-latin-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/montserrat-latin-400-700-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/montserrat-latin-400-700-normal.woff2") format("woff2");
+}
+
+@layer components {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  .cal-letter {
+    font-family: "Lato", system-ui, sans-serif;
+    font-weight: 700;
+    display: inline-block;
+    text-align: center;
+    line-height: 1;
+    min-width: 1em;
+  }
+
+  gmp-place-autocomplete {
+    display: block;
+    width: 100%;
+    color-scheme: light;
+  }
+}
+
+/* Shared UI components (mirror cloud's .tf-* set) so migrated ha-addon/engine
+   markup stays terse and consistent. */
+@layer components {
+  .tf-label {
+    @apply mb-1 block text-sm font-medium text-ink;
+  }
+  .tf-input,
+  .tf-select,
+  .tf-textarea {
+    @apply w-full rounded-md border border-ink/20 bg-white px-3 py-2 text-ink focus:border-ink focus:outline-none;
+  }
+  .tf-input-sm {
+    @apply w-full rounded-md border border-ink/20 bg-white px-2 py-1 text-sm text-ink focus:border-ink focus:outline-none;
+  }
+  .tf-check {
+    @apply h-4 w-4 rounded border-ink/30 text-ink focus:ring-ink;
+  }
+  .tf-btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-4 py-2 font-medium no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .tf-btn-sm {
+    @apply px-3 py-1 text-sm;
+  }
+  .tf-btn-primary {
+    @apply bg-ink text-white hover:bg-ink/90;
+  }
+  .tf-btn-outline {
+    @apply border border-ink/30 text-ink hover:bg-ink/5;
+  }
+  .tf-btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  .tf-card {
+    @apply rounded-lg border border-ink/10 bg-white p-4 shadow-sm;
+  }
+  .tf-card-title {
+    @apply mb-3 text-lg font-semibold text-ink;
+  }
+  .tf-link {
+    @apply text-ink underline underline-offset-2 hover:opacity-80;
+  }
+  .tf-badge {
+    @apply inline-flex items-center rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink;
+  }
+  .tf-table {
+    @apply w-full border-collapse text-sm;
+  }
+  .tf-table th,
+  .tf-table td {
+    @apply border border-ink/15 px-2 py-1 text-left align-top;
+  }
+  .tf-table thead th {
+    @apply bg-ink/5 font-semibold;
+  }
+}
+
+/* Compat shim for Bootstrap semantic color classes that ENGINE-shared views
+   and engine model methods (e.g. Device#battery_color_class) still emit as
+   plain strings. Lets those render correctly under the Tailwind layout without
+   editing coverage-tracked engine model code. */
+@layer components {
+  .text-success { color: #16a34a; }
+  .text-danger { color: #dc2626; }
+  .text-warning { color: #d97706; }
+  .text-warning-emphasis { color: #b45309; }
+  .text-info { color: #0284c7; }
+  .text-muted,
+  .text-body-secondary,
+  .text-body-tertiary { color: #6b7280; }
+  .bg-info-subtle { background-color: #eff6ff; }
+  .bg-warning-subtle { background-color: #fffbeb; }
+}
+
+/* Native <dialog> backdrop dimming for Stimulus modal_controller dialogs. */
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}

@@ -3,49 +3,43 @@
     content (device preview/screenshot, upcoming events) when the account has
     granted support access. Account members always see their own data. %>
 <% hide_support_content = defined?(current_user) && current_user.present? && !@account.users.include?(current_user) && !@account.support_access? %>
-<div class="row justify-content-center">
-  <div class="col-md-8 col-lg-6">
+<style>
+  .tf-tab { border-bottom: 2px solid transparent; }
+  .tf-tab-active { border-bottom-color: var(--color-ink); font-weight: 500; }
+</style>
+<div class="flex justify-center">
+  <div class="w-full max-w-2xl">
     <% if defined?(current_user) && current_user&.is_admin? %>
       <% admin_user = @device.account&.users&.first %>
       <% if admin_user %>
-        <p class="mb-1"><%= link_to "← Back to #{admin_user.email}", admin_account_path(@device.account), class: "text-decoration-none small" %></p>
+        <p class="mb-1"><%= link_to "← Back to #{admin_user.email}", admin_account_path(@device.account), class: "text-sm no-underline hover:underline" %></p>
       <% end %>
     <% end %>
-    <div class="d-flex align-items-center mb-4">
-      <h3 class="mb-0" id="device-title"><%= @device.name %></h3>
+    <div class="mb-4 flex items-center">
+      <h3 class="mb-0 text-xl font-semibold" id="device-title"><%= @device.name %></h3>
       <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
-        <span class="text-body-tertiary ms-2" style="font-size: 0.85rem;"><%= @device.model_name_label %></span>
+        <span class="ml-2 text-body-tertiary text-sm"><%= @device.model_name_label %></span>
       <% end %>
       <% if defined?(current_user) && current_user&.is_admin? %>
-        <span class="badge text-bg-secondary ms-2" style="font-size: 0.7rem;">ID #<%= @device.id %></span>
+        <span class="ml-2 tf-badge">ID #<%= @device.id %></span>
       <% end %>
     </div>
 
     <%# Preview + Screenshot %>
     <% unless hide_support_content %>
     <% has_screenshot = @device.screenshotted? && @device.cached_image.present? %>
-    <div class="card mb-3">
-      <div class="card-header preview-tabs-header">
-        <ul class="nav nav-tabs card-header-tabs" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button type="button" class="nav-link active" id="preview-tab" data-bs-toggle="tab" data-bs-target="#preview-pane" role="tab" aria-controls="preview-pane" aria-selected="true">Preview</button>
-          </li>
+    <div class="mb-3 rounded-lg border border-ink/10 bg-white" data-controller="tabs" data-tabs-active-class="tf-tab-active">
+      <div class="border-b border-ink/10 px-3 pt-2">
+        <div class="flex gap-1" role="tablist">
+          <button type="button" class="tf-tab px-3 py-2 text-sm" data-tabs-target="tab" data-action="tabs#select" data-panel="preview" data-tabs-default role="tab" aria-selected="true">Preview</button>
           <% if has_screenshot %>
-            <li class="nav-item" role="presentation">
-              <button type="button" class="nav-link" id="screenshot-tab" data-bs-toggle="tab" data-bs-target="#screenshot-pane" role="tab" aria-controls="screenshot-pane" aria-selected="false">Screenshot</button>
-            </li>
+            <button type="button" class="tf-tab px-3 py-2 text-sm" data-tabs-target="tab" data-action="tabs#select" data-panel="screenshot" role="tab" aria-selected="false">Screenshot</button>
           <% end %>
-        </ul>
+        </div>
       </div>
-      <style>
-        .preview-tabs-header .nav-link { color: var(--bs-body-color); }
-        .preview-tabs-header .nav-link:hover,
-        .preview-tabs-header .nav-link:focus { color: var(--bs-body-color); }
-        .preview-tabs-header .nav-link.active { color: var(--bs-body-color); }
-      </style>
-      <div class="tab-content">
-        <div class="tab-pane fade show active" id="preview-pane" role="tabpanel" aria-labelledby="preview-tab">
-          <div class="card-body p-0">
+      <div>
+        <div data-tabs-target="panel" data-panel="preview" role="tabpanel">
+          <div class="p-0">
             <div id="preview-container" style="position: relative; background: white; overflow: hidden; width: 100%;">
               <iframe
                 id="preview-iframe"
@@ -57,22 +51,22 @@
               ></iframe>
             </div>
           </div>
-          <div class="card-footer py-2">
-            <div class="d-flex flex-wrap align-items-center gap-1">
-              <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-outline-secondary" id="preview-prev" title="Previous day">&larr;</button>
-                <button type="button" class="btn btn-outline-secondary" id="preview-today">Today</button>
-                <button type="button" class="btn btn-outline-secondary" id="preview-next" title="Next day">&rarr;</button>
+          <div class="border-t border-ink/10 px-3 py-2">
+            <div class="flex flex-wrap items-center gap-1">
+              <div class="inline-flex divide-x divide-ink/30 overflow-hidden rounded-md border border-ink/30 text-sm">
+                <button type="button" class="px-2 py-1 hover:bg-ink/5" id="preview-prev" title="Previous day">&larr;</button>
+                <button type="button" class="px-2 py-1 hover:bg-ink/5" id="preview-today">Today</button>
+                <button type="button" class="px-2 py-1 hover:bg-ink/5" id="preview-next" title="Next day">&rarr;</button>
               </div>
-              <input type="date" class="form-control form-control-sm w-auto flex-shrink-0" id="preview-date" value="<%= @preview_now.to_date.to_s %>">
-              <input type="time" class="form-control form-control-sm w-auto flex-shrink-0" id="preview-time" value="<%= @preview_now.strftime("%H:%M") %>">
+              <input type="date" class="tf-input-sm w-auto flex-shrink-0" id="preview-date" value="<%= @preview_now.to_date.to_s %>">
+              <input type="time" class="tf-input-sm w-auto flex-shrink-0" id="preview-time" value="<%= @preview_now.strftime("%H:%M") %>">
             </div>
           </div>
         </div>
         <% if has_screenshot %>
-          <div class="tab-pane fade" id="screenshot-pane" role="tabpanel" aria-labelledby="screenshot-tab">
-            <div class="card-body p-2">
-              <div class="d-flex align-items-center justify-content-center" style="background: #f0f0f0; border-radius: .25rem; overflow: hidden; min-height: 100px;" id="screenshot-container">
+          <div data-tabs-target="panel" data-panel="screenshot" role="tabpanel" hidden>
+            <div class="p-2">
+              <div class="flex items-center justify-center overflow-hidden rounded" style="background: #f0f0f0; min-height: 100px;" id="screenshot-container">
                 <% if (@device.reterminal_e1003? || @device.trmnl_x?) && !@device.landscape_template? %>
                   <%# Portrait panel (display_width x display_height) shown rotated -90deg.
                       CSS rotation doesn't change the layout box, so wrap the image in an
@@ -85,16 +79,16 @@
                 <% else %>
                   <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img">
                 <% end %>
-                <div id="screenshot-loading" style="display: none;" class="text-body-secondary small py-4">Regenerating screenshot&hellip;</div>
+                <div id="screenshot-loading" style="display: none;" class="py-4 text-sm text-gray-500">Regenerating screenshot&hellip;</div>
               </div>
             </div>
-            <div class="card-footer py-2 d-flex justify-content-between align-items-center">
-              <span class="text-body-tertiary small" id="screenshot-generated-at">
+            <div class="flex items-center justify-between border-t border-ink/10 px-3 py-2">
+              <span class="text-sm text-gray-400" id="screenshot-generated-at">
                 <% if @device.cached_image_at %>
                   Generated <%= (@device.cached_image_at > 1.minute.ago) ? "<1m" : time_ago_in_words(@device.cached_image_at) %> ago
                 <% end %>
               </span>
-              <button type="button" class="btn btn-outline-secondary btn-sm" id="regen-screenshot-btn">Regenerate</button>
+              <button type="button" class="tf-btn tf-btn-outline tf-btn-sm" id="regen-screenshot-btn">Regenerate</button>
             </div>
           </div>
         <% end %>
@@ -175,28 +169,29 @@
     <%# Options. Wrapped in a Turbo Frame and auto-saved on any change so edits
         (including the layout/template) persist without a hard page refresh. %>
     <turbo-frame id="device-options">
-    <div class="card mb-3">
+    <div class="mb-3 rounded-lg border border-ink/10 bg-white">
       <%= form_with url: update_options_account_location_device_path(@account, @location, @device), method: :patch, id: "device-options-form" do %>
-        <div class="card-header d-flex align-items-center justify-content-between py-2">
+        <div class="flex items-center justify-between border-b border-ink/10 px-3 py-2">
           <span>Options</span>
-          <span class="small text-body-tertiary" data-save-status aria-live="polite"></span>
+          <span class="text-sm text-gray-400" data-save-status aria-live="polite"></span>
         </div>
-        <div class="card-body">
+        <div class="p-4">
         <%# Name %>
-        <label class="form-label small fw-bold mb-1" for="device-name">Name</label>
-        <input type="text" id="device-name" name="name" value="<%= @device.name %>" class="form-control form-control-sm mb-3" required>
+        <label class="mb-1 block text-sm font-bold" for="device-name">Name</label>
+        <input type="text" id="device-name" name="name" value="<%= @device.name %>" class="tf-input-sm mb-3" required>
 
         <%# Template selection (auto-saves on change) %>
         <% if @device.template_options %>
-          <label class="form-label small fw-bold mb-1">Layout</label>
-          <div class="list-group list-group-flush border rounded mb-3">
+          <label class="mb-1 block text-sm font-bold">Layout</label>
+          <div class="mb-3 divide-y divide-ink/10 overflow-hidden rounded-md border border-ink/10">
             <% @device.template_options.each do |tmpl| %>
-              <label class="list-group-item list-group-item-action d-flex justify-content-between align-items-center<%= ' active' if @device.active_template == tmpl[:name] %>" style="cursor: pointer;">
-                <span class="d-flex align-items-center gap-2">
-                  <%= radio_button_tag "display_template", tmpl[:name], @device.active_template == tmpl[:name], class: "form-check-input mt-0" %>
+              <% active = @device.active_template == tmpl[:name] %>
+              <label class="flex cursor-pointer items-center justify-between px-3 py-2 <%= "bg-ink/5" if active %>">
+                <span class="flex items-center gap-2">
+                  <%= radio_button_tag "display_template", tmpl[:name], active, class: "tf-check" %>
                   <%= tmpl[:label] %>
                 </span>
-                <% if @device.active_template == tmpl[:name] %>
+                <% if active %>
                   <i class="mdi mdi-check"></i>
                 <% end %>
               </label>
@@ -298,9 +293,7 @@
     <% end %>
     <% if lookup_context.template_exists?("event_icons", "devices", true) %>
       <% if hide_support_content %>
-        <div class="card mb-3">
-          <div class="card-body text-muted">User has not provided support access.</div>
-        </div>
+        <div class="mb-3 rounded-lg border border-ink/10 bg-white p-4 text-gray-500">User has not provided support access.</div>
       <% else %>
         <%= render "devices/event_icons" %>
       <% end %>
@@ -308,26 +301,26 @@
 
     <% admin_context = !defined?(current_user) || current_user&.is_admin? %>
     <% if admin_context %>
-      <div class="card mb-3 border-warning">
-        <div class="card-header py-2 bg-warning-subtle">
+      <div class="mb-3 rounded-lg border border-amber-400 bg-white">
+        <div class="border-b border-amber-400 bg-warning-subtle px-3 py-2">
           <span>Admin</span>
         </div>
-        <div class="card-body">
+        <div class="p-4">
           <%= form_with url: account_location_device_path(@account, @location, @device), method: :patch do %>
-            <div class="form-check form-switch mb-2">
+            <label class="mb-2 flex items-center gap-2">
               <% if @device.demo_mode_enabled? %>
-                <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" checked onchange="this.form.submit()">
+                <input type="checkbox" class="tf-check" checked onchange="this.form.submit()">
               <% else %>
-                <input type="checkbox" class="form-check-input" role="switch" style="cursor: pointer;" onchange="this.form.submit()">
+                <input type="checkbox" class="tf-check" onchange="this.form.submit()">
               <% end %>
-              <label class="form-check-label">Demo mode</label>
-            </div>
+              <span>Demo mode</span>
+            </label>
           <% end %>
           <% if defined?(current_user) && current_user&.is_admin? %>
             <%= form_with url: reassign_account_location_device_path(@account, @location, @device), method: :patch, class: "mb-3" do %>
-              <label class="form-label small mb-1" for="reassign-location">Reassign location</label>
-              <div class="input-group input-group-sm">
-                <select name="target_location_id" id="reassign-location" class="form-select" required>
+              <label class="mb-1 block text-sm" for="reassign-location">Reassign location</label>
+              <div class="flex">
+                <select name="target_location_id" id="reassign-location" class="tf-select rounded-r-none text-sm" required>
                   <% Account.includes(:locations).order(:name).each do |acct| %>
                     <% next if acct.locations.empty? %>
                     <optgroup label="<%= acct.name %>">
@@ -341,24 +334,24 @@
                     </optgroup>
                   <% end %>
                 </select>
-                <%= submit_tag "Reassign", class: "btn btn-warning" %>
+                <%= submit_tag "Reassign", class: "tf-btn tf-btn-sm rounded-l-none bg-amber-500 text-white hover:bg-amber-600" %>
               </div>
-              <p class="form-text mb-0">Move this device to a different account or location.</p>
+              <p class="mb-0 mt-1 text-sm text-gray-500">Move this device to a different account or location.</p>
             <% end %>
-            <div class="d-flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
               <% if respond_to?(:export_snapshot_admin_device_path) %>
-                <%= link_to "Export Debug Snapshot", export_snapshot_admin_device_path(@device), class: "btn btn-outline-secondary btn-sm" %>
+                <%= link_to "Export Debug Snapshot", export_snapshot_admin_device_path(@device), class: "tf-btn tf-btn-outline tf-btn-sm" %>
               <% end %>
               <% if @device.screenshotted? %>
-                <a href="<%= screenshot_account_location_device_path(@account, @location, @device) %>" class="btn btn-outline-secondary btn-sm">Screenshot</a>
+                <a href="<%= screenshot_account_location_device_path(@account, @location, @device) %>" class="tf-btn tf-btn-outline tf-btn-sm">Screenshot</a>
               <% end %>
             </div>
 
             <% if respond_to?(:admin_device_path) %>
               <%# Billing %>
               <div class="mt-3">
-                <label class="form-label small mb-1"><strong>Billing</strong></label>
-                <div class="text-muted small mb-2">
+                <label class="mb-1 block text-sm"><strong>Billing</strong></label>
+                <div class="mb-2 text-sm text-gray-500">
                   <% if @device.billing_exempt? %>
                     Exempt from billing - not counted toward the account's subscription.
                   <% elsif @device.purchased? %>
@@ -371,45 +364,45 @@
                     Not purchased.
                   <% end %>
                 </div>
-                <%= form_with url: admin_device_path(@device), method: :patch, class: "d-flex gap-1 mb-2" do |f| %>
-                  <%= f.date_field "device[trial_ends_on]", value: @device.trial_ends_on, class: "form-control form-control-sm" %>
-                  <%= f.submit "Save", class: "btn btn-sm btn-outline-secondary flex-shrink-0" %>
+                <%= form_with url: admin_device_path(@device), method: :patch, class: "mb-2 flex gap-1" do |f| %>
+                  <%= f.date_field "device[trial_ends_on]", value: @device.trial_ends_on, class: "tf-input-sm" %>
+                  <%= f.submit "Save", class: "tf-btn tf-btn-outline tf-btn-sm flex-shrink-0" %>
                 <% end %>
-                <div class="d-flex flex-wrap gap-2">
+                <div class="flex flex-wrap gap-2">
                   <%= button_to(
                     @device.purchased? ? "Mark not purchased" : "Mark purchased",
                     admin_device_path(@device),
                     method: :patch,
                     params: {device: {purchased: @device.purchased? ? "0" : "1"}},
-                    class: "btn btn-sm #{@device.purchased? ? "btn-outline-warning" : "btn-outline-success"}"
+                    class: "tf-btn tf-btn-outline tf-btn-sm"
                   ) %>
                   <%= button_to(
                     @device.billing_exempt? ? "Remove exemption" : "Exempt from billing",
                     admin_device_path(@device),
                     method: :patch,
                     params: {device: {billing_exempt: @device.billing_exempt? ? "0" : "1"}},
-                    class: "btn btn-sm #{@device.billing_exempt? ? "btn-outline-warning" : "btn-outline-success"}"
+                    class: "tf-btn tf-btn-outline tf-btn-sm"
                   ) %>
                 </div>
               </div>
 
               <%# Battery %>
               <div class="mt-3">
-                <label class="form-label small mb-1"><strong>Battery</strong></label>
+                <label class="mb-1 block text-sm"><strong>Battery</strong></label>
                 <div>
                   <% if @device.battery_level.present? %>
-                    <span class="<%= @device.battery_color_class %> fs-5">
+                    <span class="<%= @device.battery_color_class %> text-lg">
                       <i class="mdi mdi-<%= @device.battery_icon %>"></i>
                       <%= @device.battery_level.to_i %>%
                     </span>
-                    <span class="badge text-bg-secondary text-uppercase ms-1"><%= @device.battery_status %></span>
-                    <% if @device.charging? %><span class="badge text-bg-info ms-1">Charging</span><% end %>
-                    <% if @device.low_battery_warning? %><span class="badge text-bg-warning ms-1">Recharge warning</span><% end %>
+                    <span class="ml-1 tf-badge uppercase"><%= @device.battery_status %></span>
+                    <% if @device.charging? %><span class="ml-1 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">Charging</span><% end %>
+                    <% if @device.low_battery_warning? %><span class="ml-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Recharge warning</span><% end %>
                   <% else %>
-                    <span class="text-muted">No battery reading yet.</span>
+                    <span class="text-gray-500">No battery reading yet.</span>
                   <% end %>
                 </div>
-                <div class="text-muted small mt-1">
+                <div class="mt-1 text-sm text-gray-500">
                   Last connected:
                   <% if @device.last_connection_at %>
                     <%= @device.last_connection_at.in_time_zone(@timezone).strftime("%b %-d %-l:%M %p") %>
@@ -422,10 +415,10 @@
 
               <%# Audit Log %>
               <div class="mt-3">
-                <label class="form-label small mb-1"><strong>Audit Log</strong></label>
+                <label class="mb-1 block text-sm"><strong>Audit Log</strong></label>
                 <% if @audit_logs&.any? %>
-                  <div class="table-responsive">
-                    <table class="table table-sm table-striped">
+                  <div class="overflow-x-auto">
+                    <table class="tf-table">
                       <thead>
                         <tr>
                           <th>Time</th>
@@ -438,11 +431,11 @@
                       <tbody>
                         <% @audit_logs.each do |log| %>
                           <tr>
-                            <td class="text-nowrap"><%= log.created_at.in_time_zone(@timezone).strftime("%b %-d %-l:%M:%S%P") %></td>
+                            <td class="whitespace-nowrap"><%= log.created_at.in_time_zone(@timezone).strftime("%b %-d %-l:%M:%S%P") %></td>
                             <td><code><%= log.event_type %></code></td>
                             <td>
                               <% if log.result_type == "error" %>
-                                <span class="text-danger fw-bold">error</span>
+                                <span class="font-bold text-danger">error</span>
                               <% elsif log.result_type %>
                                 <%= log.result_type %>
                               <% end %>
@@ -450,9 +443,9 @@
                             <td>
                               <% if log.metadata&.dig("cache_age_seconds") %>
                                 <% age = log.metadata["cache_age_seconds"] %>
-                                <span class="<%= age > 900 ? "text-danger fw-bold" : "" %>">
+                                <span class="<%= "font-bold text-danger" if age > 900 %>">
                                   <%= age %>s
-                                  <% if age > 60 %><small class="text-muted">(<%= (age / 60.0).round(1) %>m)</small><% end %>
+                                  <% if age > 60 %><small class="text-gray-500">(<%= (age / 60.0).round(1) %>m)</small><% end %>
                                 </span>
                               <% end %>
                             </td>
@@ -467,7 +460,7 @@
                     </table>
                   </div>
                 <% else %>
-                  <p class="text-muted small mb-0">No audit log entries yet.</p>
+                  <p class="mb-0 text-sm text-gray-500">No audit log entries yet.</p>
                 <% end %>
               </div>
             <% end %>
@@ -478,22 +471,22 @@
 
     <%# Token URL %>
     <% if @device.visionect? && @device.display_key.present? %>
-      <div class="card mb-3">
-        <div class="card-header py-2">
+      <div class="mb-3 rounded-lg border border-ink/10 bg-white" data-controller="collapse">
+        <div class="border-b border-ink/10 px-3 py-2">
           <span>Token URL</span>
         </div>
-        <div class="card-body">
-          <div class="input-group mb-2">
-            <input type="text" class="form-control form-control-sm" value="<%= @device.token_device_url(host: request.base_url) %>" readonly id="token-url-<%= @device.id %>">
-            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="var el=document.getElementById('token-url-<%= @device.id %>'); navigator.clipboard.writeText(el.value).then(function(){alert('Copied!')})">Copy</button>
+        <div class="p-4">
+          <div class="mb-2 flex">
+            <input type="text" class="tf-input-sm rounded-r-none" value="<%= @device.token_device_url(host: request.base_url) %>" readonly id="token-url-<%= @device.id %>">
+            <button class="tf-btn tf-btn-outline tf-btn-sm rounded-l-none" type="button" onclick="var el=document.getElementById('token-url-<%= @device.id %>'); navigator.clipboard.writeText(el.value).then(function(){alert('Copied!')})">Copy</button>
           </div>
-          <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse" data-bs-target="#regen-<%= @device.id %>">Regenerate URL</button>
-          <div class="collapse mt-2" id="regen-<%= @device.id %>">
+          <button type="button" class="tf-btn tf-btn-sm bg-amber-500 text-white hover:bg-amber-600" data-action="collapse#toggle" aria-expanded="false">Regenerate URL</button>
+          <div class="mt-2" data-collapse-target="content" hidden>
             <%= form_with url: regenerate_tokens_account_location_device_path(@account, @location, @device), method: :post do %>
-              <p class="small text-muted">This will invalidate the current token URL. Type <strong><%= @device.name %></strong> to confirm.</p>
-              <div class="input-group">
-                <input type="text" name="name_confirmation" class="form-control form-control-sm" placeholder="<%= @device.name %>" autocomplete="off" data-regen-input="<%= @device.id %>">
-                <%= submit_tag "Regenerate", class: "btn btn-warning btn-sm", disabled: true, id: "regen-btn-#{@device.id}" %>
+              <p class="text-sm text-gray-500">This will invalidate the current token URL. Type <strong><%= @device.name %></strong> to confirm.</p>
+              <div class="flex">
+                <input type="text" name="name_confirmation" class="tf-input-sm rounded-r-none" placeholder="<%= @device.name %>" autocomplete="off" data-regen-input="<%= @device.id %>">
+                <%= submit_tag "Regenerate", class: "tf-btn tf-btn-sm rounded-l-none bg-amber-500 text-white hover:bg-amber-600", disabled: true, id: "regen-btn-#{@device.id}" %>
               </div>
             <% end %>
           </div>
@@ -512,20 +505,20 @@
 
     <%# Reconnect %>
     <% if @device.pairing_code_device? && @device.disconnected? %>
-      <div class="card mb-3">
-        <div class="card-header py-2">
+      <div class="mb-3 rounded-lg border border-ink/10 bg-white">
+        <div class="border-b border-ink/10 px-3 py-2">
           <span>Reconnect</span>
         </div>
-        <div class="card-body">
+        <div class="p-4">
           <% if @device.trmnl? || @device.reterminal_e1001? %>
-            <p class="small text-muted">On your device, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
+            <p class="text-sm text-gray-500">On your device, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
           <% else %>
-            <p class="small text-muted">On your device, visit <code><%= request.base_url %>/pair</code> to get a new pairing code.</p>
+            <p class="text-sm text-gray-500">On your device, visit <code><%= request.base_url %>/pair</code> to get a new pairing code.</p>
           <% end %>
           <%= form_with url: repair_account_location_device_path(@account, @location, @device), method: :post do %>
-            <div class="input-group">
-              <input type="text" name="pairing_code" class="form-control form-control-sm" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-repair-input="<%= @device.id %>">
-              <%= submit_tag "Reconnect", class: "btn btn-primary btn-sm", disabled: true, id: "repair-btn-#{@device.id}" %>
+            <div class="flex">
+              <input type="text" name="pairing_code" class="tf-input-sm rounded-r-none" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-repair-input="<%= @device.id %>">
+              <%= submit_tag "Reconnect", class: "tf-btn tf-btn-primary tf-btn-sm rounded-l-none", disabled: true, id: "repair-btn-#{@device.id}" %>
             </div>
           <% end %>
         </div>
@@ -542,16 +535,16 @@
     <% end %>
 
     <%# Danger zone %>
-    <div class="card mb-3 border-danger">
-      <div class="card-header py-2 border-danger">
+    <div class="mb-3 rounded-lg border border-red-400 bg-white">
+      <div class="border-b border-red-400 px-3 py-2">
           <span>Delete Device</span>
       </div>
-      <div class="card-body">
-        <p class="small text-muted">Type <strong><%= @device.name %></strong> to confirm deletion.</p>
+      <div class="p-4">
+        <p class="text-sm text-gray-500">Type <strong><%= @device.name %></strong> to confirm deletion.</p>
         <%= form_with url: account_location_device_path(@account, @location, @device), method: :delete do %>
-          <div class="input-group">
-            <input type="text" name="name_confirmation" class="form-control form-control-sm" placeholder="<%= @device.name %>" autocomplete="off" data-delete-input="<%= @device.id %>">
-            <%= submit_tag "Delete Device", class: "btn btn-danger btn-sm", disabled: true, id: "delete-btn-#{@device.id}" %>
+          <div class="flex">
+            <input type="text" name="name_confirmation" class="tf-input-sm rounded-r-none" placeholder="<%= @device.name %>" autocomplete="off" data-delete-input="<%= @device.id %>">
+            <%= submit_tag "Delete Device", class: "tf-btn tf-btn-danger tf-btn-sm rounded-l-none", disabled: true, id: "delete-btn-#{@device.id}" %>
           </div>
         <% end %>
       </div>

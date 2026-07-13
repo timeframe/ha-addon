@@ -22,6 +22,9 @@ gem "rufus-scheduler"
 gem "warden"
 gem "bootstrap", "~> 5.3"
 gem "dartsass-rails"
+gem "tailwindcss-ruby", "~> 4.0"
+gem "importmap-rails"
+gem "stimulus-rails"
 
 group :development, :test do
   gem "herb"

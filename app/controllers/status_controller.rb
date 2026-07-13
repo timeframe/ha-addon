@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class StatusController < ApplicationController
+  layout "application_tw"
+
   def index
     @state = UptimeCheck.current_state
     @uptime_windows = UptimeCheck::WINDOWS.map { |label, duration| [label, UptimeCheck.uptime_percentage(duration)] }

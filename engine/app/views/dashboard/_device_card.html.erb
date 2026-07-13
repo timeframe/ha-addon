@@ -1,31 +1,31 @@
 <div style="min-width: 300px;">
-  <div class="card h-100">
-    <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="flex h-full flex-col overflow-hidden rounded-lg border border-ink/10 bg-white shadow-sm" data-controller="modal">
+    <div class="flex items-center justify-between border-b border-ink/10 px-3 py-2">
       <span>
         <%= device.name %>
         <% if defined?(current_user) && current_user&.is_admin? %>
-          <span class="badge text-bg-secondary align-middle" style="font-size: 0.6rem;">ID #<%= device.id %></span>
+          <span class="ml-1 inline-flex items-center rounded-full bg-ink/10 px-1.5 py-0.5 align-middle text-[0.6rem] font-medium text-ink">ID #<%= device.id %></span>
         <% end %>
       </span>
-      <div class="d-flex align-items-center gap-2">
+      <div class="flex items-center gap-2">
         <% if device.respond_to?(:trial_active?) && device.trial_active? %>
-          <span class="badge text-bg-info" style="font-size: 0.7rem; white-space: nowrap;" title="Free trial ends <%= device.trial_ends_on.strftime("%b %-d, %Y") %>">
+          <span class="inline-flex items-center whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800" title="Free trial ends <%= device.trial_ends_on.strftime("%b %-d, %Y") %>">
             <%= device.trial_days_remaining %> day<%= "s" unless device.trial_days_remaining == 1 %> left
           </span>
         <% end %>
         <% if device.battery_level.present? %>
-          <span class="<%= device.battery_color_class %>" style="font-size: 0.85rem; white-space: nowrap;">
-            <i class="mdi mdi-<%= device.battery_icon %>"></i> <%= device.battery_level.to_i %>%<% if device.battery_status == :charging %> <span style="font-size: 0.7rem;">charging</span><% end %>
+          <span class="<%= device.battery_color_class %> whitespace-nowrap text-sm">
+            <i class="mdi mdi-<%= device.battery_icon %>"></i> <%= device.battery_level.to_i %>%<% if device.battery_status == :charging %> <span class="text-xs">charging</span><% end %>
           </span>
         <% end %>
       </div>
     </div>
-    <div class="card-body p-0">
+    <div class="p-0">
       <% aspect_ratio = (device.display_height.to_f / device.display_width * 100).round(2) %>
       <div style="position: relative; width: 100%; padding-bottom: <%= aspect_ratio %>%; overflow: hidden; background: white;">
         <% if !local_assigns.fetch(:show_preview, true) %>
           <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-            <span class="text-muted"><i class="mdi mdi-lock-outline me-1"></i>Support access not granted</span>
+            <span class="text-gray-500"><i class="mdi mdi-lock-outline mr-1"></i>Support access not granted</span>
           </div>
         <% elsif device.cached_image.present? %>
           <% if (device.reterminal_e1003? || device.trmnl_x?) && !device.landscape_template? %>
@@ -37,7 +37,7 @@
           <% end %>
         <% elsif device.screenshotted? %>
           <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-            <span class="text-muted">Could not render display</span>
+            <span class="text-gray-500">Could not render display</span>
           </div>
         <% else %>
           <% preview_url = account_location_device_path(account, device.location, device) %>
@@ -53,10 +53,10 @@
       </div>
     </div>
     <% if device.pairing_code_device? && device.never_paired? %>
-      <div class="card-body py-2 border-top bg-info-subtle">
-        <%= form_with url: repair_account_location_device_path(account, location, device), method: :post, class: "d-flex align-items-center gap-2" do %>
-          <input type="text" name="pairing_code" class="form-control form-control-sm" placeholder="Enter pairing code" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-pair-input="<%= device.id %>" required aria-label="Pairing code for <%= device.name %>">
-          <button type="submit" class="btn btn-primary btn-sm" id="pair-btn-<%= device.id %>" disabled>Pair</button>
+      <div class="border-t border-ink/10 bg-info-subtle px-3 py-2">
+        <%= form_with url: repair_account_location_device_path(account, location, device), method: :post, class: "flex items-center gap-2" do %>
+          <input type="text" name="pairing_code" class="tf-input py-1 text-sm" placeholder="Enter pairing code" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-pair-input="<%= device.id %>" required aria-label="Pairing code for <%= device.name %>">
+          <button type="submit" class="tf-btn tf-btn-primary tf-btn-sm" id="pair-btn-<%= device.id %>" disabled>Pair</button>
         <% end %>
       </div>
       <script>
@@ -70,56 +70,53 @@
         })();
       </script>
     <% elsif device.disconnected? %>
-      <div class="card-body py-2 border-top bg-warning-subtle">
-        <div class="d-flex align-items-center justify-content-between">
-          <small class="text-warning-emphasis"><i class="mdi mdi-alert-circle"></i> Disconnected</small>
-          <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#repair-device-<%= device.id %>">Reconnect</button>
+      <div class="border-t border-ink/10 bg-warning-subtle px-3 py-2">
+        <div class="flex items-center justify-between">
+          <small class="text-sm text-warning-emphasis"><i class="mdi mdi-alert-circle"></i> Disconnected</small>
+          <button type="button" class="tf-btn tf-btn-sm bg-amber-500 text-white hover:bg-amber-600" data-action="modal#open">Reconnect</button>
         </div>
       </div>
     <% end %>
-    <div class="card-footer d-flex justify-content-between align-items-center">
+    <div class="mt-auto flex items-center justify-between border-t border-ink/10 px-3 py-2">
       <% updated_at = device.cached_image_at || device.last_connection_at || device.updated_at %>
       <% updated_label = if updated_at > 1.minute.ago
         "<1m"
       else
         time_ago_in_words(updated_at)
       end %>
-      <span class="text-body-tertiary" style="font-size: 0.75rem;">Updated <%= updated_label %> ago</span>
-      <a href="<%= settings_account_location_device_path(account, location, device) %>" class="btn btn-outline-secondary btn-sm"><i class="mdi mdi-cog me-1"></i>Settings</a>
+      <span class="text-xs text-gray-400">Updated <%= updated_label %> ago</span>
+      <a href="<%= settings_account_location_device_path(account, location, device) %>" class="tf-btn tf-btn-outline tf-btn-sm"><i class="mdi mdi-cog mr-1"></i>Settings</a>
     </div>
 
     <% if device.pairing_code_device? && !device.never_paired? %>
-      <div class="modal fade" id="repair-device-<%= device.id %>" tabindex="-1" aria-labelledby="repair-device-label-<%= device.id %>" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="repair-device-label-<%= device.id %>">Reconnect "<%= device.name %>"</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <%= form_with url: repair_account_location_device_path(account, location, device), method: :post do %>
-              <div class="modal-body">
-                <% if device.reterminal_e1003? %>
-                  <p>On your reTerminal, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
-                <% elsif device.trmnl? || device.reterminal_e1001? %>
-                  <p>On your device, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
-                <% else %>
-                  <p>On your device, visit <code><%= request.base_url %>/pair</code> to get a new pairing code.</p>
-                <% end %>
-                <label class="form-label">Pairing Code</label>
-                <input type="text" name="pairing_code" class="form-control" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-repair-input="<%= device.id %>">
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <%= submit_tag "Reconnect Device", class: "btn btn-primary", disabled: true, id: "repair-btn-#{device.id}" %>
-              </div>
-            <% end %>
-          </div>
+      <dialog class="w-[min(32rem,92vw)] rounded-lg border-0 p-0 shadow-xl" data-modal-target="dialog" data-action="click->modal#backdropClose" aria-labelledby="repair-device-label-<%= device.id %>">
+        <div class="flex items-center justify-between border-b border-ink/10 px-4 py-3">
+          <h5 class="text-lg font-semibold" id="repair-device-label-<%= device.id %>">Reconnect "<%= device.name %>"</h5>
+          <button type="button" class="text-xl leading-none opacity-60 hover:opacity-100" data-action="modal#close" aria-label="Close">&times;</button>
         </div>
-      </div>
+        <%= form_with url: repair_account_location_device_path(account, location, device), method: :post do %>
+          <div class="p-4">
+            <% if device.reterminal_e1003? %>
+              <p>On your reTerminal, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
+            <% elsif device.trmnl? || device.reterminal_e1001? %>
+              <p>On your device, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
+            <% else %>
+              <p>On your device, visit <code><%= request.base_url %>/pair</code> to get a new pairing code.</p>
+            <% end %>
+            <label class="tf-label mt-3">Pairing Code</label>
+            <input type="text" name="pairing_code" class="tf-input" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-repair-input="<%= device.id %>">
+          </div>
+          <div class="flex justify-end gap-2 border-t border-ink/10 px-4 py-3">
+            <button type="button" class="tf-btn tf-btn-outline" data-action="modal#close">Cancel</button>
+            <%= submit_tag "Reconnect Device", class: "tf-btn tf-btn-primary", disabled: true, id: "repair-btn-#{device.id}" %>
+          </div>
+        <% end %>
+      </dialog>
       <script>
         (function() {
           var input = document.querySelector('[data-repair-input="<%= device.id %>"]');
           var btn = document.getElementById('repair-btn-<%= device.id %>');
+          if (!input || !btn) return;
           input.addEventListener('input', function() {
             btn.disabled = !/^[0-9]{6}$/.test(input.value);
           });

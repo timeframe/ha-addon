@@ -1,264 +1,227 @@
 <%
   state_meta = {
-    operational: {label: "All Systems Operational", badge: "text-bg-success", icon: "mdi-check-circle"},
-    degraded: {label: "Degraded Performance", badge: "text-bg-warning", icon: "mdi-alert"},
-    down: {label: "Service Disruption", badge: "text-bg-danger", icon: "mdi-alert-circle"}
+    operational: {label: "All Systems Operational", badge: "bg-green-100 text-green-800", icon: "mdi-check-circle"},
+    degraded: {label: "Degraded Performance", badge: "bg-amber-100 text-amber-800", icon: "mdi-alert"},
+    down: {label: "Service Disruption", badge: "bg-red-100 text-red-800", icon: "mdi-alert-circle"}
   }
   meta = state_meta[@state]
   fmt_pct = ->(pct) { pct.nil? ? "-" : "#{format("%.2f", pct)}%" }
-  segment_class = {up: "bg-success", degraded: "bg-warning", down: "bg-danger", no_data: "bg-secondary-subtle"}
+  segment_class = {up: "seg-up", degraded: "seg-degraded", down: "seg-down", no_data: "seg-no-data"}
 %>
 
 <style>
-  .status-banner { border-radius: .5rem; }
   .uptime-bar { display: flex; gap: 2px; height: 36px; align-items: stretch; }
   .uptime-bar .seg { flex: 1 1 0; min-width: 2px; border-radius: 2px; }
+  .uptime-bar .seg-up, .uptime-legend .seg-up { background: #16a34a; }
+  .uptime-bar .seg-degraded, .uptime-legend .seg-degraded { background: #f59e0b; }
+  .uptime-bar .seg-down, .uptime-legend .seg-down { background: #dc2626; }
+  .uptime-bar .seg-no-data, .uptime-legend .seg-no-data { background: #d1d5db; }
   .uptime-legend .swatch { display: inline-block; width: .75rem; height: .75rem; border-radius: 2px; vertical-align: middle; }
 </style>
 
-<div class="d-flex align-items-center gap-3 p-3 mb-4 status-banner border">
-  <span class="mdi <%= meta[:icon] %> fs-1 lh-1"></span>
+<div class="mb-4 flex items-center gap-3 rounded-lg border border-ink/10 p-3">
+  <span class="mdi <%= meta[:icon] %> text-4xl leading-none"></span>
   <div>
-    <h2 class="h4 mb-0"><%= meta[:label] %></h2>
-    <span class="text-muted small">Updated every minute</span>
+    <h2 class="mb-0 text-xl font-semibold"><%= meta[:label] %></h2>
+    <span class="text-sm text-gray-500">Updated every minute</span>
   </div>
-  <span class="badge <%= meta[:badge] %> fs-6 ms-auto"><%= @state.to_s.upcase %></span>
+  <span class="ml-auto inline-flex items-center rounded-full px-3 py-1 font-semibold <%= meta[:badge] %>"><%= @state.to_s.upcase %></span>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
   <% @uptime_windows.each do |label, pct| %>
-    <div class="col-6 col-md-3">
-      <div class="card h-100 text-center">
-        <div class="card-body py-3">
-          <div class="fs-3 fw-semibold"><%= fmt_pct.call(pct) %></div>
-          <div class="text-muted small">Past <%= label %></div>
-        </div>
-      </div>
+    <div class="tf-card text-center">
+      <div class="text-2xl font-semibold"><%= fmt_pct.call(pct) %></div>
+      <div class="text-sm text-gray-500">Past <%= label %></div>
     </div>
   <% end %>
 </div>
 
-<div class="card mb-4">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h3 class="h6 mb-0">Uptime - last 90 days</h3>
-      <span class="text-muted small"><%= @daily_summary.first[:date].strftime("%b %-d") %> &ndash; <%= @daily_summary.last[:date].strftime("%b %-d, %Y") %></span>
-    </div>
-    <div class="uptime-bar">
-      <% @daily_summary.each do |day| %>
-        <% title = day[:status] == :no_data ? "#{day[:date].strftime("%b %-d, %Y")} · no data" : "#{day[:date].strftime("%b %-d, %Y")} · #{fmt_pct.call(day[:uptime_pct])} uptime" %>
-        <div class="seg <%= segment_class[day[:status]] %>"
-             data-bs-toggle="tooltip"
-             title="<%= title %>"></div>
-      <% end %>
-    </div>
-    <div class="uptime-legend d-flex flex-wrap gap-3 mt-3 small text-muted">
-      <span><span class="swatch bg-success"></span> Operational</span>
-      <span><span class="swatch bg-warning"></span> Degraded</span>
-      <span><span class="swatch bg-danger"></span> Downtime</span>
-      <span><span class="swatch bg-secondary-subtle"></span> No data</span>
-    </div>
+<div class="tf-card mb-4">
+  <div class="mb-2 flex items-center justify-between">
+    <h3 class="font-semibold">Uptime - last 90 days</h3>
+    <span class="text-sm text-gray-500"><%= @daily_summary.first[:date].strftime("%b %-d") %> &ndash; <%= @daily_summary.last[:date].strftime("%b %-d, %Y") %></span>
+  </div>
+  <div class="uptime-bar">
+    <% @daily_summary.each do |day| %>
+      <% title = day[:status] == :no_data ? "#{day[:date].strftime("%b %-d, %Y")} · no data" : "#{day[:date].strftime("%b %-d, %Y")} · #{fmt_pct.call(day[:uptime_pct])} uptime" %>
+      <div class="seg <%= segment_class[day[:status]] %>" title="<%= title %>"></div>
+    <% end %>
+  </div>
+  <div class="uptime-legend mt-3 flex flex-wrap gap-3 text-sm text-gray-500">
+    <span><span class="swatch seg-up"></span> Operational</span>
+    <span><span class="swatch seg-degraded"></span> Degraded</span>
+    <span><span class="swatch seg-down"></span> Downtime</span>
+    <span><span class="swatch seg-no-data"></span> No data</span>
   </div>
 </div>
 
-<h2 class="h5 mb-3">Home Assistant Status</h2>
+<h2 class="mb-3 text-lg font-semibold">Home Assistant Status</h2>
 
-<div class="card mb-4">
-  <div class="card-header">
-    <h3 class="h6 mb-0">API Status</h3>
-  </div>
-  <div class="card-body">
-    <div class="table-responsive">
-      <table class="table table-bordered table-sm">
-        <thead class="table-light">
+<div class="tf-card mb-4">
+  <h3 class="tf-card-title">API Status</h3>
+  <div class="overflow-x-auto">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th>API</th>
+          <th>Status</th>
+          <th>Last Fetched</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @statuses.each do |status| %>
           <tr>
-            <th>API</th>
-            <th>Status</th>
-            <th>Last Fetched</th>
+            <td><i class="mdi <%= status[:icon] %>"></i> <%= status[:name] %></td>
+            <td><%= status[:healthy] ? "✓ Healthy" : "✗ Unhealthy" %></td>
+            <td><%= status[:last_fetched_at] ? DateTime.parse(status[:last_fetched_at]).strftime("%b %-d @ %-l:%M:%S %p") : "Never" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="tf-card mb-4">
+  <h3 class="tf-card-title">Config</h3>
+  <% config_data = @api.config_data %>
+  <% if config_data.present? %>
+    <div class="overflow-x-auto">
+      <table class="tf-table">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Value</th>
           </tr>
         </thead>
         <tbody>
-          <% @statuses.each do |status| %>
+          <% config_data.each do |key, value| %>
             <tr>
-              <td><i class="mdi <%= status[:icon] %>"></i> <%= status[:name] %></td>
-              <td><%= status[:healthy] ? "✓ Healthy" : "✗ Unhealthy" %></td>
-              <td><%= status[:last_fetched_at] ? DateTime.parse(status[:last_fetched_at]).strftime("%b %-d @ %-l:%M:%S %p") : "Never" %></td>
+              <td><%= key %></td>
+              <td class="max-w-xs truncate"><%= value.is_a?(Hash) ? value.to_json : value %></td>
             </tr>
           <% end %>
         </tbody>
       </table>
     </div>
-  </div>
+  <% else %>
+    <p class="text-gray-500">No config data available.</p>
+  <% end %>
 </div>
 
-<div class="card mb-4">
-  <div class="card-header">
-    <h3 class="h6 mb-0">Config</h3>
-  </div>
-  <div class="card-body">
-    <% config_data = @api.config_data %>
-    <% if config_data.present? %>
-      <div class="table-responsive">
-        <table class="table table-bordered table-sm">
-          <thead class="table-light">
+<div class="tf-card mb-4">
+  <h3 class="tf-card-title">Now Playing</h3>
+  <% now_playing = @api.now_playing %>
+  <% if now_playing.present? %>
+    <div class="overflow-x-auto">
+      <table class="tf-table">
+        <thead>
+          <tr>
+            <th>Artist</th>
+            <th>Track</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><%= now_playing[:artist] %></td>
+            <td><%= now_playing[:track] %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="text-gray-500">Nothing playing.</p>
+  <% end %>
+</div>
+
+<div class="tf-card mb-4">
+  <h3 class="tf-card-title">Calendar Events (<%= @api.calendar_events.length %>)</h3>
+  <% if @api.calendar_events.present? %>
+    <div class="overflow-x-auto">
+      <table class="tf-table">
+        <thead>
+          <tr>
+            <th>Icon</th>
+            <th>Daily?</th>
+            <th>Summary</th>
+            <th>Starts At</th>
+            <th>Ends At</th>
+            <th>ID</th>
+            <th>Location</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @api.calendar_events.sort_by(&:start_i).each do |event| %>
             <tr>
-              <th>Key</th>
-              <th>Value</th>
+              <td><%= event.icon %></td>
+              <td><%= event.daily? %></td>
+              <td><%= event.summary %></td>
+              <td><%= event.starts_at.strftime("%b %-d @ %-l:%M %p") %></td>
+              <td><%= event.ends_at.strftime("%b %-d @ %-l:%M %p") %></td>
+              <td><%= event.id %></td>
+              <td><%= event.location %></td>
             </tr>
-          </thead>
-          <tbody>
-            <% config_data.each do |key, value| %>
-              <tr>
-                <td><%= key %></td>
-                <td class="text-truncate"><%= value.is_a?(Hash) ? value.to_json : value %></td>
-              </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="text-gray-500">No calendar events.</p>
+  <% end %>
+</div>
+
+<div class="tf-card mb-4">
+  <h3 class="tf-card-title">Hourly Forecast (<%= @api.hourly_forecast.length %>)</h3>
+  <% if @api.hourly_forecast.present? %>
+    <div class="overflow-x-auto">
+      <table class="tf-table">
+        <thead>
+          <tr>
+            <% @api.hourly_forecast.first.keys.each do |key| %>
+              <th><%= key %></th>
             <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="text-muted">No config data available.</p>
-    <% end %>
-  </div>
-</div>
-
-<div class="card mb-4">
-  <div class="card-header">
-    <h3 class="h6 mb-0">Now Playing</h3>
-  </div>
-  <div class="card-body">
-    <% now_playing = @api.now_playing %>
-    <% if now_playing.present? %>
-      <div class="table-responsive">
-        <table class="table table-bordered table-sm">
-          <thead class="table-light">
+          </tr>
+        </thead>
+        <tbody>
+          <% @api.hourly_forecast.each do |hour| %>
             <tr>
-              <th>Artist</th>
-              <th>Track</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><%= now_playing[:artist] %></td>
-              <td><%= now_playing[:track] %></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="text-muted">Nothing playing.</p>
-    <% end %>
-  </div>
-</div>
-
-<div class="card mb-4">
-  <div class="card-header">
-    <h3 class="h6 mb-0">Calendar Events (<%= @api.calendar_events.length %>)</h3>
-  </div>
-  <div class="card-body">
-    <% if @api.calendar_events.present? %>
-      <div class="table-responsive">
-        <table class="table table-bordered table-sm">
-          <thead class="table-light">
-            <tr>
-              <th>Icon</th>
-              <th>Daily?</th>
-              <th>Summary</th>
-              <th>Starts At</th>
-              <th>Ends At</th>
-              <th>ID</th>
-              <th>Location</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @api.calendar_events.sort_by(&:start_i).each do |event| %>
-              <tr>
-                <td><%= event.icon %></td>
-                <td><%= event.daily? %></td>
-                <td><%= event.summary %></td>
-                <td><%= event.starts_at.strftime("%b %-d @ %-l:%M %p") %></td>
-                <td><%= event.ends_at.strftime("%b %-d @ %-l:%M %p") %></td>
-                <td><%= event.id %></td>
-                <td><%= event.location %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="text-muted">No calendar events.</p>
-    <% end %>
-  </div>
-</div>
-
-<div class="card mb-4">
-  <div class="card-header">
-    <h3 class="h6 mb-0">Hourly Forecast (<%= @api.hourly_forecast.length %>)</h3>
-  </div>
-  <div class="card-body">
-    <% if @api.hourly_forecast.present? %>
-      <div class="table-responsive">
-        <table class="table table-bordered table-sm">
-          <thead class="table-light">
-            <tr>
-              <% @api.hourly_forecast.first.keys.each do |key| %>
-                <th><%= key %></th>
+              <% hour.values.each do |value| %>
+                <td><%= value %></td>
               <% end %>
             </tr>
-          </thead>
-          <tbody>
-            <% @api.hourly_forecast.each do |hour| %>
-              <tr>
-                <% hour.values.each do |value| %>
-                  <td><%= value %></td>
-                <% end %>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="text-muted">No hourly forecast data.</p>
-    <% end %>
-  </div>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="text-gray-500">No hourly forecast data.</p>
+  <% end %>
 </div>
 
-<div class="card mb-4">
-  <div class="card-header">
-    <h3 class="h6 mb-0">Daily Forecast (<%= @api.daily_forecast.length %>)</h3>
-  </div>
-  <div class="card-body">
-    <% if @api.daily_forecast.present? %>
-      <div class="table-responsive">
-        <table class="table table-bordered table-sm">
-          <thead class="table-light">
+<div class="tf-card mb-4">
+  <h3 class="tf-card-title">Daily Forecast (<%= @api.daily_forecast.length %>)</h3>
+  <% if @api.daily_forecast.present? %>
+    <div class="overflow-x-auto">
+      <table class="tf-table">
+        <thead>
+          <tr>
+            <% @api.daily_forecast.first.keys.each do |key| %>
+              <th><%= key %></th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody>
+          <% @api.daily_forecast.each do |day| %>
             <tr>
-              <% @api.daily_forecast.first.keys.each do |key| %>
-                <th><%= key %></th>
+              <% day.values.each do |value| %>
+                <td><%= value %></td>
               <% end %>
             </tr>
-          </thead>
-          <tbody>
-            <% @api.daily_forecast.each do |day| %>
-              <tr>
-                <% day.values.each do |value| %>
-                  <td><%= value %></td>
-                <% end %>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    <% else %>
-      <p class="text-muted">No daily forecast data.</p>
-    <% end %>
-  </div>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <p class="text-gray-500">No daily forecast data.</p>
+  <% end %>
 </div>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
-      new bootstrap.Tooltip(el);
-    });
-  });
-</script>

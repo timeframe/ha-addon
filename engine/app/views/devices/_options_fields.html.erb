@@ -5,30 +5,32 @@
   <% DeviceSettingsOptions.call(device).each do |opt| %>
     <% if opt[:type] == :time %>
       <div class="mt-3" data-depends-on="<%= opt[:depends_on] %>">
-        <input type="time" id="<%= opt[:key].tr("_", "-") %>" name="configuration[<%= opt[:key] %>]" value="<%= device.configuration&.dig(opt[:key]).presence || opt[:default] %>" class="form-control form-control-sm" style="max-width: 10rem;">
+        <input type="time" id="<%= opt[:key].tr("_", "-") %>" name="configuration[<%= opt[:key] %>]" value="<%= device.configuration&.dig(opt[:key]).presence || opt[:default] %>" class="tf-input-sm max-w-[10rem]">
       </div>
     <% else %>
       <%
         current_value = device.configuration&.dig(opt[:key])
         is_on = opt[:default_on] ? current_value != "false" : current_value == "true"
       %>
-      <div class="form-check form-switch mb-2" data-depends-on="<%= opt[:depends_on] %>">
-        <input type="hidden" name="configuration[<%= opt[:key] %>]" value="false">
-        <%= check_box_tag "configuration[#{opt[:key]}]", "true", is_on, class: "form-check-input", role: "switch", style: "cursor: pointer;", data: {"option-key": opt[:key]} %>
-        <label class="form-check-label"><%= opt[:label] %></label>
+      <div class="mb-2" data-depends-on="<%= opt[:depends_on] %>">
+        <label class="flex items-center gap-2">
+          <input type="hidden" name="configuration[<%= opt[:key] %>]" value="false">
+          <%= check_box_tag "configuration[#{opt[:key]}]", "true", is_on, class: "tf-check", data: {"option-key": opt[:key]} %>
+          <span><%= opt[:label] %></span>
+        </label>
         <% if opt[:description].present? %>
-          <div class="form-text ms-0 mt-0 mb-1"><%= opt[:description] %></div>
+          <div class="mt-0.5 text-sm text-gray-500"><%= opt[:description] %></div>
         <% end %>
       </div>
       <% if opt[:key] == "show_temperature_events" %>
         <% selected_hours = device.temperature_event_hours %>
-        <div class="mb-2 ms-4" data-depends-on="show_temperature_events">
+        <div class="mb-2 ml-4" data-depends-on="show_temperature_events">
           <input type="hidden" name="temperature_hours_present" value="1">
-          <div class="d-flex flex-wrap gap-1">
+          <div class="flex flex-wrap gap-1">
             <% (0..23).each do |hour| %>
               <% label = Time.new(2000, 1, 1, hour).strftime("%-l%P") %>
-              <%= check_box_tag "temperature_hours[]", hour, selected_hours.include?(hour), id: "temp-hour-#{hour}", class: "btn-check", autocomplete: "off" %>
-              <label class="btn btn-sm btn-outline-primary" for="temp-hour-<%= hour %>" style="min-width: 2.5rem; padding: 0.15rem 0.4rem; font-size: 0.75rem;"><%= label %></label>
+              <%= check_box_tag "temperature_hours[]", hour, selected_hours.include?(hour), id: "temp-hour-#{hour}", class: "peer sr-only", autocomplete: "off" %>
+              <label class="min-w-[2.5rem] cursor-pointer rounded border border-ink/30 px-1.5 py-0.5 text-center text-xs peer-checked:border-ink peer-checked:bg-ink peer-checked:text-white" for="temp-hour-<%= hour %>"><%= label %></label>
             <% end %>
           </div>
         </div>
@@ -39,12 +41,12 @@
           threshold_mph = device.wind_gust_threshold_mph
           display_value = (display_unit == "kph") ? (threshold_mph * 1.609344).round : threshold_mph.round
         %>
-        <div class="mb-2 ms-4 d-flex align-items-center gap-2" data-depends-on="show_wind_events">
-          <label class="form-label small mb-0" for="wind-gust-threshold">Gust threshold</label>
-          <div class="input-group input-group-sm" style="max-width: 8rem;">
-            <input type="number" min="1" step="1" id="wind-gust-threshold" name="configuration[wind_gust_threshold_mph]" value="<%= display_value %>" class="form-control">
+        <div class="mb-2 ml-4 flex items-center gap-2" data-depends-on="show_wind_events">
+          <label class="mb-0 text-sm" for="wind-gust-threshold">Gust threshold</label>
+          <div class="flex max-w-[8rem]">
+            <input type="number" min="1" step="1" id="wind-gust-threshold" name="configuration[wind_gust_threshold_mph]" value="<%= display_value %>" class="tf-input-sm rounded-r-none">
             <input type="hidden" name="units[wind_gust_threshold_mph]" value="<%= display_unit %>">
-            <span class="input-group-text"><%= display_unit %></span>
+            <span class="inline-flex items-center rounded-r-md border border-l-0 border-ink/20 bg-ink/5 px-2 text-sm"><%= display_unit %></span>
           </div>
         </div>
       <% end %>

@@ -5,6 +5,10 @@ require_dependency TimeframeCore::Engine.root.join("app", "controllers", "device
 class DevicesController
   skip_before_action :auto_sign_in_default_user!, raise: false, only: [:confirmation_image]
 
+  # The admin settings page uses the Tailwind layout; device-facing actions
+  # (preview/screenshot/confirmation) keep their existing layouts.
+  layout -> { (action_name == "settings") ? "application_tw" : "application" }
+
   private
 
   def available_calendar_identifiers_for(_device)

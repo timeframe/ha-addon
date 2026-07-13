@@ -6,31 +6,31 @@
   end
 %>
 <% if calendar_entities.any? %>
-  <hr class="my-3">
-  <label class="form-label small fw-bold mb-1">Calendars</label>
+  <hr class="my-3 border-ink/10">
+  <label class="mb-1 block text-sm font-bold">Calendars</label>
   <input type="hidden" name="calendar_identifiers_present" value="1">
-  <p class="small text-body-secondary mb-2">Choose which Home Assistant calendars contribute events to this device. All are included by default. Add an optional filter under a calendar to only show events whose title contains one of the comma-separated keywords.</p>
-        <% calendar_entities.each do |c| %>
-          <% included = !@device.calendar_excluded?(c[:entity_id]) %>
-          <div class="form-check mb-1">
-            <%= check_box_tag "calendar_identifiers[]", c[:entity_id], included, id: "device-cal-#{c[:entity_id]}", class: "form-check-input", data: {"calendar-toggle": c[:entity_id]} %>
-            <label class="form-check-label d-inline-flex align-items-center gap-1" for="device-cal-<%= c[:entity_id] %>">
-              <span class="mdi mdi-<%= c[:icon] %>"></span>
-              <%= c[:name] %>
-            </label>
-          </div>
-          <div class="ms-4 mb-2<%= ' d-none' unless included %>" data-calendar-filter="<%= c[:entity_id] %>">
-            <input type="text" name="event_filters[<%= c[:entity_id] %>]" value="<%= @device.configuration&.dig("event_filter_#{c[:entity_id]}") %>" class="form-control form-control-sm" placeholder="Filter keywords, e.g. soccer, piano">
-          </div>
-        <% end %>
-        <script>
-          (function() {
-            document.querySelectorAll('[data-calendar-toggle]').forEach(function(checkbox) {
-              checkbox.addEventListener('change', function() {
-                var filter = document.querySelector('[data-calendar-filter="' + checkbox.getAttribute('data-calendar-toggle') + '"]');
-                if (filter) { filter.classList.toggle('d-none', !checkbox.checked); }
-              });
-            });
-          })();
-        </script>
+  <p class="mb-2 text-sm text-gray-500">Choose which Home Assistant calendars contribute events to this device. All are included by default. Add an optional filter under a calendar to only show events whose title contains one of the comma-separated keywords.</p>
+  <% calendar_entities.each do |c| %>
+    <% included = !@device.calendar_excluded?(c[:entity_id]) %>
+    <div class="mb-1">
+      <label class="inline-flex items-center gap-1">
+        <%= check_box_tag "calendar_identifiers[]", c[:entity_id], included, id: "device-cal-#{c[:entity_id]}", class: "tf-check", data: {"calendar-toggle": c[:entity_id]} %>
+        <span class="mdi mdi-<%= c[:icon] %>"></span>
+        <%= c[:name] %>
+      </label>
+    </div>
+    <div class="mb-2 ml-4<%= ' hidden' unless included %>" data-calendar-filter="<%= c[:entity_id] %>">
+      <input type="text" name="event_filters[<%= c[:entity_id] %>]" value="<%= @device.configuration&.dig("event_filter_#{c[:entity_id]}") %>" class="tf-input-sm" placeholder="Filter keywords, e.g. soccer, piano">
+    </div>
+  <% end %>
+  <script>
+    (function() {
+      document.querySelectorAll('[data-calendar-toggle]').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+          var filter = document.querySelector('[data-calendar-filter="' + checkbox.getAttribute('data-calendar-toggle') + '"]');
+          if (filter) { filter.classList.toggle('hidden', !checkbox.checked); }
+        });
+      });
+    })();
+  </script>
 <% end %>
