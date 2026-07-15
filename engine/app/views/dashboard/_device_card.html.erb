@@ -22,6 +22,11 @@
     </div>
     <div class="p-0">
       <% aspect_ratio = (device.display_height.to_f / device.display_width * 100).round(2) %>
+      <%# The screenshot is stored rotated (landscape) and shown upright with a
+          -90deg CSS rotation. Size the rotated box to the container's swapped
+          dimensions and use object-fit: contain so the preview always fits the
+          card regardless of the source image's exact pixel dimensions. %>
+      <% rotated_height = (device.display_width.to_f / device.display_height * 100).round(2) %>
       <div style="position: relative; width: 100%; padding-bottom: <%= aspect_ratio %>%; overflow: hidden; background: white;">
         <% if !local_assigns.fetch(:show_preview, true) %>
           <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
@@ -29,9 +34,9 @@
           </div>
         <% elsif device.cached_image.present? %>
           <% if (device.reterminal_e1003? || device.trmnl_x?) && !device.landscape_template? %>
-            <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; transform: translate(-50%, -50%) rotate(-90deg);">
+            <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; height: <%= rotated_height %>%; object-fit: contain; transform: translate(-50%, -50%) rotate(-90deg);">
           <% elsif device.portrait? %>
-            <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; transform: translate(-50%, -50%) rotate(-90deg);">
+            <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 50%; left: 50%; width: <%= aspect_ratio %>%; height: <%= rotated_height %>%; object-fit: contain; transform: translate(-50%, -50%) rotate(-90deg);">
           <% else %>
             <img src="data:image/png;base64,<%= device.cached_image %>" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;">
           <% end %>
