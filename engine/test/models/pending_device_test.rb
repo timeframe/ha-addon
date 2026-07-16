@@ -18,6 +18,15 @@ class PendingDeviceTest < Minitest::Test
     assert_nil PendingDevice.model_key_for_firmware("")
   end
 
+  # The firmware sends its DEVICE_MODEL string verbatim, which for reTerminal
+  # hardware is the underscore form. These must resolve to the matching model
+  # key so pairing sets the right model (and template suggestions).
+  def test_model_key_for_firmware_maps_underscore_firmware_values
+    assert_equal "reterminal_e1001", PendingDevice.model_key_for_firmware("reterminal_e1001")
+    assert_equal "reterminal_e1003", PendingDevice.model_key_for_firmware("reterminal_e1003")
+    assert_equal "trmnl_x", PendingDevice.model_key_for_firmware("trmnl_x")
+  end
+
   def test_resolved_model_only_returns_supported_models
     assert_equal "trmnl_x", PendingDevice.new(model: "trmnl_x").resolved_model
     assert_nil PendingDevice.new(model: "bogus").resolved_model
@@ -88,6 +97,30 @@ class PendingDeviceTest < Minitest::Test
 
     refute pd.expired?
     refute_equal old_code, pd.pairing_code
+  end
+
+  def test_keep_alive_resets_expiry_without_changing_the_code
+    pd = PendingDevice.create!
+    old_code = pd.pairing_code
+    pd.update_column(:created_at, 65.minutes.ago)
+    assert pd.expired?
+
+    pd.keep_alive!
+    pd.reload
+
+    refute pd.expired?
+    assert_equal old_code, pd.pairing_code
+  end
+
+  def test_keep_alive_is_a_noop_for_a_claimed_device
+    mac = "AD:#{SecureRandom.hex(5).scan(/../).join(":").upcase}"
+    pd = PendingDevice.create!(mac_address: mac, api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase)
+    pd.claim!(location: test_location, name: "Claimed #{SecureRandom.hex(4)}", model: "trmnl_og")
+    pd.update_column(:created_at, 65.minutes.ago)
+
+    pd.keep_alive!
+
+    assert pd.reload.expired?
   end
 
   def test_link_to_copies_credentials_onto_existing_device

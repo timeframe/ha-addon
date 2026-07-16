@@ -3,15 +3,13 @@
 class PendingDevice < ActiveRecord::Base
   EXPIRY_DURATION = 60.minutes
 
-  # Maps the firmware "Model" header sent to /api/setup to a Device
-  # SUPPORTED_MODELS key, so pairing can create the device as the right model and
-  # suggest the matching templates. Unknown/omitted models stay nil (the pairing
-  # flow falls back to a default or lets the user choose).
+  # Aliases for firmware "Model" header values that do not already match a
+  # Device SUPPORTED_MODELS key. reTerminal / TRMNL-X hardware sends the exact
+  # underscore key (e.g. "reterminal_e1003"), which is matched directly in
+  # model_key_for_firmware; only the short marketing aliases need mapping here.
   FIRMWARE_MODEL_MAP = {
     "og" => "trmnl_og",
-    "x" => "trmnl_x",
-    "reterminal e1001" => "reterminal_e1001",
-    "reterminal e1003" => "reterminal_e1003"
+    "x" => "trmnl_x"
   }.freeze
 
   belongs_to :claimed_device, class_name: "Device", optional: true
@@ -25,9 +23,19 @@ class PendingDevice < ActiveRecord::Base
   before_create :generate_pairing_code
 
   # Resolves a firmware "Model" header to a Device model key, or nil when the
-  # value is blank/unrecognized.
+  # value is blank/unrecognized. The firmware sends its DEVICE_MODEL string,
+  # which for reTerminal hardware is the underscore form that already matches a
+  # SUPPORTED_MODELS key (e.g. "reterminal_e1003"); human/spaced forms
+  # ("reTerminal E1003") normalize to the same key. Short marketing aliases
+  # ("og", "x") fall back to FIRMWARE_MODEL_MAP.
   def self.model_key_for_firmware(firmware_model)
-    FIRMWARE_MODEL_MAP[firmware_model.to_s.strip.downcase.presence]
+    value = firmware_model.to_s.strip.downcase.presence
+    return nil unless value
+
+    underscored = value.tr(" ", "_")
+    return underscored if Device::SUPPORTED_MODELS.key?(underscored)
+
+    FIRMWARE_MODEL_MAP[value]
   end
 
   # The Device model key to use when claiming this pending device: the captured
@@ -49,6 +57,18 @@ class PendingDevice < ActiveRecord::Base
       pairing_code: SecureRandom.random_number(1_000_000).to_s.rjust(6, "0"),
       created_at: Time.current
     )
+  end
+
+  # Extends the expiry window WITHOUT rotating the pairing code. A device that
+  # is waiting to be paired polls /api/display every few seconds while showing
+  # its code, so calling this on each poll keeps the on-screen code valid (and
+  # keeps find_active_by_code from destroying it) for as long as the device
+  # stays online — preventing the 60-minute expiry from stranding the device on
+  # a dead code / permanent 401.
+  def keep_alive!
+    return if claimed?
+
+    update_column(:created_at, Time.current)
   end
 
   def self.find_active_by_code(code)

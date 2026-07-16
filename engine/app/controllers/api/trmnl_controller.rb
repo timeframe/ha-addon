@@ -60,6 +60,10 @@ module Api
       Rails.logger.info("[API Display] mac=#{mac_address} device_id=#{@device&.id}")
 
       unless @device
+        # Keep an actively-waiting device's pending registration from expiring
+        # out from under the user: it polls here every few seconds while showing
+        # its pairing code, so refresh the expiry (same code) on each poll.
+        PendingDevice.find_by(mac_address: mac_address)&.keep_alive!
         render json: {status: 202}, status: :ok
         return
       end

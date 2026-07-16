@@ -126,6 +126,23 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     assert_equal 202, json["status"]
   end
 
+  test "display keeps a waiting pending device from expiring so its code stays pairable" do
+    get "/api/setup", headers: {"ID" => "FF:EE:DD:CC:BB:AA"}
+    pending = PendingDevice.find_by(mac_address: "FF:EE:DD:CC:BB:AA")
+    code = pending.pairing_code
+    # Simulate the pairing code approaching the 60-minute expiry window.
+    pending.update_column(:created_at, 59.minutes.ago)
+
+    get "/api/display", headers: {"ID" => "FF:EE:DD:CC:BB:AA"}
+    assert_response :success
+    assert_equal 202, JSON.parse(response.body)["status"]
+
+    pending.reload
+    refute pending.expired?
+    assert_equal code, pending.pairing_code
+    assert PendingDevice.find_active_by_code(code)
+  end
+
   test "display returns image data for valid device" do
     device = create_trmnl_device!
 
