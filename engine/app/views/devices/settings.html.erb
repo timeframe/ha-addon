@@ -9,6 +9,9 @@
 </style>
 <div class="flex justify-center">
   <div class="w-full max-w-2xl">
+    <%# Host apps (e.g. the cloud dashboard) may inject an "Add Device" link
+        here; the engine renders nothing by default. %>
+    <%= render "devices/add_device_link" %>
     <% if defined?(current_user) && current_user&.is_admin? %>
       <% admin_user = @device.account&.users&.first %>
       <% if admin_user %>
