@@ -146,33 +146,37 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
   test "display returns image data for valid device" do
     device = create_trmnl_device!
 
+    # Pin to a daytime hour so the overnight (23:00-05:00 local) reduced refresh
+    # rate never makes this assertion flaky.
     ScreenshotService.stub :capture, "fakeimagedatabase64" do
-      get "/api/display", headers: {
-        "ID" => device.mac_address,
-        "ACCESS_TOKEN" => device.api_key,
-        "Battery-Voltage" => "4.1",
-        "FW-Version" => "1.8.1",
-        "RSSI" => "-69"
-      }
+      travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 12, 0, 0) do
+        get "/api/display", headers: {
+          "ID" => device.mac_address,
+          "ACCESS_TOKEN" => device.api_key,
+          "Battery-Voltage" => "4.1",
+          "FW-Version" => "1.8.1",
+          "RSSI" => "-69"
+        }
 
-      assert_response :success
-      json = JSON.parse(response.body)
-      assert_equal 0, json["status"]
-      assert_match(/\Adisplay-.*\.png\z/, json["filename"])
-      assert json["image_url"].include?("/signed_screenshot/")
-      assert_equal 0, json["image_url_timeout"]
-      assert_equal 900, json["refresh_rate"]
-      assert_equal "sleep", json["special_function"]
-      assert_equal false, json["reset_firmware"]
-      assert_equal false, json["update_firmware"]
-      assert_nil json["firmware_url"]
-      assert_equal "default", json["temperature_profile"]
+        assert_response :success
+        json = JSON.parse(response.body)
+        assert_equal 0, json["status"]
+        assert_match(/\Adisplay-.*\.png\z/, json["filename"])
+        assert json["image_url"].include?("/signed_screenshot/")
+        assert_equal 0, json["image_url_timeout"]
+        assert_equal 900, json["refresh_rate"]
+        assert_equal "sleep", json["special_function"]
+        assert_equal false, json["reset_firmware"]
+        assert_equal false, json["update_firmware"]
+        assert_nil json["firmware_url"]
+        assert_equal "default", json["temperature_profile"]
 
-      device.reload
-      assert device.last_connection_at.present?
-      assert_equal 92, device.battery_level
-      assert_equal "1.8.1", device.firmware_version
-      assert_equal(-69, device.rssi)
+        device.reload
+        assert device.last_connection_at.present?
+        assert_equal 92, device.battery_level
+        assert_equal "1.8.1", device.firmware_version
+        assert_equal(-69, device.rssi)
+      end
     end
   end
 

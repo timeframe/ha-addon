@@ -3,6 +3,8 @@
 require "test_helper"
 
 class DeviceTest < Minitest::Test
+  include ActiveSupport::Testing::TimeHelpers
+
   def setup
     # Clean up all test-created devices to avoid uniqueness conflicts across tests
     PendingDevice.where.not(claimed_device_id: nil).update_all(claimed_device_id: nil)
@@ -40,6 +42,55 @@ class DeviceTest < Minitest::Test
   def test_display_height
     device = Device.new(name: "test", model: "visionect_13")
     assert_equal 1600, device.display_height
+  end
+
+  def test_refresh_rate_daytime_is_regular
+    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 12, 0, 0) do
+      assert_equal 900, device.refresh_rate
+    end
+  end
+
+  def test_refresh_rate_late_evening_is_hourly
+    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 23, 30, 0) do
+      assert_equal 3540, device.refresh_rate
+    end
+  end
+
+  def test_refresh_rate_small_hours_is_hourly
+    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 2, 0, 0) do
+      assert_equal 3540, device.refresh_rate
+    end
+  end
+
+  def test_refresh_rate_in_four_am_hour_is_capped_to_five_am
+    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 4, 30, 0) do
+      assert_equal 1800, device.refresh_rate
+    end
+  end
+
+  def test_refresh_rate_after_four_forty_five_resumes_regular
+    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 4, 50, 0) do
+      assert_equal 900, device.refresh_rate
+    end
+  end
+
+  def test_refresh_rate_at_five_am_is_regular
+    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 5, 30, 0) do
+      assert_equal 900, device.refresh_rate
+    end
+  end
+
+  def test_refresh_rate_without_location_uses_utc
+    device = Device.new(name: "test_rr", model: "trmnl_og")
+    travel_to Time.utc(2026, 7, 17, 2, 0, 0) do
+      assert_equal 3540, device.refresh_rate
+    end
   end
 
   def test_find_or_create_by_visionect_serial_creates_new_device

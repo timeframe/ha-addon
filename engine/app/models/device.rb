@@ -4,6 +4,13 @@ class Device < ActiveRecord::Base
   include Rails.application.routes.url_helpers
 
   REFRESH_RATE_SECONDS = 900
+  # Overnight (23:00-05:00 local) devices update roughly once per hour to spare
+  # battery. 3540s (59 min) rather than a full 3600 keeps last_connection_at
+  # inside the one-hour "disconnected?" window so the device isn't flagged
+  # disconnected between hourly wakes.
+  NIGHT_REFRESH_RATE_SECONDS = 3540
+  NIGHT_START_HOUR = 23
+  MORNING_RESUME_HOUR = 5
   TWO_DAY_DEFAULT_ROLLOVER_TIME = "18:00"
 
   # Battery hysteresis: turn the on-screen recharge warning ON at/below
@@ -74,11 +81,22 @@ class Device < ActiveRecord::Base
     portrait? ? SUPPORTED_MODELS.dig(model, :width) : SUPPORTED_MODELS.dig(model, :height)
   end
 
-  # :nocov:
+  # How long (seconds) the firmware should sleep before polling again. Normally
+  # 15 minutes, but overnight (23:00-05:00 in the device's local time) devices
+  # update roughly once per hour to conserve battery. During the final overnight
+  # hour the interval is capped so a device wakes back up around 05:00 rather
+  # than sleeping well past it, and floored at the normal rate so that after
+  # ~04:45 it simply resumes the regular 15-minute cadence.
   def refresh_rate
-    REFRESH_RATE_SECONDS
+    tz = location&.time_zone.presence || "UTC"
+    now = Time.current.in_time_zone(tz)
+    return REFRESH_RATE_SECONDS unless now.hour >= NIGHT_START_HOUR || now.hour < MORNING_RESUME_HOUR
+
+    morning = now.change(hour: MORNING_RESUME_HOUR, min: 0, sec: 0)
+    morning += 1.day if now.hour >= MORNING_RESUME_HOUR
+    seconds_until_morning = (morning - now).to_i
+    seconds_until_morning.clamp(REFRESH_RATE_SECONDS, NIGHT_REFRESH_RATE_SECONDS)
   end
-  # :nocov:
 
   def trmnl?
     model == "trmnl_og"
