@@ -64,11 +64,13 @@ class DeviceSettingsOptions
 
   def compact? = %w[two_day three_day one_day].include?(template)
 
+  def reterminal? = %w[reterminal reterminal_landscape].include?(template)
+
   def header_options
     if %w[trmnl reterminal thirteen boox_mira mira].include?(template)
       switch("show_current_day", "Current date & temperature", default_on: template != "trmnl")
     end
-    if compact?
+    if compact? || reterminal?
       switch("only_show_events_with_icons", "Only show events with manually set icons", default_on: false)
     end
   end

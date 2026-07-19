@@ -9,6 +9,9 @@
 
 <% show_icons = true %>
 <% show_dates = @view_object.dig(:configuration, "show_dates") == "true" %>
+<% only_icons = @view_object.dig(:configuration, "only_show_events_with_icons") == "true" %>
+<%# only_icons filters calendar events only; weather/alerts always stay. %>
+<% keep_only_icons = ->(e) { e[:timeframe_icon] || e[:weather] || e[:weather_ranged] } %>
 <% @view_object[:day_groups].each_with_index do |event_day, index| %>
   <div style="display: flex; margin-bottom: 1rem">
     <div style="width: 15.5rem; vertical-align: top; padding-right: 1rem; border-right: 2px solid #ccc;">
@@ -35,7 +38,7 @@
               </td>
             </tr>
           <% end %>
-          <% event_day[:daily].each do |event| %>
+          <% (only_icons ? event_day[:daily].select(&keep_only_icons) : event_day[:daily]).each do |event| %>
             <tr>
               <% if show_icons %>
                 <td style="width: 1%; text-align: center; font-size: 1.25rem; font-weight: bold; padding-right: 0.25rem;">
@@ -63,7 +66,7 @@
     </div>
     <div style="width: 30rem;">
       <table style="width: 100%">
-        <% event_day[:periodic].each do |event| %>
+        <% (only_icons ? event_day[:periodic].select(&keep_only_icons) : event_day[:periodic]).each do |event| %>
           <tr>
             <% if show_icons %>
               <td style="width: 2rem; text-align: center; font-size: 1.25rem; font-weight: bold; padding-left: 1rem;">

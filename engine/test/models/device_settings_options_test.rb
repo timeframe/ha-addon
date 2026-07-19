@@ -58,8 +58,8 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
 
   def test_reterminal_options
     assert_equal(
-      %w[show_current_day show_temperature_events show_precip_events show_wind_events
-        show_weather_alerts hide_current_day_enabled hide_current_day_time],
+      %w[show_current_day only_show_events_with_icons show_temperature_events show_precip_events
+        show_wind_events show_weather_alerts hide_current_day_enabled hide_current_day_time],
       keys_for("reterminal")
     )
     show_current_day = DeviceSettingsOptions.call(Device.new(display_template: "reterminal")).find { |o| o[:key] == "show_current_day" }
@@ -69,6 +69,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   def test_reterminal_landscape_has_clothing_forecast_like_trmnl
     keys = keys_for("reterminal_landscape")
     assert_includes keys, "clothing_forecast"
+    assert_includes keys, "only_show_events_with_icons"
     refute_includes keys, "show_current_day"
   end
 

@@ -103,15 +103,47 @@ class TimelineComponentTest < ActiveSupport::TestCase
     assert_includes html, "Tuesday"
   end
 
+  test "only_show_events_with_icons filters events without manual icons" do
+    html = render_timeline(
+      day_groups: [
+        day_group(
+          show_daily: true,
+          daily: [{icon_class: "weather-sunny", summary: "75°", weather: true}],
+          periodic: [
+            {timeframe_icon: "soccer", icon_class: "soccer", time_html: "3:00p", summary: "Game"},
+            {icon_class: "calendar", time_html: "9:00a", summary: "Team Standup"}
+          ]
+        )
+      ],
+      configuration: {"only_show_events_with_icons" => "true"}
+    )
+    assert_includes html, "Game"
+    refute_includes html, "Team Standup"
+    # Weather (daily) events are always kept.
+    assert_includes html, "75°"
+  end
+
+  test "without only_show_events_with_icons shows all events" do
+    html = render_timeline(
+      day_groups: [
+        day_group(periodic: [
+          {icon_class: "calendar", time_html: "9:00a", summary: "Team Standup"}
+        ])
+      ],
+      configuration: {"only_show_events_with_icons" => "false"}
+    )
+    assert_includes html, "Team Standup"
+  end
+
   private
 
   def day_group(day_name: "Today", show_daily: false, daily: [], periodic: [])
     {day_name: day_name, show_daily: show_daily, daily: daily, periodic: periodic}
   end
 
-  def render_timeline(day_groups:)
+  def render_timeline(day_groups:, configuration: {})
     ApplicationController.render(
-      Devices::TimelineComponent.new(view_object: {day_groups: day_groups}),
+      Devices::TimelineComponent.new(view_object: {day_groups: day_groups, configuration: configuration}),
       layout: false
     )
   end
