@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 47) do
+ActiveRecord::Schema[8.1].define(version: 48) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -74,6 +74,21 @@ ActiveRecord::Schema[8.1].define(version: 47) do
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
   end
 
+  create_table "calendar_event_customizations", force: :cascade do |t|
+    t.boolean "banner_enabled", default: false, null: false
+    t.text "banner_message"
+    t.bigint "calendar_id", null: false
+    t.datetime "created_at", null: false
+    t.string "customization_key", null: false
+    t.string "icon"
+    t.boolean "omit", default: false, null: false
+    t.jsonb "only_tokens", default: [], null: false
+    t.text "title_override"
+    t.datetime "updated_at", null: false
+    t.index ["calendar_id", "customization_key"], name: "index_event_customizations_on_calendar_and_key", unique: true
+    t.index ["calendar_id"], name: "index_calendar_event_customizations_on_calendar_id"
+  end
+
   create_table "calendar_events", force: :cascade do |t|
     t.bigint "calendar_id", null: false
     t.datetime "created_at", null: false
@@ -84,6 +99,7 @@ ActiveRecord::Schema[8.1].define(version: 47) do
     t.boolean "has_attachment", default: false, null: false
     t.string "location"
     t.string "provider_etag"
+    t.boolean "provider_read_only", default: false, null: false
     t.string "provider_url"
     t.string "recurrence_rule"
     t.string "start_timezone"
@@ -431,6 +447,7 @@ ActiveRecord::Schema[8.1].define(version: 47) do
   add_foreign_key "account_users", "users"
   add_foreign_key "apple_accounts", "accounts"
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "calendar_event_customizations", "calendars"
   add_foreign_key "calendar_events", "calendars"
   add_foreign_key "calendars", "accounts"
   add_foreign_key "calendars", "apple_accounts"
