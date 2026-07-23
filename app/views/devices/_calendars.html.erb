@@ -20,7 +20,7 @@
       </label>
     </div>
     <div class="mb-2 ml-4<%= ' hidden' unless included %>" data-calendar-filter="<%= c[:entity_id] %>">
-      <input type="text" name="event_filters[<%= c[:entity_id] %>]" value="<%= @device.configuration&.dig("event_filter_#{c[:entity_id]}") %>" class="tf-input-sm" placeholder="Filter keywords, e.g. soccer, piano">
+      <input type="text" name="event_filters[<%= c[:entity_id] %>]" value="<%= @device.configuration&.dig("event_filter_#{c[:entity_id]}") %>" class="tf-input-sm" placeholder="Filter keywords, e.g. Jacob, soccer, piano">
     </div>
   <% end %>
   <script>

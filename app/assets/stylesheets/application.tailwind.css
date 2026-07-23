@@ -57,10 +57,12 @@
 }
 
 @layer components {
+  /* Use `clip` (not `hidden`) so html/body don't become scroll containers,
+     which would disable `position: sticky` on descendants. */
   html,
   body {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
     overscroll-behavior-x: none;
   }
 

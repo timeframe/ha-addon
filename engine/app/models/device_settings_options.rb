@@ -70,7 +70,7 @@ class DeviceSettingsOptions
 
   def header_options
     if %w[trmnl reterminal thirteen boox_mira mira].include?(template)
-      switch("show_current_day", "Current date & temperature", default_on: template != "trmnl")
+      switch("show_current_day", "Current date & temperature", default_on: true)
     end
     if compact? || reterminal?
       switch("only_show_events_with_icons", "Only show events with manually set icons", default_on: false)
@@ -114,6 +114,9 @@ class DeviceSettingsOptions
     end
     if template == "reterminal_landscape"
       switch("clothing_forecast", "Clothing forecast", default_on: false)
+    end
+    if reterminal? || %w[thirteen mira boox_mira].include?(template)
+      switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: false)
     end
     return unless compact?
 

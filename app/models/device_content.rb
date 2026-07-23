@@ -21,7 +21,8 @@ class DeviceContent
     clothing_forecast: false,
     auto_icons: false,
     event_filters: {},
-    wind_gust_threshold_mph: 20.0
+    wind_gust_threshold_mph: 20.0,
+    day_groups_limit: nil
   )
     home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph)
     current_time ||= Time.now.utc.in_time_zone(home_assistant_api.time_zone)
@@ -195,8 +196,13 @@ class DeviceContent
           )
         end
 
-        if temperature_hours && !weather_row
-          periodic_events = periodic_events.reject { |e| e.weather_hourly? && !temperature_hours.include?(e.starts_at.hour) }
+        if !weather_row
+          periodic_events =
+            if include_temperature
+              periodic_events.reject { |e| e.weather_hourly? && temperature_hours && !temperature_hours.include?(e.starts_at.hour) }
+            else
+              periodic_events.reject(&:weather_hourly?)
+            end
         end
 
         {
@@ -209,6 +215,8 @@ class DeviceContent
           clothing: clothing_data
         }
       end.compact
+
+    out[:day_groups] = out[:day_groups].first(day_groups_limit) if day_groups_limit
 
     if auto_icons
       out[:day_groups].each do |day|

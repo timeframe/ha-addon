@@ -5,7 +5,7 @@ class DemoDeviceContent
     include_weather_alerts: true, include_temperature: true, temperature_hours: nil,
     use_day_names: false, include_daily_weather: true, weather_row: false, start_time_only: false,
     always_show_today: false, hide_today_after_minutes: 1200, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filters: {},
-    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0, battery_level: nil, charging: false)
+    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0, battery_level: nil, charging: false, day_groups_limit: nil)
     current_time ||= Time.now.utc.in_time_zone(timezone)
 
     out = {}
@@ -64,6 +64,7 @@ class DemoDeviceContent
     out[:day_groups] = build_day_groups(current_time, timezone, days: days, include_wind: include_wind,
       include_temperature: include_temperature, temperature_hours: temperature_hours, use_day_names: use_day_names, weather_row: weather_row,
       start_offset: start_offset, clothing_forecast: clothing_forecast, fill_hourly_weather: fill_hourly_weather)
+    out[:day_groups] = out[:day_groups].first(day_groups_limit) if day_groups_limit
 
     if event_filters.present?
       keywords = event_filters.values.flat_map { |value| value.to_s.split(",") }.map(&:strip).reject(&:empty?)
@@ -176,8 +177,13 @@ class DemoDeviceContent
         clothing_data = clothing_for(periodic_events.select(&:weather_hourly?), events[:daily])
       end
 
-      if temperature_hours && !weather_row
-        periodic_events = periodic_events.reject { |e| e.weather_hourly? && !temperature_hours.include?(e.starts_at.hour) }
+      if !weather_row
+        periodic_events =
+          if include_temperature
+            periodic_events.reject { |e| e.weather_hourly? && temperature_hours && !temperature_hours.include?(e.starts_at.hour) }
+          else
+            periodic_events.reject(&:weather_hourly?)
+          end
       end
 
       {

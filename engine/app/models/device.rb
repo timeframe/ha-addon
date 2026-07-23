@@ -406,6 +406,7 @@ class Device < ActiveRecord::Base
     compact_view = %w[three_day two_day one_day].include?(active_template)
     two_day = active_template == "two_day"
     one_day = active_template == "one_day"
+    three_day = active_template == "three_day"
     include_ranged_weather_events = !one_day
     include_temperature_events = if two_day || one_day
       true
@@ -423,6 +424,16 @@ class Device < ActiveRecord::Base
     else
       !hide_today_enabled
     end
+    # Auto-assign icons is available on every template. It defaults ON for the
+    # timeline (trmnl) and compact layouts (their historical behavior) and OFF
+    # for all other templates.
+    auto_icons_default_on = compact_view || active_template == "trmnl"
+    auto_icons_value = configuration&.dig("auto_assign_icons")
+    auto_icons_enabled = auto_icons_value.nil? ? auto_icons_default_on : auto_icons_value == "true"
+    # The 3-day template always renders three day columns. When the current day
+    # can be hidden after the rollover cutoff, over-generate one extra future day
+    # and cap the rendered groups to three so a hidden "today" is backfilled.
+    day_groups_limit = three_day ? 3 : nil
     args = {
       days:
         if two_day
@@ -433,6 +444,8 @@ class Device < ActiveRecord::Base
           14
         elsif active_template == "reterminal" || active_template == "reterminal_landscape"
           12
+        elsif three_day
+          (hide_today_enabled ? 4 : 3)
         else
           (compact_view ? 3 : 5)
         end,
@@ -454,9 +467,10 @@ class Device < ActiveRecord::Base
       always_show_today: always_show_today_value,
       hide_today_after_minutes: hide_today_minutes,
       clothing_forecast: (compact_view || active_template == "trmnl" || active_template == "reterminal_landscape") && (one_day || configuration&.dig("clothing_forecast") == "true"),
-      auto_icons: (compact_view || active_template == "trmnl") && configuration&.dig("auto_assign_icons") != "false",
+      auto_icons: auto_icons_enabled,
       wind_gust_threshold_mph: wind_gust_threshold_mph,
-      event_filters: calendar_event_filters
+      event_filters: calendar_event_filters,
+      day_groups_limit: day_groups_limit
     }
     args[:current_time] = current_time if current_time
     args

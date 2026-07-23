@@ -8,7 +8,7 @@
   .tf-tab-active { border-bottom-color: var(--color-ink); font-weight: 500; }
 </style>
 <div class="flex justify-center">
-  <div class="w-full max-w-2xl">
+  <div class="w-full max-w-2xl lg:max-w-6xl">
     <%# Host apps (e.g. the cloud dashboard) may inject an "Add Device" link
         here; the engine renders nothing by default. %>
     <%= render "devices/add_device_link" %>
@@ -29,9 +29,15 @@
     </div>
 
     <%# Preview + Screenshot %>
+    <%# On large screens the preview sits beside the options card for easier
+        previewing; both stack on small screens. The columns stretch to equal
+        height and the preview card itself is sticky inside its column (a sticky
+        flex item would stretch full-height and never move). %>
+    <div class="lg:flex lg:gap-6">
     <% unless hide_support_content %>
+    <div class="lg:w-1/2 lg:flex-shrink-0">
     <% has_screenshot = @device.screenshotted? && @device.cached_image.present? %>
-    <div class="mb-3 rounded-lg border border-ink/10 bg-white" data-controller="tabs" data-tabs-active-class="tf-tab-active">
+    <div class="mb-3 rounded-lg border border-ink/10 bg-white lg:sticky lg:top-4" data-controller="tabs" data-tabs-active-class="tf-tab-active">
       <div class="border-b border-ink/10 px-3 pt-2">
         <div class="flex gap-1" role="tablist">
           <button type="button" class="tf-tab px-3 py-2 text-sm" data-tabs-target="tab" data-action="tabs#select" data-panel="preview" data-tabs-default role="tab" aria-selected="true">Preview</button>
@@ -171,10 +177,12 @@
         </script>
       <% end %>
     </div>
+    </div>
     <% end %>
 
     <%# Options. Wrapped in a Turbo Frame and auto-saved on any change so edits
         (including the layout/template) persist without a hard page refresh. %>
+    <div class="lg:flex-1 lg:min-w-0">
     <turbo-frame id="device-options">
     <div class="mb-3 rounded-lg border border-ink/10 bg-white">
       <%= form_with url: update_options_account_location_device_path(@account, @location, @device), method: :patch, id: "device-options-form" do %>
@@ -264,28 +272,81 @@
           }
           setStatus('Saving\u2026');
           fetch(form.action, {method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: {"Accept": "text/html"}})
-            .then(function(r) { if (!r.ok) { throw new Error("save failed"); } flashSaved(); reloadPreview(); })
+            .then(function(r) {
+              if (!r.ok) { throw new Error("save failed"); }
+              flashSaved();
+              reloadPreview();
+              if (window.tfShowSettingsToast) { window.tfShowSettingsToast(); }
+            })
             .catch(function() { setStatus('Save failed'); });
         });
       })();
     </script>
     </turbo-frame>
+    </div>
+    </div>
     <script>
-      // Bound once (outside the Turbo Frame): after each options save, reload the
-      // device preview and flash a "Saved" indicator.
+      // Bound once (outside the Turbo Frame): a layout change re-renders this
+      // frame (the options for the new template) in place. On the reTerminal
+      // E1003 / TRMNL X the portrait <-> landscape templates also SWAP the
+      // device dimensions, which the already-rendered preview iframe can't
+      // reflect, so for those models reload the whole page (re-showing the save
+      // toast afterwards). Every other device updates the preview in place.
       if (!window.__tfSettingsSaveBound) {
         window.__tfSettingsSaveBound = true;
+        var tfReloadOnTemplateChange = <%= (@device.reterminal_e1003? || @device.trmnl_x?) ? "true" : "false" %>;
         document.addEventListener('turbo:frame-render', function(e) {
           if (!e.target || e.target.id !== 'device-options') { return; }
+          if (tfReloadOnTemplateChange) {
+            try { sessionStorage.setItem('tfSettingsSaved', '1'); } catch (err) {}
+            window.location.reload();
+            return;
+          }
           var iframe = document.getElementById('preview-iframe');
           if (iframe) { iframe.src = iframe.src; }
-          var status = document.querySelector('#device-options [data-save-status]');
-          if (status) {
-            status.textContent = 'Saved';
-            setTimeout(function() { if (status.textContent === 'Saved') { status.textContent = ''; } }, 2000);
-          }
+          if (window.tfShowSettingsToast) { window.tfShowSettingsToast(); }
         });
       }
+    </script>
+
+    <%# Prominent, screen-reader-announced confirmation shown after a settings
+        change. role="status" + aria-live="polite" announces it without stealing
+        focus. %>
+    <div id="settings-toast" role="status" aria-live="polite" aria-atomic="true"
+         class="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4"
+         style="display: none;">
+      <div class="pointer-events-auto flex max-w-lg items-start gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-900 shadow-lg">
+        <span class="mdi mdi-check-circle mt-0.5 text-green-600" aria-hidden="true"></span>
+        <span class="text-sm" id="settings-toast-message"></span>
+        <button type="button" id="settings-toast-close" class="ml-2 text-green-700 hover:text-green-900" aria-label="Dismiss">
+          <span class="mdi mdi-close" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+    <script>
+      (function() {
+        var SAVE_MESSAGE = 'Settings saved. Your device will show the change at its next scheduled refresh. To see it right away, press the green button on the device.';
+        var toast = document.getElementById('settings-toast');
+        var toastMsg = document.getElementById('settings-toast-message');
+        var toastClose = document.getElementById('settings-toast-close');
+        var hideTimer = null;
+        function hideToast() { if (toast) { toast.style.display = 'none'; } }
+        window.tfShowSettingsToast = function(message) {
+          if (!toast || !toastMsg) { return; }
+          toastMsg.textContent = message || SAVE_MESSAGE;
+          toast.style.display = 'flex';
+          if (hideTimer) { clearTimeout(hideTimer); }
+          hideTimer = setTimeout(hideToast, 5000);
+        };
+        if (toastClose) { toastClose.addEventListener('click', hideToast); }
+        // Re-show the toast after a template-change reload.
+        try {
+          if (sessionStorage.getItem('tfSettingsSaved')) {
+            sessionStorage.removeItem('tfSettingsSaved');
+            window.tfShowSettingsToast(SAVE_MESSAGE);
+          }
+        } catch (err) {}
+      })();
     </script>
 
     <%# Device-scoped calendar creation modal + event card (cloud only). Rendered
