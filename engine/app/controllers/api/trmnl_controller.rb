@@ -21,21 +21,20 @@ module Api
       return head :bad_request if mac_address.blank?
 
       device = Device.find_by(mac_address: mac_address)
-      if device
-        update_device_from_headers(device)
-        render json: {
-          status: 200,
-          api_key: device.api_key,
-          friendly_id: device.friendly_id,
-          message: "Welcome to Timeframe"
-        }
-        return
-      end
+      # A device only calls /api/setup when it has no stored credentials — it is
+      # brand new or has been factory reset. If a device record already exists
+      # for this hardware's MAC, the hardware was reset, so detach it (rather
+      # than silently handing back its old credentials) and fall through to
+      # issue a fresh pairing code the owner must enter to reconnect it.
+      device&.detach_hardware!
 
       pending = PendingDevice.find_or_create_by!(mac_address: mac_address) do |pd|
         pd.api_key = SecureRandom.hex(16)
         pd.friendly_id = SecureRandom.alphanumeric(6).upcase
         pd.model = PendingDevice.model_key_for_firmware(request.headers["Model"])
+        # Remember the record we just detached so it can be deleted if this
+        # hardware is claimed by a different device (paired to a new account).
+        pd.detached_device_id = device&.id
       end
 
       pending.refresh! if pending.expired?

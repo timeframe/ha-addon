@@ -238,6 +238,24 @@ class Device < ActiveRecord::Base
     session_token
   end
 
+  # Detaches the physical hardware from this device so it must be explicitly
+  # re-paired (e.g. after a factory reset), without discarding the device's
+  # settings or account. Swaps in a placeholder MAC (like an unpaired,
+  # onboarding-created device), invalidates the old credentials, and clears the
+  # prior pairing registration so the device reads as never_paired? again — the
+  # reset hardware is neither silently served nor re-paired to its old account.
+  def detach_hardware!
+    transaction do
+      PendingDevice.where(claimed_device_id: id).destroy_all
+      update!(
+        mac_address: SecureRandom.hex(6),
+        api_key: SecureRandom.hex(16),
+        session_token: nil,
+        last_connection_at: nil
+      )
+    end
+  end
+
   def pending_confirmation?
     confirmation_code.present? && !confirmed?
   end

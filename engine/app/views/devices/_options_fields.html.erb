@@ -35,10 +35,11 @@
           <span class="inline-flex items-center rounded-r-md border border-l-0 border-ink/20 bg-ink/5 px-2 text-sm"><%= display_unit %></span>
         </div>
       <% elsif time_opt %>
-        <%# The rollover time reads "…if no events after [TIME]"; always shown. %>
-        <input type="time" id="<%= time_opt[:key].tr("_", "-") %>" name="configuration[<%= time_opt[:key] %>]" value="<%= device.configuration&.dig(time_opt[:key]).presence || time_opt[:default] %>" class="tf-input-sm h-11 w-auto flex-shrink-0" aria-label="<%= opt[:label] %>">
-      <% elsif opt[:description].present? %>
-        <div class="mt-0.5 text-sm text-gray-500"><%= opt[:description] %></div>
+        <%# Companion time picker (e.g. rollover time, daily reminder time). %>
+        <input type="time" id="<%= time_opt[:key].tr("_", "-") %>" name="configuration[<%= time_opt[:key] %>]" value="<%= device.configuration&.dig(time_opt[:key]).presence || time_opt[:default] %>" class="tf-input-sm h-11 w-auto flex-shrink-0" aria-label="<%= time_opt[:label] %>">
+      <% end %>
+      <% if opt[:description].present? %>
+        <div class="mt-0.5 w-full text-sm text-gray-500"><%= opt[:description] %></div>
       <% end %>
     </div>
     <% if opt[:key] == "show_temperature_events" %>

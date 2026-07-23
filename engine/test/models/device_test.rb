@@ -152,6 +152,29 @@ class DeviceTest < Minitest::Test
     refute device.never_paired?
   end
 
+  def test_detach_hardware_frees_the_mac_and_resets_pairing_state
+    device = test_location.devices.create!(
+      name: "detach_#{SecureRandom.hex(3)}",
+      model: "reterminal_e1001",
+      mac_address: "DE:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      confirmed_at: Time.current
+    )
+    device.update_columns(last_connection_at: Time.current)
+    original_mac = device.mac_address
+    original_api_key = device.api_key
+    pending = PendingDevice.create!(claimed_device: device)
+
+    device.detach_hardware!
+    device.reload
+
+    refute_equal original_mac, device.mac_address
+    refute_equal original_api_key, device.api_key
+    assert_nil device.last_connection_at
+    assert_nil device.session_token
+    assert device.never_paired?
+    refute PendingDevice.exists?(pending.id)
+  end
+
   def test_encode_visionect_image_stores_4bpp_data
     device = Device.create!(location: test_location, name: "test_encode", model: "visionect_13", visionect_serial: "ENC1")
     # Create a small white PNG via ImageMagick

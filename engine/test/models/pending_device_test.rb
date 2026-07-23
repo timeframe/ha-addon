@@ -164,4 +164,93 @@ class PendingDeviceTest < Minitest::Test
     assert_equal device.id, pd.claimed_device_id
     assert pd.claimed?
   end
+
+  # When a reset device is claimed by a DIFFERENT device (paired into a new
+  # account via the dashboard claim flow), the superseded record is deleted.
+  def test_claim_deletes_the_superseded_detached_device
+    old_device = test_location.devices.create!(
+      name: "Old #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    pd = PendingDevice.create!(
+      mac_address: "1A:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase,
+      detached_device: old_device
+    )
+
+    new_device = pd.claim!(location: test_location, name: "New #{SecureRandom.hex(4)}", model: "reterminal_e1001")
+
+    refute_equal old_device.id, new_device.id
+    refute Device.exists?(old_device.id)
+  end
+
+  # Linking a reset device into a new account via onboarding (a fresh device
+  # record) also deletes the superseded record.
+  def test_link_to_deletes_the_superseded_detached_device
+    old_device = test_location.devices.create!(
+      name: "Old #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    new_device = test_location.devices.create!(
+      name: "Onboard #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    pd = PendingDevice.create!(
+      mac_address: "1B:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase,
+      detached_device: old_device
+    )
+
+    pd.link_to!(new_device)
+
+    refute Device.exists?(old_device.id)
+  end
+
+  # Re-pairing the SAME device (repair on its own device card) keeps it: the
+  # claiming device is the detached device, so nothing is deleted.
+  def test_link_to_keeps_the_device_when_repairing_the_same_record
+    device = test_location.devices.create!(
+      name: "Repair #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    pd = PendingDevice.create!(
+      mac_address: "1C:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase,
+      detached_device: device
+    )
+
+    pd.link_to!(device)
+
+    assert Device.exists?(device.id)
+  end
+
+  # A normal (non-reset) pairing has no superseded device to clean up.
+  def test_claim_without_a_detached_device_deletes_nothing
+    other = test_location.devices.create!(
+      name: "Other #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    pd = PendingDevice.create!(
+      mac_address: "1D:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase
+    )
+
+    pd.claim!(location: test_location, name: "Fresh #{SecureRandom.hex(4)}", model: "reterminal_e1001")
+
+    assert Device.exists?(other.id)
+  end
 end

@@ -16,8 +16,10 @@ class DeviceSettingsOptions
     "flood, winter storm, extreme heat, and high wind warnings."
 
   DAILY_EMAIL_DESCRIPTION =
-    "At 6pm each day we'll email a preview of how this device will look " \
-    "tomorrow morning, as a reminder to update your calendar."
+    "Each day at the time you choose we'll email a preview of how this " \
+    "device will look tomorrow morning, as a reminder to update your calendar."
+
+  DAILY_EMAIL_DEFAULT_TIME = "19:00"
 
   def self.call(device)
     new(device).call
@@ -98,7 +100,8 @@ class DeviceSettingsOptions
     switch("show_ha_status", "Home Assistant status", default_on: true) if ha_sync
 
     if device.screenshotted? && device.account.respond_to?(:owner_email)
-      switch("daily_screenshot_email", "Email me a daily reminder", default_on: false, description: DAILY_EMAIL_DESCRIPTION)
+      switch("daily_screenshot_email", "Email me a daily reminder at", default_on: false, description: DAILY_EMAIL_DESCRIPTION)
+      time_input("daily_screenshot_email_time", "Daily reminder time", default: DAILY_EMAIL_DEFAULT_TIME, depends_on: "daily_screenshot_email")
     end
   end
   # :nocov:

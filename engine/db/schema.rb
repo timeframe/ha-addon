@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 48) do
+ActiveRecord::Schema[8.1].define(version: 49) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -366,12 +366,14 @@ ActiveRecord::Schema[8.1].define(version: 48) do
     t.text "api_key"
     t.bigint "claimed_device_id"
     t.datetime "created_at", null: false
+    t.bigint "detached_device_id"
     t.string "friendly_id"
     t.text "mac_address"
     t.string "model"
     t.text "pairing_code", null: false
     t.datetime "updated_at", null: false
     t.index ["claimed_device_id"], name: "index_pending_devices_on_claimed_device_id"
+    t.index ["detached_device_id"], name: "index_pending_devices_on_detached_device_id"
     t.index ["mac_address"], name: "index_pending_devices_on_mac_address", unique: true
     t.index ["pairing_code"], name: "index_pending_devices_on_pairing_code", unique: true
   end
@@ -463,6 +465,7 @@ ActiveRecord::Schema[8.1].define(version: 48) do
   add_foreign_key "orders", "accounts", on_delete: :cascade
   add_foreign_key "orders", "users", on_delete: :nullify
   add_foreign_key "pending_devices", "devices", column: "claimed_device_id"
+  add_foreign_key "pending_devices", "devices", column: "detached_device_id", on_delete: :nullify
   add_foreign_key "sent_emails", "users", column: "receiving_user_id", on_delete: :nullify
   add_foreign_key "weather_syncs", "locations"
 end

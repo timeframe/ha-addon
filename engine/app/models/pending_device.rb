@@ -13,6 +13,10 @@ class PendingDevice < ActiveRecord::Base
   }.freeze
 
   belongs_to :claimed_device, class_name: "Device", optional: true
+  # The device this registration superseded when the hardware was factory reset
+  # (set by Device#detach_hardware!). Deleted once a *different* device claims
+  # the reset hardware (see delete_superseded_device!).
+  belongs_to :detached_device, class_name: "Device", optional: true
 
   encrypts :mac_address, deterministic: true
   encrypts :pairing_code, deterministic: true
@@ -94,6 +98,7 @@ class PendingDevice < ActiveRecord::Base
       confirmed_at: Time.current
     )
     update!(claimed_device: device)
+    delete_superseded_device!(device)
     device
   end
 
@@ -114,10 +119,23 @@ class PendingDevice < ActiveRecord::Base
     attrs[:model] = resolved_model if resolved_model.present?
     device.update!(attrs)
     update!(claimed_device: device)
+    delete_superseded_device!(device)
     device
   end
 
   private
+
+  # When a factory-reset device is claimed by a *different* device (e.g. paired
+  # into a new account via onboarding rather than re-paired to its original
+  # device card), delete the superseded record so it doesn't linger as an
+  # orphaned "needs pairing" card on the previous account. Re-pairing the same
+  # device (repair) keeps it, since claimed device == detached device.
+  def delete_superseded_device!(claiming_device)
+    return if detached_device_id.nil?
+    return if detached_device_id == claiming_device.id
+
+    Device.where(id: detached_device_id).destroy_all
+  end
 
   def generate_pairing_code
     self.pairing_code ||= SecureRandom.random_number(1_000_000).to_s.rjust(6, "0")

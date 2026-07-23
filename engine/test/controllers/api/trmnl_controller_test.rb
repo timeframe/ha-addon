@@ -25,18 +25,34 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     assert pending.present?
   end
 
-  test "setup returns api_key for confirmed device" do
+  test "setup detaches an existing device and issues a pairing code" do
     device = create_trmnl_device!(mac: "AA:BB:CC:DD:EE:FF")
+    device.update_columns(last_connection_at: Time.current)
+    original_api_key = device.api_key
 
     get "/api/setup", headers: {"ID" => "AA:BB:CC:DD:EE:FF"}
 
     assert_response :success
     json = JSON.parse(response.body)
     assert_equal 200, json["status"]
-    assert_equal device.api_key, json["api_key"]
-    assert_equal device.friendly_id, json["friendly_id"]
-    assert_nil json["image_url"]
-    assert_equal "Welcome to Timeframe", json["message"]
+    assert_match(/Enter this code/, json["message"])
+
+    # A fresh pending registration is created for the reset hardware's MAC and
+    # its pairing code is returned (not the old device's friendly_id).
+    pending = PendingDevice.find_by(mac_address: "AA:BB:CC:DD:EE:FF")
+    assert pending.present?
+    assert_equal pending.pairing_code, json["friendly_id"]
+    # The pending remembers the device it superseded so it can be deleted if the
+    # hardware is claimed by a different device (a new account).
+    assert_equal device.id, pending.detached_device_id
+
+    # The old device keeps its record/settings but is detached: its real MAC is
+    # freed, its credentials are rotated, and it reads as never paired again so
+    # the owner must explicitly re-pair it.
+    device.reload
+    assert_not_equal "AA:BB:CC:DD:EE:FF", device.mac_address
+    assert_not_equal original_api_key, device.api_key
+    assert device.never_paired?
   end
 
   test "setup returns existing pending device for duplicate MAC" do
@@ -50,14 +66,18 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, PendingDevice.where(mac_address: "AA:BB:CC:DD:EE:FF").count
   end
 
-  test "setup updates firmware_version from headers for confirmed device" do
+  test "setup does not update an existing device from headers" do
     device = create_trmnl_device!(mac: "AA:BB:CC:DD:EE:FF")
 
     get "/api/setup", headers: {"ID" => "AA:BB:CC:DD:EE:FF", "FW-Version" => "1.8.1"}
 
     assert_response :success
+    # An existing device is detached at setup (a factory-reset device must
+    # re-pair), so setup no longer serves it or updates it from headers.
     device.reload
-    assert_equal "1.8.1", device.firmware_version
+    assert_not_equal "1.8.1", device.firmware_version
+    assert_not_equal "AA:BB:CC:DD:EE:FF", device.mac_address
+    assert device.never_paired?
   end
 
   test "setup returns bad request without MAC address" do
