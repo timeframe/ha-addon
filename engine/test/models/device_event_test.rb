@@ -62,7 +62,8 @@ class DeviceEventTest < Minitest::Test
       starts_at: 1675123200,
       ends_at: 1675209601,
       summary: "foo",
-      description: (Date.today.year - 2).to_s
+      description: (Date.today.year - 2).to_s,
+      yearly_recurring: true
     )
 
     assert_equal("foo (2)", event.summary)
@@ -549,10 +550,23 @@ class DeviceEventTest < Minitest::Test
       starts_at: 1621288800,
       ends_at: 1621292400,
       summary: "Anniversary",
-      description: "Married in 2000"
+      description: "Married in 2000",
+      yearly_recurring: true
     )
 
     assert_equal "Anniversary (#{Date.today.year - 2000})", event.summary
+  end
+
+  def test_summary_leaves_description_year_alone_for_non_yearly_events
+    # The description "(YYYY)" -> count only applies to yearly recurring events.
+    event = DeviceEvent.new(
+      starts_at: 1621288800,
+      ends_at: 1621292400,
+      summary: "Anniversary",
+      description: "Married in 2000"
+    )
+
+    assert_equal "Anniversary", event.summary
   end
 
   def test_summary_renders_trailing_year_in_title_as_a_count_for_yearly_events
@@ -587,6 +601,49 @@ class DeviceEventTest < Minitest::Test
     assert_nil DeviceEvent.title_with_year_count("No year here")
     assert_nil DeviceEvent.title_with_year_count("Old (1850)")
     assert_nil DeviceEvent.title_with_year_count(nil)
+  end
+
+  def test_countdown_days_reads_the_token
+    event = DeviceEvent.new(starts_at: 3.days.from_now, ends_at: 3.days.from_now + 1.hour,
+      summary: "Trip", description: "Notes\n\ntimeframe-countdown:7")
+    assert_equal 7, event.countdown_days
+  end
+
+  def test_countdown_days_nil_without_a_token
+    event = DeviceEvent.new(starts_at: 3.days.from_now, ends_at: 3.days.from_now + 1.hour, summary: "Trip")
+    assert_nil event.countdown_days
+  end
+
+  def test_countdown_reminder_within_window
+    tz = "America/Chicago"
+    today = Time.now.in_time_zone(tz).to_date
+    starts = ActiveSupport::TimeZone[tz].local(today.year, today.month, today.day) + 3.days
+    event = DeviceEvent.new(starts_at: starts, ends_at: starts + 1.hour,
+      summary: "Trip", description: "timeframe-countdown:7", timezone: tz)
+
+    reminder = event.countdown_reminder(today)
+    assert reminder
+    assert_equal "Trip (in 3d)", reminder.summary
+    assert reminder.daily?
+  end
+
+  def test_countdown_reminder_nil_outside_window
+    tz = "America/Chicago"
+    today = Time.now.in_time_zone(tz).to_date
+    starts = ActiveSupport::TimeZone[tz].local(today.year, today.month, today.day) + 10.days
+    event = DeviceEvent.new(starts_at: starts, ends_at: starts + 1.hour,
+      summary: "Trip", description: "timeframe-countdown:3", timezone: tz)
+
+    assert_nil event.countdown_reminder(today)
+  end
+
+  def test_countdown_reminder_nil_without_token
+    tz = "America/Chicago"
+    today = Time.now.in_time_zone(tz).to_date
+    starts = ActiveSupport::TimeZone[tz].local(today.year, today.month, today.day) + 3.days
+    event = DeviceEvent.new(starts_at: starts, ends_at: starts + 1.hour, summary: "Trip", timezone: tz)
+
+    assert_nil event.countdown_reminder(today)
   end
 
   def test_title_override_not_applied_without_tag

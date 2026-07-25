@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 49) do
+ActiveRecord::Schema[8.1].define(version: 51) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -47,6 +47,15 @@ ActiveRecord::Schema[8.1].define(version: 49) do
     t.index ["stripe_subscription_id"], name: "index_accounts_on_stripe_subscription_id", unique: true
   end
 
+  create_table "air_quality_syncs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "fetched_at", null: false
+    t.bigint "location_id", null: false
+    t.jsonb "response_data", null: false
+    t.datetime "updated_at", null: false
+    t.index ["location_id", "fetched_at"], name: "index_air_quality_syncs_on_location_id_and_fetched_at"
+  end
+
   create_table "apple_accounts", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.text "app_specific_password", null: false
@@ -78,6 +87,7 @@ ActiveRecord::Schema[8.1].define(version: 49) do
     t.boolean "banner_enabled", default: false, null: false
     t.text "banner_message"
     t.bigint "calendar_id", null: false
+    t.integer "countdown_days"
     t.datetime "created_at", null: false
     t.string "customization_key", null: false
     t.string "icon"

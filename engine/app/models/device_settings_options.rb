@@ -15,6 +15,10 @@ class DeviceSettingsOptions
     "Shows official government alerts such as severe thunderstorm, tornado, " \
     "flood, winter storm, extreme heat, and high wind warnings."
 
+  AIR_QUALITY_ALERTS_DESCRIPTION =
+    "Shows air quality warnings when the US AQI forecast reaches " \
+    "\"Unhealthy for Sensitive Groups\" or worse over the next 24 hours."
+
   DAILY_EMAIL_DESCRIPTION =
     "Each day at the time you choose we'll email a preview of how this " \
     "device will look tomorrow morning, as a reminder to update your calendar."
@@ -89,6 +93,11 @@ class DeviceSettingsOptions
       "show_weather_alerts", "Weather alerts",
       default_on: !%w[one_day two_day].include?(template),
       description: WEATHER_ALERTS_DESCRIPTION
+    )
+    switch(
+      "show_air_quality_events", "Air quality alerts",
+      default_on: !%w[one_day two_day].include?(template),
+      description: AIR_QUALITY_ALERTS_DESCRIPTION
     )
   end
 

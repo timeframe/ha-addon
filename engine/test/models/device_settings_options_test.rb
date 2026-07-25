@@ -14,7 +14,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   def test_trmnl_options
     assert_equal(
       %w[show_current_day show_temperature_events show_precip_events show_wind_events
-        show_weather_alerts auto_assign_icons show_dates clothing_forecast
+        show_weather_alerts show_air_quality_events auto_assign_icons show_dates clothing_forecast
         hide_current_day_enabled hide_current_day_time],
       keys_for("trmnl")
     )
@@ -25,7 +25,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   def test_three_day_options
     assert_equal(
       %w[only_show_events_with_icons show_temperature_events show_precip_events show_wind_events
-        show_weather_alerts clothing_forecast show_icons auto_assign_icons show_dates
+        show_weather_alerts show_air_quality_events clothing_forecast show_icons auto_assign_icons show_dates
         hide_current_day_enabled hide_current_day_time],
       keys_for("three_day")
     )
@@ -34,7 +34,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   def test_two_day_options
     assert_equal(
       %w[only_show_events_with_icons show_precip_events show_wind_events show_weather_alerts
-        clothing_forecast show_icons auto_assign_icons show_dates show_event_times
+        show_air_quality_events clothing_forecast show_icons auto_assign_icons show_dates show_event_times
         two_day_rollover_enabled two_day_rollover_time],
       keys_for("two_day")
     )
@@ -46,7 +46,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
 
   def test_one_day_options
     assert_equal(
-      %w[only_show_events_with_icons show_weather_alerts show_icons auto_assign_icons
+      %w[only_show_events_with_icons show_weather_alerts show_air_quality_events show_icons auto_assign_icons
         show_event_times one_day_rollover_enabled one_day_rollover_time],
       keys_for("one_day")
     )
@@ -59,7 +59,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   def test_reterminal_options
     assert_equal(
       %w[show_current_day only_show_events_with_icons show_temperature_events show_precip_events
-        show_wind_events show_weather_alerts auto_assign_icons hide_current_day_enabled hide_current_day_time],
+        show_wind_events show_weather_alerts show_air_quality_events auto_assign_icons hide_current_day_enabled hide_current_day_time],
       keys_for("reterminal")
     )
     show_current_day = DeviceSettingsOptions.call(Device.new(display_template: "reterminal")).find { |o| o[:key] == "show_current_day" }
@@ -76,7 +76,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   def test_thirteen_options
     assert_equal(
       %w[show_current_day show_temperature_events show_precip_events show_wind_events
-        show_weather_alerts auto_assign_icons hide_current_day_enabled hide_current_day_time],
+        show_weather_alerts show_air_quality_events auto_assign_icons hide_current_day_enabled hide_current_day_time],
       keys_for("thirteen")
     )
   end

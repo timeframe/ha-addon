@@ -81,9 +81,20 @@ The following entities can be created in Home Assistant to customize behavior. I
 
 ## Calendar events
 
-### Hiding specific events
+### Event description tokens
 
-To hide a specific event, include `timeframe-omit` in the description.
+You can customize how an individual calendar event renders by adding one or more tokens to its **description**. Tokens are usually placed on their own line and are stripped from any text shown on the display. Icon names come from [Material Design Icons](https://pictogrammers.com/library/mdi/) (without the `mdi-` prefix).
+
+| Token | Description |
+|---|---|
+| `timeframe-omit` | Hides this event from the display. |
+| `timeframe-icon:NAME` | Sets the event's icon, e.g. `timeframe-icon:soccer`. An `mdi-` prefix is accepted and ignored. |
+| `timeframe-title:TEXT` | Overrides the displayed title without changing the real event title. |
+| `timeframe-only:TOKENS` | Shows the event only on the listed devices. `TOKENS` is a comma-separated list of device names or ids, e.g. `timeframe-only:Kitchen, 12`. |
+| `timeframe-banner` (or `#banner`) | Shows the event as a full-width banner while it is active (see below). |
+| `timeframe-countdown:N` | Adds an all-day "(in Xd)" reminder on each of the `N` days leading up to the event (never on/after the event day). `N` is 1–365. Honored by the hosted Timeframe app. |
+
+A recurring event whose title ends with a four-digit year in parentheses, e.g. `Ada (1990)`, renders that year as an elapsed count (`Ada (35)`) — this is how birthdays and anniversaries show an age.
 
 ### Banner mode
 

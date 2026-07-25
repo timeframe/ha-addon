@@ -130,6 +130,32 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_countdown_reminder_appears_today
+    travel_to DateTime.new(2023, 8, 27, 9, 0, 0, "-0600") do
+      api = new_test_api
+      tz = api.time_zone
+      starts = ActiveSupport::TimeZone[tz].local(2023, 8, 30, 9, 0, 0)
+      events = [
+        DeviceEvent.new(
+          starts_at: starts,
+          ends_at: starts + 1.hour,
+          summary: "Vacation",
+          description: "timeframe-countdown:7",
+          timezone: tz
+        )
+      ]
+      api.stub :calendars_healthy?, false do
+        api.stub :calendar_events, events do
+          result = DeviceContent.new.call(home_assistant_api: api, always_show_today: true, days: 1)
+          day = result[:day_groups].first
+          items = (day[:daily] + day[:periodic])
+          assert(items.any? { |e| e[:summary] == "Vacation (in 3d)" },
+            "expected a countdown reminder today, got: #{items.map { |e| e[:summary] }.inspect}")
+        end
+      end
+    end
+  end
+
   def test_daily_events_remain_after_cutoff_when_periodic_events_exist
     # After the cutoff the day must not have its daily (all-day) events hidden
     # while a periodic event is still showing; the cutoff only hides the entire

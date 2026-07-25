@@ -9,6 +9,7 @@ class DeviceContent
     include_precip: true,
     include_wind: true,
     include_weather_alerts: true,
+    include_air_quality: true,
     include_temperature: true,
     temperature_hours: nil,
     use_day_names: false,
@@ -87,6 +88,15 @@ class DeviceContent
       end
     end
     raw_events << cal_events
+
+    # Countdown reminders: a "timeframe-countdown:N" token on a calendar event
+    # adds a synthetic all-day "Title (in Xd)" reminder on today for each of the
+    # N days leading up to the event.
+    today = current_time.to_date
+    cal_events.each do |event|
+      reminder = event.countdown_reminder(today)
+      raw_events << reminder if reminder
+    end
 
     out[:day_groups] =
       (start_offset...(start_offset + days)).to_a.map do |day_index|

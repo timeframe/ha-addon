@@ -336,6 +336,16 @@ class Device < ActiveRecord::Base
     !%w[one_day two_day].include?(active_template)
   end
 
+  # Air-quality alerts (US AQI "Unhealthy for Sensitive Groups" or worse) can be
+  # toggled on every template. They default ON, except for the compact one-day /
+  # two-day layouts which default OFF.
+  def air_quality_alerts_enabled?
+    value = configuration&.dig("show_air_quality_events")
+    return value != "false" unless value.nil?
+
+    !%w[one_day two_day].include?(active_template)
+  end
+
   # The Home Assistant status bar (top-left/right, weather status, now playing)
   # can be toggled on every template. It defaults ON.
   def ha_status_enabled?
@@ -460,6 +470,7 @@ class Device < ActiveRecord::Base
       include_precip: include_precip_events,
       include_wind: include_wind_events,
       include_weather_alerts: weather_alerts_enabled?,
+      include_air_quality: air_quality_alerts_enabled?,
       include_temperature: include_temperature_events,
       temperature_hours: temperature_hours,
       use_day_names: compact_view, include_daily_weather: !compact_view,

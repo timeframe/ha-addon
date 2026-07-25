@@ -1,6 +1,7 @@
 class DeviceEvent
   DAY_IN_SECONDS = 86_400
   TIMEFRAME_ICON_PATTERN = /timeframe-icon:(?:mdi-)?([a-z0-9][a-z0-9-]*)/i
+  TIMEFRAME_COUNTDOWN_PATTERN = /timeframe-countdown:(\d{1,3})/i
 
   attr_reader :id, :starts_at, :ends_at, :multi_day, :location, :icon_rotation, :attachment_image, :precip, :wind_gust, :entity_id
   attr_accessor :icon
@@ -36,6 +37,11 @@ class DeviceEvent
 
     @timeframe_icon = @description&.match(TIMEFRAME_ICON_PATTERN)&.captures&.first
     @icon = @timeframe_icon if @timeframe_icon.present?
+
+    # A "timeframe-countdown:N" token asks for an all-day "(in Xd)" reminder on
+    # each of the N days before the event (rendered via #countdown_reminder).
+    countdown = @description&.match(TIMEFRAME_COUNTDOWN_PATTERN)&.captures&.first&.to_i
+    @countdown_days = countdown&.positive? ? countdown : nil
 
     # Keep the underlying (un-overridden) title so auto icon matching can fall
     # back to it when the overwritten title doesn't match an icon.
@@ -214,7 +220,7 @@ class DeviceEvent
   def summary(as_of = nil)
     if @yearly_recurring && (rendered = self.class.title_with_year_count(@summary))
       rendered
-    elsif (count = self.class.year_count(@description))
+    elsif @yearly_recurring && (count = self.class.year_count(@description))
       "#{@summary} (#{count})"
     elsif multi_day? && as_of
       numerator = (as_of.to_date - @starts_at.to_date).to_i + 1
@@ -250,6 +256,30 @@ class DeviceEvent
     return nil unless (1900..2100).cover?(year)
 
     "#{match[1]} (#{Date.today.year - year})"
+  end
+
+  # The configured countdown length in days, or nil when this event has no
+  # "timeframe-countdown:N" token.
+  attr_reader :countdown_days
+
+  # A synthetic all-day "Title (in Xd)" reminder for `as_of` (a Date, the day
+  # being rendered), or nil when no countdown is configured or `as_of` falls
+  # outside the window. The reminder shows on each of the N days before the
+  # event, never on or after the event's own start day.
+  def countdown_reminder(as_of)
+    return nil unless @countdown_days
+
+    days_until = (@starts_at.to_date - as_of.to_date).to_i
+    return nil unless days_until.between?(1, @countdown_days)
+
+    self.class.new(
+      id: "_countdown_#{@id}",
+      starts_at: as_of.to_s,
+      ends_at: (as_of.to_date + 1).to_s,
+      summary: "#{summary} (in #{days_until}d)",
+      icon: @icon,
+      timezone: @timezone
+    )
   end
 
   def as_json(date: nil)
