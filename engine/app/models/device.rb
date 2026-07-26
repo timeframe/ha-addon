@@ -601,7 +601,8 @@ class Device < ActiveRecord::Base
   end
 
   def self.enqueue_screenshot_refresh_jobs!(stagger: false)
-    where(model: SCREENSHOTTED_MODELS).find_each.with_index do |device, index|
+    pending_ids = RefreshDeviceScreenshotJob.pending_device_ids
+    where(model: SCREENSHOTTED_MODELS).where.not(id: pending_ids).find_each.with_index do |device, index|
       if stagger
         RefreshDeviceScreenshotJob.set(wait: (index * 30).seconds).perform_later(device.id)
       else

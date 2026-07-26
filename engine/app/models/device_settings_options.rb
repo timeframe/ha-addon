@@ -17,7 +17,7 @@ class DeviceSettingsOptions
 
   AIR_QUALITY_ALERTS_DESCRIPTION =
     "Shows air quality warnings when the US AQI forecast reaches " \
-    "\"Unhealthy for Sensitive Groups\" or worse over the next 24 hours."
+    "\"Unhealthy for Sensitive Groups\" or worse over the next 4 days."
 
   DAILY_EMAIL_DESCRIPTION =
     "Each day at the time you choose we'll email a preview of how this " \
