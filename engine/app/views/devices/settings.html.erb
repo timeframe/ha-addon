@@ -23,7 +23,7 @@
       <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
         <span class="ml-2 text-body-tertiary text-sm"><%= @device.model_name_label %></span>
       <% end %>
-      <% if defined?(current_user) && current_user&.is_admin? && @device.show_device_id? %>
+      <% if defined?(current_user) && current_user&.is_admin? %>
         <span class="ml-2 tf-badge">ID #<%= @device.id %></span>
       <% end %>
     </div>
