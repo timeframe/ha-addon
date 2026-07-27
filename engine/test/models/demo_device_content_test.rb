@@ -10,7 +10,6 @@ class DemoDeviceContentTest < Minitest::Test
       result = DemoDeviceContent.new.call(timezone: "America/Chicago")
 
       assert_equal "72°", result[:current_temperature]
-      assert result[:timestamp].present?
       assert result[:current_time].present?
       assert result[:top_left].is_a?(Array)
       assert result[:top_right].is_a?(Array)

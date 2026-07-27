@@ -10,7 +10,6 @@ class DemoDeviceContent
 
     out = {}
     out[:current_temperature] = "72°"
-    out[:timestamp] = current_time.strftime("%-l:%M %p")
     out[:current_time] = current_time
 
     battery = Device.battery_descriptor(level: battery_level, charging: charging)

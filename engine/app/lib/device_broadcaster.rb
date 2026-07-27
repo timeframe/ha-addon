@@ -8,10 +8,10 @@ class DeviceBroadcaster
   class << self
     def broadcast_if_changed(device)
       data = view_object_for(device)
-      # Exclude time-only fields from the dedup hash: the Mira renders its clock
-      # client-side, so a new minute alone must not trigger a refresh broadcast
-      # (which would cause a full-body swap / e-ink blink every minute).
-      data_hash = Digest::MD5.hexdigest(data.except(:current_time, :timestamp).to_json)
+      # Exclude the raw current_time value from the dedup hash: the Mira renders
+      # its clock client-side, so a new minute alone must not trigger a refresh
+      # broadcast (which would cause a full-body swap / e-ink blink every minute).
+      data_hash = Digest::MD5.hexdigest(data.except(:current_time).to_json)
 
       should_broadcast = @mutex.synchronize do
         if @last_hashes[device.id] != data_hash

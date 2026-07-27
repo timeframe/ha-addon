@@ -173,10 +173,61 @@
       tfLog('error', 'promise: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
     });
 
+    var refreshInFlight = false;
+
+    function tfApplyHtml(html) {
+      if (window.tfMorph) {
+        var parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html').body;
+        window.tfMorph(document.body, parsed);
+      } else {
+        document.body.innerHTML = html;
+        tfLog('warn', 'tfMorph missing; full innerHTML swap');
+      }
+      window.initMiraClock();
+    }
+
+    // Fetch the latest rendered content and morph it in. During a backend
+    // (Heroku) outage the request can fail or return an error page; in that case
+    // KEEP the last good content on screen and retry indefinitely with backoff
+    // (ramping up to every 30s) instead of blanking the display or morphing in
+    // an error page.
+    function tfRefresh(attempt) {
+      if (refreshInFlight && attempt === 0) return;
+      refreshInFlight = true;
+      fetch(deviceUrl + '?layout=false', { cache: 'no-store' })
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function(html) {
+          refreshInFlight = false;
+          if (html && html.trim().length) tfApplyHtml(html);
+        })
+        .catch(function(e) {
+          tfLog('error', 'refresh failed: ' + e);
+          console.error('[Timeframe] Refresh failed:', e);
+          setTimeout(function() { tfRefresh(attempt + 1); }, Math.min(30000, 5000 * (attempt + 1)));
+        });
+    }
+
+    var everConnected = false;
     var cable = ActionCable.createConsumer();
     cable.subscriptions.create(
       { channel: 'DeviceChannel', device_id: '<%= @device.id %>' },
       {
+        connected: function() {
+          // First connect: the page already has fresh server-rendered content.
+          // Re-connect (after a backend outage dropped the WebSocket): pull the
+          // latest content to catch up on any refreshes broadcast while offline.
+          if (everConnected) {
+            tfLog('info', 'reconnected; refreshing content');
+            tfRefresh(0);
+          }
+          everConnected = true;
+        },
+        disconnected: function() {
+          tfLog('warn', 'websocket disconnected');
+        },
         received: function(data) {
           if (data.deploy_time && data.deploy_time.toString() !== knownDeployTime) {
             tfLog('info', 'deploy changed; full page reload');
@@ -184,19 +235,7 @@
             return;
           }
           if (data.action === 'refresh') {
-            fetch(deviceUrl + '?layout=false')
-              .then(function(r) { return r.text(); })
-              .then(function(html) {
-                if (window.tfMorph) {
-                  var parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html').body;
-                  window.tfMorph(document.body, parsed);
-                } else {
-                  document.body.innerHTML = html;
-                  tfLog('warn', 'tfMorph missing; full innerHTML swap');
-                }
-                window.initMiraClock();
-              })
-              .catch(function(e) { tfLog('error', 'refresh failed: ' + e); console.error('[Timeframe] Refresh failed:', e); });
+            tfRefresh(0);
           }
         }
       }

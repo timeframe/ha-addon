@@ -15,6 +15,7 @@ module VisualRegressionHelper
     actual_path = ARTIFACT_ROOT.join("#{name}.actual.png")
     diff_path = ARTIFACT_ROOT.join("#{name}.diff.png")
 
+    wait_for_web_fonts
     Capybara.current_session.save_screenshot(actual_path.to_s, full: false)
 
     if ENV["UPDATE_VISUALS"] == "1" || !baseline_path.exist?
@@ -38,6 +39,29 @@ module VisualRegressionHelper
   end
 
   private
+
+  # Webfonts (e.g. Material Design Icons) load asynchronously, so a screenshot
+  # taken before they finish paints fallback glyphs. Wait until the browser
+  # reports every font loaded, and specifically confirm the icon font is ready,
+  # so the capture is deterministic.
+  def wait_for_web_fonts(timeout: 5, icon_font: '1.25rem "Material Design Icons"')
+    deadline = Time.now + timeout
+
+    loop do
+      ready = Capybara.current_session.evaluate_script(<<~JS)
+        (function () {
+          if (!document.fonts) return true;
+          return document.fonts.status === "loaded" &&
+                 document.fonts.check(#{icon_font.to_json});
+        })();
+      JS
+
+      break if ready
+      break if Time.now > deadline
+
+      sleep 0.05
+    end
+  end
 
   def changed_pixel_ratio(expected_path, actual_path, channel_tolerance:)
     expected = MiniMagick::Image.open(expected_path.to_s)

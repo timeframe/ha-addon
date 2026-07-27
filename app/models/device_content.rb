@@ -33,7 +33,6 @@ class DeviceContent
     out[:top_right] = []
     out[:weather_status] = []
     out[:current_time] = current_time
-    out[:timestamp] = current_time.strftime("%-l:%M %p")
 
     if home_assistant_api.states_healthy?
       out[:current_temperature] = home_assistant_api.feels_like_temperature

@@ -23,7 +23,7 @@
       <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
         <span class="ml-2 text-body-tertiary text-sm"><%= @device.model_name_label %></span>
       <% end %>
-      <% if defined?(current_user) && current_user&.is_admin? %>
+      <% if defined?(current_user) && current_user&.is_admin? && @device.show_device_id? %>
         <span class="ml-2 tf-badge">ID #<%= @device.id %></span>
       <% end %>
     </div>
@@ -377,6 +377,14 @@
                 <input type="checkbox" class="tf-check" onchange="this.form.submit()">
               <% end %>
               <span>Demo mode</span>
+            </label>
+          <% end %>
+          <%= form_with url: update_configuration_account_location_device_path(@account, @location, @device), method: :patch do %>
+            <input type="hidden" name="key" value="show_device_id">
+            <input type="hidden" name="value" value="<%= @device.show_device_id? ? "false" : "true" %>">
+            <label class="mb-2 flex items-center gap-2">
+              <%= tag.input type: "checkbox", class: "tf-check", checked: @device.show_device_id?, onchange: "this.form.submit()" %>
+              <span>Show device ID</span>
             </label>
           <% end %>
           <% if defined?(current_user) && current_user&.is_admin? %>

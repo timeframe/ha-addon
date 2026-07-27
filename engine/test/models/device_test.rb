@@ -227,6 +227,38 @@ class DeviceTest < Minitest::Test
     Device.define_method(:refresh_screenshot!, original_method)
   end
 
+  def test_refresh_screenshot_skips_capture_when_content_unchanged
+    device = Device.create!(location: test_location, name: "test_hash_skip_#{SecureRandom.hex(3)}", model: "trmnl_og", mac_address: "CA:#{SecureRandom.hex(5).scan(/../).join(":").upcase}", api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, display_key: SecureRandom.alphanumeric(24))
+    captures = 0
+    capture = ->(_url) {
+      captures += 1
+      "img-#{captures}"
+    }
+    device.stub(:rendered_display_html, "<html>stable</html>") do
+      device.stub(:capture_screenshot, capture) do
+        device.refresh_screenshot!("http://example.test")
+        device.refresh_screenshot!("http://example.test")
+      end
+    end
+    assert_equal 1, captures, "unchanged content must not capture a second time"
+    assert_equal "img-1", device.reload.cached_image
+  end
+
+  def test_refresh_screenshot_recaptures_when_content_changes
+    device = Device.create!(location: test_location, name: "test_hash_change_#{SecureRandom.hex(3)}", model: "trmnl_og", mac_address: "CB:#{SecureRandom.hex(5).scan(/../).join(":").upcase}", api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, display_key: SecureRandom.alphanumeric(24))
+    captures = 0
+    capture = ->(_url) {
+      captures += 1
+      "img-#{captures}"
+    }
+    device.stub(:capture_screenshot, capture) do
+      device.stub(:rendered_display_html, "<html>one</html>") { device.refresh_screenshot!("http://example.test") }
+      device.stub(:rendered_display_html, "<html>two</html>") { device.refresh_screenshot!("http://example.test") }
+    end
+    assert_equal 2, captures, "changed content must capture again"
+    assert_equal "img-2", device.reload.cached_image
+  end
+
   def test_confirm_sets_location_and_confirmed_at
     device = Device.create!(name: "test_confirm_#{SecureRandom.hex(4)}", model: "trmnl_og", mac_address: "AA:BB:#{SecureRandom.hex(4).scan(/../).join(":").upcase}", api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase)
     assert device.pending_confirmation?
@@ -757,6 +789,18 @@ class DeviceTest < Minitest::Test
     nil_config = Device.new
     nil_config.configuration = nil
     assert nil_config.ha_status_enabled?
+  end
+
+  def test_show_device_id_defaults_off_and_respects_setting
+    # Defaults off when unset.
+    refute Device.new.show_device_id?
+    assert Device.new(configuration: {"show_device_id" => "true"}).show_device_id?
+    refute Device.new(configuration: {"show_device_id" => "false"}).show_device_id?
+
+    # A nil configuration still defaults off.
+    nil_config = Device.new
+    nil_config.configuration = nil
+    refute nil_config.show_device_id?
   end
 
   def test_wind_gust_threshold_mph_defaults_and_overrides

@@ -352,6 +352,12 @@ class Device < ActiveRecord::Base
     configuration&.dig("show_ha_status") != "false"
   end
 
+  # Whether the numeric device ID badge is shown on the device settings page.
+  # Admin-only control; defaults OFF so the ID is hidden unless explicitly enabled.
+  def show_device_id?
+    configuration&.dig("show_device_id") == "true"
+  end
+
   DEFAULT_TEMPERATURE_HOURS = [8, 12, 16, 20].freeze
   COMPACT_TEMPERATURE_HOURS = [8, 12, 16].freeze
 
@@ -543,11 +549,73 @@ class Device < ActiveRecord::Base
     base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
     url = token_device_url(host: base_url)
 
+    # Skip regenerating the screenshot when the rendered page (plus the deploy
+    # id) is byte-for-byte the same as last time. Keeping the existing
+    # cached_image AND cached_image_at means /api/display serves the same
+    # filename, so TRMNL devices recognise it as already-drawn and never
+    # re-flash the panel for unchanged content. A new deploy changes DEPLOY_TIME
+    # so every device refreshes exactly once after a release.
+    crc = display_content_crc
+    if crc && crc == display_state_crc && cached_image.present?
+      log_screenshot_refresh("skipped", crc: crc)
+      return
+    end
+
+    previous_crc = display_state_crc
     self.cached_image = capture_screenshot(url)
     self.cached_image_at = Time.current
+    self.display_state_crc = crc
     save!
 
+    log_screenshot_refresh("regenerated", crc: crc, previous_crc: previous_crc)
+
     encode_visionect_image! if visionect?
+  end
+
+  # Records the screenshot refresh decision (skipped vs regenerated) as an audit
+  # log so the content-hash short-circuit is observable in the admin audit view.
+  # CreateAuditLogJob/AuditLog only exist in the cloud app, so this is a no-op
+  # in deployments without them.
+  def log_screenshot_refresh(result, crc: nil, previous_crc: nil)
+    return unless defined?(CreateAuditLogJob)
+
+    CreateAuditLogJob.perform_later(
+      subject_type: self.class.name,
+      subject_id: id,
+      event_type: "devices.screenshot_refresh",
+      result_type: result,
+      metadata: {content_crc: crc, previous_content_crc: previous_crc}.compact
+    )
+  rescue => e
+    Rails.logger.warn("[Screenshot] audit log failed for #{name}: #{e.message}")
+  end
+
+  # CRC of the rendered display HTML combined with the deploy id. Returns nil if
+  # rendering fails so the caller falls back to capturing a fresh screenshot.
+  def display_content_crc
+    Zlib.crc32("#{rendered_display_html}\n#{DEPLOY_TIME}")
+  rescue => e
+    Rails.logger.warn("[Screenshot] content hash failed for #{name}: #{e.message}")
+    nil
+  end
+
+  # Renders the device display page HTML in-process (no headless browser),
+  # matching what the screenshot browser loads. Only ever used for
+  # screenshotted (non-realtime) templates.
+  def rendered_display_html(current_time: nil)
+    template = active_template
+    view_object = device_content(current_time: current_time)
+    view_object[:configuration] = configuration || {}
+    component = DevicesController::TEMPLATE_COMPONENTS[template].constantize.new(view_object: view_object)
+    ApplicationController.render(
+      component,
+      layout: "device",
+      assigns: {
+        refresh: false,
+        banner: ((template == "mira") ? nil : view_object[:banner]),
+        low_battery_banner: Device.low_battery_banner(template, view_object)
+      }
+    )
   end
 
   # Captures the display as it will look at a future moment (used by the daily

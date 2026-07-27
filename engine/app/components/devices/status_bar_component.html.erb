@@ -1,17 +1,16 @@
-<div style="clear: both; line-height: .7; margin-bottom: 1rem;">
-  <div style="float: left;">
+<div style="display: flex; align-items: baseline; gap: 1rem; line-height: .7; margin-bottom: 1rem;">
+  <div style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
 <%- if (battery = @view_object[:battery]) -%>
 <span style="margin-right: .5rem;"><i class="mdi mdi-<%= battery[:icon] %>" style="margin-right: .1rem;"></i><%= battery[:charging] ? "Charging #{battery[:level]}%" : "Recharge battery: #{battery[:level]}%" %></span>
 <%- end -%>
-<%- (@view_object[:top_left] + @view_object[:weather_status]).each do |top_left| -%>
-<span style="margin-right: .5rem;"><i class="mdi mdi-<%= top_left[:icon] %>" style="margin-right: .1rem;<%= " display: inline-block; transform: rotate(#{top_left[:rotation]}deg);" if top_left[:rotation] %>"></i><%= top_left[:label] %></span>
+<%- left_groups.each do |group| -%>
+<span style="margin-right: .5rem;"><i class="mdi mdi-<%= group[:icon] %>" style="margin-right: .1rem;<%= " display: inline-block; transform: rotate(#{group[:rotation]}deg);" if group[:rotation] %>"></i><%= group[:labels].join(", ") %></span>
 <%- end -%>
   </div>
-  <div style="float: right; text-align: right;">
-<%- @view_object[:top_right].each do |top_right| -%>
-<span><i class="mdi mdi-<%= top_right[:icon] %>" style="margin-right: .1rem;"></i><%= top_right[:label] %></span>
+  <div style="flex: 0 0 auto; text-align: right; white-space: nowrap;">
+<%- right_groups.each do |group| -%>
+<span><i class="mdi mdi-<%= group[:icon] %>" style="margin-right: .1rem;"></i><%= group[:labels].join(", ") %></span>
 <%- end -%>
   </div>
-  <div>&nbsp;</div>
 </div>
 <hr style="margin: 1rem 0 1rem; border: none; background-color: #ccc; color: #ccc; height: 2px;">

@@ -137,7 +137,9 @@ class DevicesController < ApplicationController
     config = device.configuration || {}
     config[params[:key]] = normalize_configuration_value(params[:key], params[:value], params[:unit])
     device.update!(configuration: config)
-    RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted?
+    # "show_device_id" only affects the web settings page, never the rendered
+    # display, so it must not trigger a screenshot regeneration.
+    RefreshDeviceScreenshotJob.perform_later(device.id) if device.screenshotted? && params[:key] != "show_device_id"
     redirect_back fallback_location: root_path
   end
 
