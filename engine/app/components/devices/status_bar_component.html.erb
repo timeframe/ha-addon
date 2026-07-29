@@ -1,5 +1,5 @@
 <div style="display: flex; align-items: baseline; gap: 1rem; line-height: .7; margin-bottom: 1rem;">
-  <div style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+  <div style="flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-block: .3em; margin-block: -.3em;">
 <%- if (battery = @view_object[:battery]) -%>
 <span style="margin-right: .5rem;"><i class="mdi mdi-<%= battery[:icon] %>" style="margin-right: .1rem;"></i><%= battery[:charging] ? "Charging #{battery[:level]}%" : "Recharge battery: #{battery[:level]}%" %></span>
 <%- end -%>
@@ -7,7 +7,7 @@
 <span style="margin-right: .5rem;"><i class="mdi mdi-<%= group[:icon] %>" style="margin-right: .1rem;<%= " display: inline-block; transform: rotate(#{group[:rotation]}deg);" if group[:rotation] %>"></i><%= group[:labels].join(", ") %></span>
 <%- end -%>
   </div>
-  <div style="flex: 0 0 auto; text-align: right; white-space: nowrap;">
+  <div style="flex: 0 0 auto; text-align: right; white-space: nowrap; overflow: hidden; padding-block: .3em; margin-block: -.3em;">
 <%- right_groups.each do |group| -%>
 <span><i class="mdi mdi-<%= group[:icon] %>" style="margin-right: .1rem;"></i><%= group[:labels].join(", ") %></span>
 <%- end -%>

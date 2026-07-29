@@ -126,8 +126,11 @@ class DemoDeviceContentTest < Minitest::Test
     travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
       result = DemoDeviceContent.new.call(timezone: "America/Chicago")
 
-      assert_equal 1, result[:top_left].count
-      assert result[:top_left].any? { |s| s[:icon] == "door-open" }
+      assert_equal 3, result[:top_left].count
+      # Two door-open indicators exercise the status-bar icon grouping.
+      assert_equal 2, result[:top_left].count { |s| s[:icon] == "door-open" }
+      # Descender-bearing labels ("Garage", "Laundry") exercise glyph clipping.
+      assert result[:top_left].any? { |s| s[:label] == "Laundry" }
     end
   end
 

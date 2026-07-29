@@ -59,14 +59,14 @@
 <div style="margin-top: 1.5rem;"></div>
 <div style="display: flex; justify-content: space-between; margin-bottom: .5rem;">
   <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 1rem;">
-<%- @view_object[:top_left].each do |top_left| -%>
-<span style="margin-right: .5rem;"><i class="mdi mdi-<%= top_left[:icon] %>" style="margin-right: .25rem;"></i><%= top_left[:label] %></span>
+<%- Devices::StatusBarComponent.consolidate(@view_object[:top_left]).each do |group| -%>
+<span style="margin-right: .5rem;"><i class="mdi mdi-<%= group[:icon] %>" style="margin-right: .25rem;<%= " display: inline-block; transform: rotate(#{group[:rotation]}deg);" if group[:rotation] %>"></i><%= group[:labels].join(", ") %></span>
 <%- end -%>
   </div>
 
   <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-<%- @view_object[:top_right].each do |top_right| -%>
-<span><i class="mdi mdi-<%= top_right[:icon] %>" style="margin-right: .25rem;"></i><%= top_right[:label] %></span>
+<%- Devices::StatusBarComponent.consolidate(@view_object[:top_right]).each do |group| -%>
+<span><i class="mdi mdi-<%= group[:icon] %>" style="margin-right: .25rem;<%= " display: inline-block; transform: rotate(#{group[:rotation]}deg);" if group[:rotation] %>"></i><%= group[:labels].join(", ") %></span>
 <%- end -%>
   </div>
 </div>
@@ -76,8 +76,8 @@
 <div style="margin: 1rem 0 1.5rem; display: flex; justify-content: space-between; line-height: 2rem; font-size: 2rem;">
   <div><span id="mira-date" data-morph-keep></span></div>
   <div style="white-space: nowrap;">
-<%- @view_object[:weather_status].each do |weather_status| -%>
-<span style="margin-left: .5rem;"><i class="mdi mdi-<%= weather_status[:icon] %>" style="<%= " display: inline-block; transform: rotate(#{weather_status[:rotation]}deg);" if weather_status[:rotation] %>"></i><%= weather_status[:label] %></span>
+<%- Devices::StatusBarComponent.consolidate(@view_object[:weather_status]).each do |group| -%>
+<span style="margin-left: .5rem;"><i class="mdi mdi-<%= group[:icon] %>" style="<%= " display: inline-block; transform: rotate(#{group[:rotation]}deg);" if group[:rotation] %>"></i><%= group[:labels].join(", ") %></span>
 <%- end -%>
   </div>
 </div>

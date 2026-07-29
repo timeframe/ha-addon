@@ -16,7 +16,9 @@ class DemoDeviceContent
     out[:battery] = battery if battery && (battery[:low] || battery[:charging])
 
     out[:top_left] = [
-      {icon: "door-open", label: "Front Door"}
+      {icon: "door-open", label: "Front Door"},
+      {icon: "door-open", label: "Garage"},
+      {icon: "washing-machine", label: "Laundry"}
     ]
 
     out[:top_right] = [
