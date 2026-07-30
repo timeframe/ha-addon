@@ -148,6 +148,105 @@ class CalendarFeedTest < Minitest::Test
     end
   end
 
+  # The same underlying event synced into two calendars (different ids and
+  # different per-calendar icons) shares an iCalendar UID, so it collapses to a
+  # single row keeping the first calendar's icon.
+  def test_events_for_dedupes_by_ical_uid
+    calendar_events = [
+      DeviceEvent.new(
+        id: "joel-copy",
+        ical_uid: "shared-uid@google.com",
+        starts_at: DateTime.new(2023, 8, 27, 20, 20, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 27, 23, 0, 0, "-0600"),
+        summary: "Nonni and Poppi outing",
+        icon: "alpha-d"
+      ),
+      DeviceEvent.new(
+        id: "caitlin-copy",
+        ical_uid: "shared-uid@google.com",
+        starts_at: DateTime.new(2023, 8, 27, 20, 20, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 27, 23, 0, 0, "-0600"),
+        summary: "Nonni and Poppi outing",
+        icon: "alpha-m"
+      )
+    ]
+
+    travel_to DateTime.new(2023, 8, 27, 22, 20, 0, "-0600") do
+      start_time_utc = DateTime.new(2023, 8, 27, 20, 20, 0, "-0600").utc.to_time
+      end_time_utc = DateTime.new(2023, 8, 28, 0, 0, 0, "-0600").utc.to_time
+
+      result = CalendarFeed.new.events_for(start_time_utc, end_time_utc, calendar_events)
+
+      assert(result[:periodic].length == 1)
+      assert(result[:periodic][0].icon == "alpha-d")
+    end
+  end
+
+  # Two genuinely different events (different UIDs) that merely share a title and
+  # time, e.g. a "Nap" separately created on each child's calendar, stay
+  # separate: they aren't the same event.
+  def test_events_for_keeps_different_ical_uid
+    calendar_events = [
+      DeviceEvent.new(
+        id: "jack-nap",
+        ical_uid: "jack-uid@google.com",
+        starts_at: DateTime.new(2023, 8, 27, 20, 20, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 27, 23, 0, 0, "-0600"),
+        summary: "Nap",
+        icon: "alpha-j"
+      ),
+      DeviceEvent.new(
+        id: "calvin-nap",
+        ical_uid: "calvin-uid@google.com",
+        starts_at: DateTime.new(2023, 8, 27, 20, 20, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 27, 23, 0, 0, "-0600"),
+        summary: "Nap",
+        icon: "alpha-c"
+      )
+    ]
+
+    travel_to DateTime.new(2023, 8, 27, 22, 20, 0, "-0600") do
+      start_time_utc = DateTime.new(2023, 8, 27, 20, 20, 0, "-0600").utc.to_time
+      end_time_utc = DateTime.new(2023, 8, 28, 0, 0, 0, "-0600").utc.to_time
+
+      result = CalendarFeed.new.events_for(start_time_utc, end_time_utc, calendar_events)
+
+      assert(result[:periodic].length == 2)
+    end
+  end
+
+  # Recurring instances of one series share a UID, so time is part of the dedupe
+  # key: two occurrences at different times must both survive.
+  def test_events_for_ical_uid_keeps_separate_occurrences
+    calendar_events = [
+      DeviceEvent.new(
+        id: "occ-1",
+        ical_uid: "series-uid@google.com",
+        starts_at: DateTime.new(2023, 8, 27, 20, 20, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 27, 21, 0, 0, "-0600"),
+        summary: "Standup",
+        icon: "alpha-d"
+      ),
+      DeviceEvent.new(
+        id: "occ-2",
+        ical_uid: "series-uid@google.com",
+        starts_at: DateTime.new(2023, 8, 27, 22, 20, 0, "-0600"),
+        ends_at: DateTime.new(2023, 8, 27, 23, 0, 0, "-0600"),
+        summary: "Standup",
+        icon: "alpha-d"
+      )
+    ]
+
+    travel_to DateTime.new(2023, 8, 27, 19, 0, 0, "-0600") do
+      start_time_utc = DateTime.new(2023, 8, 27, 20, 0, 0, "-0600").utc.to_time
+      end_time_utc = DateTime.new(2023, 8, 28, 0, 0, 0, "-0600").utc.to_time
+
+      result = CalendarFeed.new.events_for(start_time_utc, end_time_utc, calendar_events)
+
+      assert(result[:periodic].length == 2)
+    end
+  end
+
   # Ran into this bug upgrading to Rails 7.1. Momentary events were not
   # returned due to a bug in range overlap comparison
   def test_filtering_moments

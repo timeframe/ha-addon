@@ -17,6 +17,15 @@
 <% end %>
 <%= render Devices::TimelineComponent.new(view_object: @view_object) %>
 
+<% if @view_object[:minutely_precipitation_bars].present? %>
+  <div class="hide-if-empty" style="font-size: 1.75rem; position:absolute; left: 0; right: 0; bottom: 0; z-index: 5">
+    <div style="position: relative">
+      <div style="background:-webkit-gradient(linear,left top,left bottom,color-stop(0%, rgba(255,255,255,0)),color-stop(100%,rgba(255,255,255,1)));position: absolute;left: 0;right: 0; top: -2rem;height: 2rem;z-index: 5;"></div>
+    </div>
+    <%= render Devices::MinutelyPrecipitationComponent.new(view_object: @view_object) %>
+  </div>
+<% end %>
+
 <script>
 (function() {
   function checkFlash() {

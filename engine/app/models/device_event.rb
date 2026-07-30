@@ -3,7 +3,7 @@ class DeviceEvent
   TIMEFRAME_ICON_PATTERN = /timeframe-icon:(?:mdi-)?([a-z0-9][a-z0-9-]*)/i
   TIMEFRAME_COUNTDOWN_PATTERN = /timeframe-countdown:(\d{1,3})/i
 
-  attr_reader :id, :starts_at, :ends_at, :multi_day, :location, :icon_rotation, :attachment_image, :precip, :wind_gust, :entity_id
+  attr_reader :id, :starts_at, :ends_at, :multi_day, :location, :icon_rotation, :attachment_image, :precip, :wind_gust, :entity_id, :ical_uid
   attr_accessor :icon
 
   def initialize(
@@ -23,10 +23,12 @@ class DeviceEvent
     wind_gust: nil,
     entity_id: nil,
     yearly_recurring: false,
+    ical_uid: nil,
     id: SecureRandom.hex
   )
     @id, @icon, @icon_rotation, @summary, @description, @location, @daily, @timezone, @attachment_image, @wind_gust, @entity_id =
       id, icon, icon_rotation, summary.gsub(/[^a-zA-Z0-9.\-"\  _°\/\\&:+,?()<>'@#%\u2019]/, ""), description, location, daily, timezone, attachment_image, wind_gust, entity_id
+    @ical_uid = ical_uid
     @yearly_recurring = yearly_recurring
 
     @precip = if precip

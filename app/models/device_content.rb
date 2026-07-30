@@ -23,7 +23,8 @@ class DeviceContent
     auto_icons: false,
     event_filters: {},
     wind_gust_threshold_mph: 20.0,
-    day_groups_limit: nil
+    day_groups_limit: nil,
+    include_minutely: true
   )
     home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph)
     current_time ||= Time.now.utc.in_time_zone(home_assistant_api.time_zone)

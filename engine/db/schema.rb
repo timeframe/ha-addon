@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 51) do
+ActiveRecord::Schema[8.1].define(version: 52) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -107,6 +107,7 @@ ActiveRecord::Schema[8.1].define(version: 51) do
     t.datetime "ends_at", null: false
     t.string "external_id", null: false
     t.boolean "has_attachment", default: false, null: false
+    t.string "ical_uid"
     t.string "location"
     t.string "provider_etag"
     t.boolean "provider_read_only", default: false, null: false

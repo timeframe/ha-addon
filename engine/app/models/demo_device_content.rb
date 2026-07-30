@@ -5,7 +5,7 @@ class DemoDeviceContent
     include_weather_alerts: true, include_air_quality: true, include_temperature: true, temperature_hours: nil,
     use_day_names: false, include_daily_weather: true, weather_row: false, start_time_only: false,
     always_show_today: false, hide_today_after_minutes: 1200, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filters: {},
-    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0, battery_level: nil, charging: false, day_groups_limit: nil)
+    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0, battery_level: nil, charging: false, day_groups_limit: nil, include_minutely: true)
     current_time ||= Time.now.utc.in_time_zone(timezone)
 
     out = {}
@@ -31,33 +31,35 @@ class DemoDeviceContent
 
     out[:now_playing] = {artist: "Tycho", track: "A Walk"}
 
-    out[:minutely_weather_minutes] = (0...60).map do |i|
-      chance = if i < 10
-        0.1
-      elsif i < 30
-        0.3 + (i - 10) * 0.035
-      elsif i < 45
-        1.0 - (i - 30) * 0.05
-      else
-        0.2
+    if include_minutely
+      out[:minutely_weather_minutes] = (0...60).map do |i|
+        chance = if i < 10
+          0.1
+        elsif i < 30
+          0.3 + (i - 10) * 0.035
+        elsif i < 45
+          1.0 - (i - 30) * 0.05
+        else
+          0.2
+        end
+
+        intensity = if i < 10
+          0.0
+        elsif i < 30
+          0.5 + (i - 10) * 0.1
+        elsif i < 45
+          2.5 - (i - 30) * 0.15
+        else
+          0.2
+        end
+
+        {precipitationChance: chance.clamp(0.0, 1.0), precipitationIntensity: intensity.clamp(0.0, 3.0)}
       end
+      out[:minutely_weather_minutes_icon] = "water"
 
-      intensity = if i < 10
-        0.0
-      elsif i < 30
-        0.5 + (i - 10) * 0.1
-      elsif i < 45
-        2.5 - (i - 30) * 0.15
-      else
-        0.2
+      out[:minutely_precipitation_bars] = out[:minutely_weather_minutes].map do |minute|
+        (minute[:precipitationChance] * minute[:precipitationIntensity] * 50).clamp(3, 100).round
       end
-
-      {precipitationChance: chance.clamp(0.0, 1.0), precipitationIntensity: intensity.clamp(0.0, 3.0)}
-    end
-    out[:minutely_weather_minutes_icon] = "water"
-
-    out[:minutely_precipitation_bars] = out[:minutely_weather_minutes].map do |minute|
-      (minute[:precipitationChance] * minute[:precipitationIntensity] * 50).clamp(3, 100).round
     end
 
     out[:attribution] = "Weather"

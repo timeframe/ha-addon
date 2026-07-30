@@ -34,6 +34,22 @@ class CalendarFeed
         end
       end
 
+    # Primary de-duplication: collapse events that share a provider iCalendar
+    # UID over the same time span (the one underlying event synced into several
+    # calendars). Time is part of the key so the recurring instances of a series
+    # (which all share a UID) stay separate; only same-instance copies merge.
+    # The first occurrence wins, keeping its calendar's icon. Events without a
+    # UID (weather, HA, birthdays, etc.) are left untouched for the backup pass.
+    seen_uids = {}
+    filtered_events = filtered_events.reject do |event|
+      next false if event.ical_uid.blank?
+
+      key = [event.ical_uid, event.start_i, event.end_i]
+      seen_uids.key?(key).tap { seen_uids[key] = true }
+    end
+
+    # Backup de-duplication: collapse remaining exact look-alikes (same icon,
+    # span, and summary) that don't carry a shared UID.
     filtered_events = filtered_events.uniq { [it.icon, it.start_i, it.end_i, it.summary] }
 
     daily_events = filtered_events.select(&:daily?)

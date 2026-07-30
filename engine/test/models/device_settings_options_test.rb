@@ -87,4 +87,19 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
     assert_equal Device::HIDE_CURRENT_DAY_DEFAULT_TIME, hide_time[:default]
     assert_equal "hide_current_day_enabled", hide_time[:depends_on]
   end
+
+  def test_realtime_templates_include_minutely_precip_toggle
+    %w[mira boox_mira].each do |template|
+      keys = keys_for(template)
+      assert_includes keys, "show_minutely_precip", "expected #{template} to offer show_minutely_precip"
+      option = DeviceSettingsOptions.call(Device.new(display_template: template)).find { |o| o[:key] == "show_minutely_precip" }
+      assert option[:default_on]
+    end
+  end
+
+  def test_non_realtime_templates_omit_minutely_precip_toggle
+    %w[trmnl reterminal thirteen two_day].each do |template|
+      refute_includes keys_for(template), "show_minutely_precip"
+    end
+  end
 end

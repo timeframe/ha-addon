@@ -1,0 +1,25 @@
+<div class="hide-if-empty" style="background-color: #ddd; color: black; padding: 0.5rem 2rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
+  <div>
+    <div style="display: inline-block; padding-right: 1rem; vertical-align: super">
+      <i class="mdi mdi-<%= @icon %>"></i>
+    </div>
+    <div style="display: inline-block">
+      <table class="minutely" border="0" cellpadding="0" cellspacing="0">
+        <tr>
+          <% @bars.each do |bar_height| %>
+            <td>
+              <div style="height: 100px; position:relative; width: 25px;">
+                <div style="background-color:black; position: absolute; height: <%= bar_height %>px; left: 0; right: 10px; bottom: 0; border-radius: 25px;"></div>
+              </div>
+            </td>
+          <% end %>
+        </tr>
+        <tr style="font-size: .75rem;">
+          <td colspan="20">Now</td>
+          <td colspan="20">20m</td>
+          <td colspan="20">40m</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>

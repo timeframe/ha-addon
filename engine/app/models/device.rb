@@ -346,6 +346,15 @@ class Device < ActiveRecord::Base
     !%w[one_day two_day].include?(active_template)
   end
 
+  # Minute-resolution "next hour" precipitation bars are only rendered by the
+  # realtime (Mira/Boox) displays. Defaults ON for those models; other models
+  # have no place to show them.
+  def minutely_precip_enabled?
+    return false unless realtime_display?
+
+    configuration&.dig("show_minutely_precip") != "false"
+  end
+
   # The Home Assistant status bar (top-left/right, weather status, now playing)
   # can be toggled on every template. It defaults ON.
   def ha_status_enabled?
@@ -477,6 +486,7 @@ class Device < ActiveRecord::Base
       include_wind: include_wind_events,
       include_weather_alerts: weather_alerts_enabled?,
       include_air_quality: air_quality_alerts_enabled?,
+      include_minutely: minutely_precip_enabled?,
       include_temperature: include_temperature_events,
       temperature_hours: temperature_hours,
       use_day_names: compact_view, include_daily_weather: !compact_view,

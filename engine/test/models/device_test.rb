@@ -485,6 +485,22 @@ class DeviceTest < Minitest::Test
     refute_includes Device::REALTIME_MODELS, "trmnl_og"
   end
 
+  def test_minutely_precip_enabled_defaults_on_for_realtime_models
+    device = Device.new(model: "boox_mira")
+    device.configuration = nil
+    assert device.minutely_precip_enabled?
+  end
+
+  def test_minutely_precip_enabled_respects_disabled_configuration
+    device = Device.new(model: "boox_mira", configuration: {"show_minutely_precip" => "false"})
+    refute device.minutely_precip_enabled?
+  end
+
+  def test_minutely_precip_disabled_for_non_realtime_models
+    device = Device.new(model: "trmnl_og")
+    refute device.minutely_precip_enabled?
+  end
+
   def test_one_day_template_available_for_trmnl_og_and_reterminal_e1001
     %w[trmnl_og reterminal_e1001].each do |model|
       templates = Device::SUPPORTED_MODELS.dig(model, :templates).map { |t| t[:name] }

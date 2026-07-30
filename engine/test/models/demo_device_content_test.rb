@@ -177,6 +177,15 @@ class DemoDeviceContentTest < Minitest::Test
     end
   end
 
+  def test_minutely_weather_data_omitted_when_disabled
+    travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
+      result = DemoDeviceContent.new.call(timezone: "America/Chicago", include_minutely: false)
+
+      refute result.key?(:minutely_weather_minutes)
+      refute result.key?(:minutely_precipitation_bars)
+    end
+  end
+
   def test_today_has_long_event_name
     travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
       result = DemoDeviceContent.new.call(timezone: "America/Chicago")

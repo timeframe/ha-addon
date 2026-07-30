@@ -19,6 +19,10 @@ class DeviceSettingsOptions
     "Shows air quality warnings when the US AQI forecast reaches " \
     "\"Unhealthy for Sensitive Groups\" or worse over the next 4 days."
 
+  MINUTELY_PRECIP_DESCRIPTION =
+    "Shows a minute-by-minute chart of rain or snow expected over the next " \
+    "hour at the bottom of the display."
+
   DAILY_EMAIL_DESCRIPTION =
     "Each day at the time you choose we'll email a preview of how this " \
     "device will look tomorrow morning, as a reminder to update your calendar."
@@ -99,6 +103,13 @@ class DeviceSettingsOptions
       default_on: !%w[one_day two_day].include?(template),
       description: AIR_QUALITY_ALERTS_DESCRIPTION
     )
+    if %w[mira boox_mira].include?(template)
+      switch(
+        "show_minutely_precip", "Next-hour precipitation",
+        default_on: true,
+        description: MINUTELY_PRECIP_DESCRIPTION
+      )
+    end
   end
 
   # :nocov: Account/HA-specific options depend on cloud/ha-addon associations
