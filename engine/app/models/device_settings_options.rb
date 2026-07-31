@@ -27,6 +27,52 @@ class DeviceSettingsOptions
     "Each day at the time you choose we'll email a preview of how this " \
     "device will look tomorrow morning, as a reminder to update your calendar."
 
+  CURRENT_DAY_DESCRIPTION =
+    "Shows today's date and the current temperature at the top of the display."
+
+  ONLY_ICON_EVENTS_DESCRIPTION =
+    "Hides any event that doesn't have a manually set icon, for a cleaner, " \
+    "more glanceable display."
+
+  HOURLY_CONDITIONS_DESCRIPTION =
+    "Adds hour-by-hour temperature and conditions to the timeline."
+
+  PRECIP_EVENTS_DESCRIPTION =
+    "Shows periods when rain or snow is expected."
+
+  WIND_EVENTS_DESCRIPTION =
+    "Shows periods when strong wind gusts are expected."
+
+  HA_STATUS_DESCRIPTION =
+    "Shows Home Assistant sensor states and now-playing media at the top of " \
+    "the display."
+
+  AUTO_ICONS_DESCRIPTION =
+    "Automatically picks an icon for each event based on its title."
+
+  DATES_DESCRIPTION =
+    "Shows the calendar date beneath each day."
+
+  CLOTHING_FORECAST_DESCRIPTION =
+    "Suggests what to wear based on the morning's forecast."
+
+  ICONS_DESCRIPTION =
+    "Shows an icon next to each event."
+
+  EVENT_TIMES_DESCRIPTION =
+    "Shows the start time next to each event."
+
+  TRUNCATE_EVENT_TEXT_DESCRIPTION =
+    "Shortens long event names with an ellipsis so each event stays on one " \
+    "line. Turn off to wrap and show the full event name."
+
+  LARGER_TEXT_DESCRIPTION =
+    "Increases the size of all text on the display for easier reading from a " \
+    "distance."
+
+  HIDE_CURRENT_DAY_DESCRIPTION =
+    "After the given time, hides the current day if there are no remaining events, making more room to show future days."
+
   DAILY_EMAIL_DEFAULT_TIME = "19:00"
 
   def self.call(device)
@@ -78,20 +124,20 @@ class DeviceSettingsOptions
 
   def header_options
     if %w[trmnl reterminal thirteen boox_mira mira].include?(template)
-      switch("show_current_day", "Current date & temperature", default_on: true)
+      switch("show_current_day", "Current date & temperature", default_on: true, description: CURRENT_DAY_DESCRIPTION)
     end
     if compact? || reterminal?
-      switch("only_show_events_with_icons", "Only show events with manually set icons", default_on: false)
+      switch("only_show_events_with_icons", "Only show events with manually set icons", default_on: false, description: ONLY_ICON_EVENTS_DESCRIPTION)
     end
   end
 
   def weather_options
     if !one_day? && !two_day?
-      switch("show_temperature_events", "Hourly conditions", default_on: true)
+      switch("show_temperature_events", "Hourly conditions", default_on: true, description: HOURLY_CONDITIONS_DESCRIPTION)
     end
     unless one_day?
-      switch("show_precip_events", "Precipitation events", default_on: true)
-      switch("show_wind_events", "Wind events", default_on: true)
+      switch("show_precip_events", "Precipitation events", default_on: true, description: PRECIP_EVENTS_DESCRIPTION)
+      switch("show_wind_events", "Wind events", default_on: true, description: WIND_EVENTS_DESCRIPTION)
     end
     switch(
       "show_weather_alerts", "Weather alerts",
@@ -117,7 +163,7 @@ class DeviceSettingsOptions
   # exercised through the host apps' device settings pages instead.
   def account_options
     ha_sync = device.location.respond_to?(:ha_sync) && device.location.ha_sync&.synced_at.present?
-    switch("show_ha_status", "Home Assistant status", default_on: true) if ha_sync
+    switch("show_ha_status", "Home Assistant status", default_on: true, description: HA_STATUS_DESCRIPTION) if ha_sync
 
     if device.screenshotted? && device.account.respond_to?(:owner_email)
       switch("daily_screenshot_email", "Email me a daily reminder at", default_on: false, description: DAILY_EMAIL_DESCRIPTION)
@@ -128,39 +174,41 @@ class DeviceSettingsOptions
 
   def template_options
     if trmnl?
-      switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: true)
-      switch("show_dates", "Dates", default_on: false)
-      switch("clothing_forecast", "Clothing forecast", default_on: false)
+      switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: true, description: AUTO_ICONS_DESCRIPTION)
+      switch("show_dates", "Dates", default_on: false, description: DATES_DESCRIPTION)
+      switch("clothing_forecast", "Clothing forecast", default_on: false, description: CLOTHING_FORECAST_DESCRIPTION)
+      switch("truncate_event_text", "Truncate long event names", default_on: true, description: TRUNCATE_EVENT_TEXT_DESCRIPTION)
+      switch("larger_text", "Larger text", default_on: false, description: LARGER_TEXT_DESCRIPTION)
     end
     if template == "reterminal_landscape"
-      switch("clothing_forecast", "Clothing forecast", default_on: false)
+      switch("clothing_forecast", "Clothing forecast", default_on: false, description: CLOTHING_FORECAST_DESCRIPTION)
     end
     if reterminal? || %w[thirteen mira boox_mira].include?(template)
-      switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: false)
+      switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: false, description: AUTO_ICONS_DESCRIPTION)
     end
     return unless compact?
 
-    switch("clothing_forecast", "Clothing forecast", default_on: false) unless one_day?
-    switch("show_icons", "Icons", default_on: true)
-    switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: true, depends_on: "show_icons")
+    switch("clothing_forecast", "Clothing forecast", default_on: false, description: CLOTHING_FORECAST_DESCRIPTION) unless one_day?
+    switch("show_icons", "Icons", default_on: true, description: ICONS_DESCRIPTION)
+    switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: true, depends_on: "show_icons", description: AUTO_ICONS_DESCRIPTION)
     if template == "three_day"
-      switch("show_dates", "Dates", default_on: true)
+      switch("show_dates", "Dates", default_on: true, description: DATES_DESCRIPTION)
     end
     if two_day?
-      switch("show_dates", "Dates", default_on: true)
-      switch("show_event_times", "Event times", default_on: true)
-      switch("two_day_rollover_enabled", "Hide current day if no events after", default_on: true)
+      switch("show_dates", "Dates", default_on: true, description: DATES_DESCRIPTION)
+      switch("show_event_times", "Event times", default_on: true, description: EVENT_TIMES_DESCRIPTION)
+      switch("two_day_rollover_enabled", "Hide current day if no events after", default_on: true, description: HIDE_CURRENT_DAY_DESCRIPTION)
     end
     if one_day?
-      switch("show_event_times", "Event times", default_on: false)
-      switch("one_day_rollover_enabled", "Hide current day if no events after", default_on: true)
+      switch("show_event_times", "Event times", default_on: false, description: EVENT_TIMES_DESCRIPTION)
+      switch("one_day_rollover_enabled", "Hide current day if no events after", default_on: true, description: HIDE_CURRENT_DAY_DESCRIPTION)
     end
   end
 
   def hide_current_day_option
     return unless Device::HIDE_CURRENT_DAY_TEMPLATES.include?(template)
 
-    switch("hide_current_day_enabled", "Hide current day if no events after", default_on: device.hide_current_day_default_on?)
+    switch("hide_current_day_enabled", "Hide current day if no events after", default_on: device.hide_current_day_default_on?, description: HIDE_CURRENT_DAY_DESCRIPTION)
   end
 
   def time_inputs

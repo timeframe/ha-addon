@@ -135,6 +135,28 @@ class TimelineComponentTest < ActiveSupport::TestCase
     assert_includes html, "Team Standup"
   end
 
+  test "truncates event text by default" do
+    html = render_timeline(day_groups: [
+      day_group(periodic: [
+        {icon_class: "calendar", time_html: "9:00a", summary: "Team Standup"}
+      ])
+    ])
+    assert_includes html, "text-overflow: ellipsis"
+  end
+
+  test "does not truncate event text when truncate_event_text is false" do
+    html = render_timeline(
+      day_groups: [
+        day_group(periodic: [
+          {icon_class: "calendar", time_html: "9:00a", summary: "Team Standup"}
+        ])
+      ],
+      configuration: {"truncate_event_text" => "false"}
+    )
+    refute_includes html, "text-overflow: ellipsis"
+    assert_includes html, "Team Standup"
+  end
+
   private
 
   def day_group(day_name: "Today", show_daily: false, daily: [], periodic: [])

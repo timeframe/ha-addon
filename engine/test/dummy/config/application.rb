@@ -13,6 +13,7 @@ require "global_id/railtie"
 
 Bundler.require(*Rails.groups)
 require "timeframe_core"
+require "good_job"
 require "warden"
 
 module Dummy

@@ -10,6 +10,8 @@
 <% show_icons = true %>
 <% show_dates = @view_object.dig(:configuration, "show_dates") == "true" %>
 <% only_icons = @view_object.dig(:configuration, "only_show_events_with_icons") == "true" %>
+<%# Truncation defaults on; when off, long event names wrap instead of clipping. %>
+<% truncate_text = @view_object.dig(:configuration, "truncate_event_text") != "false" %>
 <%# only_icons filters calendar events only; weather/alerts always stay. %>
 <% keep_only_icons = ->(e) { e[:timeframe_icon] || e[:weather] || e[:weather_ranged] } %>
 <% @view_object[:day_groups].each_with_index do |event_day, index| %>
@@ -84,7 +86,7 @@
             <td style="white-space: nowrap; font-size: .75rem; padding: 0 .5rem; width: 5.5rem;">
               <%= event[:time_html].html_safe %>
             </td>
-            <td style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 0;">
+            <td style="<%= "text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 0;" if truncate_text %>">
               <%= event[:summary] %>
             </td>
           </tr>

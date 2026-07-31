@@ -26,6 +26,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "standard"
   spec.add_development_dependency "capybara"
   spec.add_development_dependency "cuprite"
+  spec.add_development_dependency "good_job"
   spec.add_development_dependency "puma"
   spec.add_development_dependency "warden"
 end

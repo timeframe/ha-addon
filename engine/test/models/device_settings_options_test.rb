@@ -15,6 +15,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
     assert_equal(
       %w[show_current_day show_temperature_events show_precip_events show_wind_events
         show_weather_alerts show_air_quality_events auto_assign_icons show_dates clothing_forecast
+        truncate_event_text larger_text
         hide_current_day_enabled hide_current_day_time],
       keys_for("trmnl")
     )
@@ -100,6 +101,21 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   def test_non_realtime_templates_omit_minutely_precip_toggle
     %w[trmnl reterminal thirteen two_day].each do |template|
       refute_includes keys_for(template), "show_minutely_precip"
+    end
+  end
+
+  def test_trmnl_text_options_defaults
+    options = DeviceSettingsOptions.call(Device.new(display_template: "trmnl"))
+    truncate = options.find { |o| o[:key] == "truncate_event_text" }
+    larger = options.find { |o| o[:key] == "larger_text" }
+    assert truncate[:default_on]
+    refute larger[:default_on]
+  end
+
+  def test_text_options_are_trmnl_only
+    %w[reterminal thirteen two_day one_day three_day mira].each do |template|
+      refute_includes keys_for(template), "truncate_event_text"
+      refute_includes keys_for(template), "larger_text"
     end
   end
 end

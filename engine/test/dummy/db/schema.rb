@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 36) do
+ActiveRecord::Schema[8.1].define(version: 52) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -29,6 +29,7 @@ ActiveRecord::Schema[8.1].define(version: 36) do
 
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.jsonb "dismissed_calendar_suggestions", default: [], null: false
     t.text "name", null: false
     t.string "precipitation_unit", default: "in", null: false
     t.string "speed_unit", default: "mph", null: false
@@ -41,10 +42,18 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.string "subscription_status"
     t.datetime "support_access_at"
     t.string "temperature_unit", default: "F", null: false
-    t.date "trial_ends_on"
     t.datetime "updated_at", null: false
     t.index ["stripe_customer_id"], name: "index_accounts_on_stripe_customer_id", unique: true
     t.index ["stripe_subscription_id"], name: "index_accounts_on_stripe_subscription_id", unique: true
+  end
+
+  create_table "air_quality_syncs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "fetched_at", null: false
+    t.bigint "location_id", null: false
+    t.jsonb "response_data", null: false
+    t.datetime "updated_at", null: false
+    t.index ["location_id", "fetched_at"], name: "index_air_quality_syncs_on_location_id_and_fetched_at"
   end
 
   create_table "apple_accounts", force: :cascade do |t|
@@ -74,6 +83,22 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.index ["user_id"], name: "index_audit_logs_on_user_id"
   end
 
+  create_table "calendar_event_customizations", force: :cascade do |t|
+    t.boolean "banner_enabled", default: false, null: false
+    t.text "banner_message"
+    t.bigint "calendar_id", null: false
+    t.integer "countdown_days"
+    t.datetime "created_at", null: false
+    t.string "customization_key", null: false
+    t.string "icon"
+    t.boolean "omit", default: false, null: false
+    t.jsonb "only_tokens", default: [], null: false
+    t.text "title_override"
+    t.datetime "updated_at", null: false
+    t.index ["calendar_id", "customization_key"], name: "index_event_customizations_on_calendar_and_key", unique: true
+    t.index ["calendar_id"], name: "index_calendar_event_customizations_on_calendar_id"
+  end
+
   create_table "calendar_events", force: :cascade do |t|
     t.bigint "calendar_id", null: false
     t.datetime "created_at", null: false
@@ -82,9 +107,12 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.datetime "ends_at", null: false
     t.string "external_id", null: false
     t.boolean "has_attachment", default: false, null: false
+    t.string "ical_uid"
     t.string "location"
     t.string "provider_etag"
+    t.boolean "provider_read_only", default: false, null: false
     t.string "provider_url"
+    t.string "recurrence_rule"
     t.string "start_timezone"
     t.datetime "starts_at", null: false
     t.string "title"
@@ -106,6 +134,8 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.datetime "last_synced_at"
     t.bigint "microsoft_account_id"
     t.string "name", null: false
+    t.boolean "provider_deletable", default: true, null: false
+    t.boolean "provider_writable", default: true, null: false
     t.string "source_type", null: false
     t.datetime "updated_at", null: false
     t.string "url"
@@ -145,9 +175,11 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.text "mac_address"
     t.string "model", null: false
     t.string "name", null: false
+    t.datetime "purchased_at"
     t.integer "rssi"
     t.text "session_token"
     t.float "temperature"
+    t.date "trial_ends_on"
     t.datetime "updated_at", null: false
     t.text "visionect_serial"
     t.index ["api_key"], name: "index_devices_on_api_key", unique: true
@@ -315,6 +347,7 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.datetime "fulfilled_at"
     t.datetime "paid_at"
     t.boolean "payment_method_saved", default: false, null: false
+    t.datetime "refunded_at"
     t.text "ship_city"
     t.text "ship_country"
     t.text "ship_line1"
@@ -327,6 +360,7 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.string "status", default: "pending", null: false
     t.string "stripe_payment_intent_id"
     t.string "stripe_tax_calculation_id"
+    t.string "stripe_tax_transaction_id"
     t.integer "subtotal_cents", default: 0, null: false
     t.integer "tax_cents", default: 0, null: false
     t.integer "total_cents", default: 0, null: false
@@ -343,11 +377,14 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.text "api_key"
     t.bigint "claimed_device_id"
     t.datetime "created_at", null: false
+    t.bigint "detached_device_id"
     t.string "friendly_id"
     t.text "mac_address"
+    t.string "model"
     t.text "pairing_code", null: false
     t.datetime "updated_at", null: false
     t.index ["claimed_device_id"], name: "index_pending_devices_on_claimed_device_id"
+    t.index ["detached_device_id"], name: "index_pending_devices_on_detached_device_id"
     t.index ["mac_address"], name: "index_pending_devices_on_mac_address", unique: true
     t.index ["pairing_code"], name: "index_pending_devices_on_pairing_code", unique: true
   end
@@ -377,17 +414,20 @@ ActiveRecord::Schema[8.1].define(version: 36) do
     t.string "mail_action"
     t.string "mailer"
     t.string "message_id"
+    t.bigint "receiving_user_id"
     t.text "subject"
     t.text "to"
     t.datetime "updated_at", null: false
     t.index ["delivered_at"], name: "index_sent_emails_on_delivered_at"
     t.index ["mailer"], name: "index_sent_emails_on_mailer"
+    t.index ["receiving_user_id"], name: "index_sent_emails_on_receiving_user_id"
   end
 
   create_table "uptime_checks", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.boolean "healthy", default: true, null: false
     t.datetime "recorded_at", null: false
+    t.jsonb "status_data"
     t.datetime "updated_at", null: false
     t.index ["recorded_at"], name: "index_uptime_checks_on_recorded_at", unique: true
   end
@@ -420,6 +460,7 @@ ActiveRecord::Schema[8.1].define(version: 36) do
   add_foreign_key "account_users", "users"
   add_foreign_key "apple_accounts", "accounts"
   add_foreign_key "audit_logs", "users"
+  add_foreign_key "calendar_event_customizations", "calendars"
   add_foreign_key "calendar_events", "calendars"
   add_foreign_key "calendars", "accounts"
   add_foreign_key "calendars", "apple_accounts"
@@ -435,5 +476,7 @@ ActiveRecord::Schema[8.1].define(version: 36) do
   add_foreign_key "orders", "accounts", on_delete: :cascade
   add_foreign_key "orders", "users", on_delete: :nullify
   add_foreign_key "pending_devices", "devices", column: "claimed_device_id"
+  add_foreign_key "pending_devices", "devices", column: "detached_device_id", on_delete: :nullify
+  add_foreign_key "sent_emails", "users", column: "receiving_user_id", on_delete: :nullify
   add_foreign_key "weather_syncs", "locations"
 end
