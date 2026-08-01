@@ -33,7 +33,6 @@ class TrmnlVisualRegressionTest < ApplicationSystemTestCase
 
     assert_text "Front Door"
     assert_text "Morning standup"
-    assert_selector ".timestamp"
     assert_visual_match "trmnl_demo"
   end
 end

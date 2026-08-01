@@ -19,7 +19,7 @@
       <% end %>
     <% end %>
     <div class="mb-4 flex items-center">
-      <h3 class="mb-0 text-xl font-semibold" id="device-title"><%= @device.name %></h3>
+      <h3 class="mb-0 text-3xl font-bold" id="device-title"><%= @device.name %></h3>
       <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
         <span class="ml-2 text-body-tertiary text-sm"><%= @device.model_name_label %></span>
       <% end %>
@@ -75,7 +75,7 @@
         <% if has_screenshot %>
           <div data-tabs-target="panel" data-panel="screenshot" role="tabpanel" hidden>
             <div class="p-2">
-              <div class="flex items-center justify-center overflow-hidden rounded" style="background: #f0f0f0; min-height: 100px;" id="screenshot-container">
+              <div class="flex items-center justify-center overflow-hidden rounded" style="position: relative; background: #f0f0f0; min-height: 100px;" id="screenshot-container">
                 <% if (@device.reterminal_e1003? || @device.trmnl_x?) && !@device.landscape_template? %>
                   <%# Portrait panel (display_width x display_height) shown rotated -90deg.
                       CSS rotation doesn't change the layout box, so wrap the image in an
@@ -88,7 +88,7 @@
                 <% else %>
                   <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img">
                 <% end %>
-                <div id="screenshot-loading" style="display: none;" class="py-4 text-sm text-gray-500">Regenerating screenshot&hellip;</div>
+                <div id="screenshot-loading" style="display: none; position: absolute; inset: 0; background: #f0f0f0;" class="flex items-center justify-center text-sm text-gray-500">Regenerating screenshot&hellip;</div>
               </div>
             </div>
             <div class="flex items-center justify-between border-t border-ink/10 px-3 py-2">
@@ -153,6 +153,7 @@
             var btn = document.getElementById('regen-screenshot-btn');
             var img = document.getElementById('screenshot-img');
             var loading = document.getElementById('screenshot-loading');
+            var generatedAt = document.getElementById('screenshot-generated-at');
             btn.addEventListener('click', function() {
               btn.disabled = true;
               btn.textContent = 'Regenerating\u2026';
@@ -165,6 +166,7 @@
                 loading.style.display = 'none';
                 btn.disabled = false;
                 btn.textContent = 'Regenerate';
+                if (generatedAt) generatedAt.textContent = 'Generated <1m ago';
               };
               newImg.onerror = function() {
                 loading.textContent = 'Failed to regenerate screenshot.';

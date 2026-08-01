@@ -1,5 +1,4 @@
 <div class="fade-bottom"></div>
-<%= render Devices::AttributionComponent.new(view_object: @view_object, offset: ".25rem", font_size: "12px") %>
 <%= render Devices::StatusBarComponent.new(view_object: @view_object) %>
 <% if @view_object.dig(:configuration, "show_current_day") != "false" %>
   <div style="clear: both; line-height: .7; margin-bottom: 1rem; padding-bottom: .5rem; font-size: 3rem;">

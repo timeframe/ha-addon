@@ -174,7 +174,7 @@ class DeviceSettingsOptions
 
   def template_options
     if trmnl?
-      switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: true, description: AUTO_ICONS_DESCRIPTION)
+      switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: false, description: AUTO_ICONS_DESCRIPTION)
       switch("show_dates", "Dates", default_on: false, description: DATES_DESCRIPTION)
       switch("clothing_forecast", "Clothing forecast", default_on: false, description: CLOTHING_FORECAST_DESCRIPTION)
       switch("truncate_event_text", "Truncate long event names", default_on: true, description: TRUNCATE_EVENT_TEXT_DESCRIPTION)

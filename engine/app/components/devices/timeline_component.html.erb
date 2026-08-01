@@ -9,6 +9,10 @@
 
 <% show_icons = true %>
 <% show_dates = @view_object.dig(:configuration, "show_dates") == "true" %>
+<%# Larger text (trmnl only) needs a wider left column so long day names like
+    "Tomorrow" don't collide with the clothing-forecast icons. %>
+<% larger_text = @view_object.dig(:configuration, "larger_text") == "true" %>
+<% day_column_width = larger_text ? "17.5rem" : "15.5rem" %>
 <% only_icons = @view_object.dig(:configuration, "only_show_events_with_icons") == "true" %>
 <%# Truncation defaults on; when off, long event names wrap instead of clipping. %>
 <% truncate_text = @view_object.dig(:configuration, "truncate_event_text") != "false" %>
@@ -16,7 +20,7 @@
 <% keep_only_icons = ->(e) { e[:timeframe_icon] || e[:weather] || e[:weather_ranged] } %>
 <% @view_object[:day_groups].each_with_index do |event_day, index| %>
   <div style="display: flex; margin-bottom: 1rem">
-    <div style="width: 15.5rem; vertical-align: top; padding-right: 1rem; border-right: 2px solid #ccc;">
+    <div style="width: <%= day_column_width %>; vertical-align: top; padding-right: 1rem; border-right: 2px solid #ccc;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 2rem; font-weight: 700; line-height: 1"><%= event_day[:day_name] %></span>
         <% if event_day[:clothing] %>
@@ -67,7 +71,7 @@
       <% end %>
     </div>
     <div style="width: 30rem;">
-      <table style="width: 100%">
+      <table style="width: 100%; table-layout: fixed;">
         <% (only_icons ? event_day[:periodic].select(&keep_only_icons) : event_day[:periodic]).each do |event| %>
           <tr>
             <% if show_icons %>
@@ -83,8 +87,8 @@
                 <% end %>
               </td>
             <% end %>
-            <td style="white-space: nowrap; font-size: .75rem; padding: 0 .5rem; width: 5.5rem;">
-              <%= event[:time_html].html_safe %>
+            <td class="timeline-time" style="white-space: nowrap; overflow: hidden; font-size: .75rem; padding: 0 .5rem; width: 5rem;">
+              <span class="timeline-time-inner"><%= event[:time_html].html_safe %></span>
             </td>
             <td style="<%= "text-overflow: ellipsis; white-space: nowrap; overflow: hidden; max-width: 0;" if truncate_text %>">
               <%= event[:summary] %>
@@ -96,3 +100,42 @@
   </div>
   <hr style="margin: 0 0 1rem; border: none; background-color: #ccc; color: #ccc; height: 2px;">
 <% end %>
+
+<script>
+  // Each day is its own table, so give every periodic time column the same
+  // width - but sized only to the times actually on screen (rows below the
+  // viewport are clipped off the display, so they must not widen the column).
+  // Runs after fonts settle so the measured widths match the final render.
+  (function() {
+    function syncTimeColumns() {
+      var cells = Array.prototype.slice.call(document.querySelectorAll('.timeline-time'));
+      if (!cells.length) return;
+      cells.forEach(function(td) { td.style.width = ''; });
+      var limit = window.innerHeight || document.documentElement.clientHeight || Infinity;
+      function widen(onlyVisible) {
+        var max = 0;
+        cells.forEach(function(td) {
+          if (onlyVisible && td.getBoundingClientRect().top >= limit) return;
+          var inner = td.querySelector('.timeline-time-inner');
+          var w = inner ? inner.getBoundingClientRect().width : 0;
+          if (w > max) max = w;
+        });
+        return max;
+      }
+      // Fall back to all rows if none measured as on screen (e.g. no viewport).
+      var max = widen(true) || widen(false);
+      if (max > 0) {
+        cells.forEach(function(td) { td.style.width = Math.ceil(max) + 'px'; });
+      }
+    }
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(syncTimeColumns);
+    }
+    window.addEventListener('load', syncTimeColumns);
+    if (document.readyState === 'complete') {
+      syncTimeColumns();
+    } else {
+      document.addEventListener('DOMContentLoaded', syncTimeColumns);
+    }
+  })();
+</script>

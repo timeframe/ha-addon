@@ -71,12 +71,6 @@
   <%= render Devices::TimelineComponent.new(view_object: @view_object) %>
 </div>
 
-<% if @view_object[:attribution].present? %>
-  <div style="position: absolute; bottom: 0; right: 0; font-size: .375rem; color: #000; writing-mode: vertical-rl; text-orientation: mixed; padding: 0.25rem; z-index: 10;">
-    <%= @view_object[:attribution] %>
-  </div>
-<% end %>
-
 <script>
 (function() {
   var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];

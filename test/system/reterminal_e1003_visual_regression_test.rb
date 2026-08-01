@@ -27,7 +27,6 @@ class ReterminalE1003VisualRegressionTest < ApplicationSystemTestCase
     assert_text "Front Door, Garage"
     assert_text "Laundry"
     assert_text "Soccer practice"
-    assert_selector ".timestamp"
     assert_visual_match "reterminal_e1003_portrait"
   end
 
@@ -43,7 +42,6 @@ class ReterminalE1003VisualRegressionTest < ApplicationSystemTestCase
     assert_text "Front Door, Garage"
     assert_text "Laundry"
     assert_text "Soccer practice"
-    assert_selector ".timestamp"
     assert_visual_match "reterminal_e1003_landscape"
   end
 

@@ -452,7 +452,7 @@ class Device < ActiveRecord::Base
     # Auto-assign icons is available on every template. It defaults ON for the
     # timeline (trmnl) and compact layouts (their historical behavior) and OFF
     # for all other templates.
-    auto_icons_default_on = compact_view || active_template == "trmnl"
+    auto_icons_default_on = compact_view
     auto_icons_value = configuration&.dig("auto_assign_icons")
     auto_icons_enabled = auto_icons_value.nil? ? auto_icons_default_on : auto_icons_value == "true"
     # The 3-day template always renders three day columns. When the current day
