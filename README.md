@@ -7,8 +7,12 @@ An e-paper calendar, weather, and smart home family dashboard
 ## Supported displays
 
 - Visionect [Place & Play 13](https://www.visionect.com/shop/place-play-13/) / [Joan 13 Pro](https://getjoan.com/shop/joan-13-pro/) - designed for 10m update interval
-- Boox [Mira Pro](https://shop.boox.com/products/boox-mira-procolor-version) - Real-time updates via WebSocket
+- Boox [Mira Pro 25.3"](https://shop.boox.com/products/boox-mira-procolor-version) - Real-time updates via WebSocket
+- Boox [Mira 13.3"](https://shop.boox.com/products/boox-mira) - Real-time updates via WebSocket
 - TRMNL [(OG)](https://shop.trmnl.com/collections/devices/products/trmnl)
+- TRMNL (X)
+- reTerminal E1001 7.5"
+- reTerminal E1003 10.3"
 
 ## Installation
 
@@ -71,7 +75,7 @@ The following entities can be created in Home Assistant to customize behavior. I
 
 | Entity ID | Default behavior | Description |
 |---|---|---|
-| `sensor.timeframe_top_right_*` | None | Displays items in the top-right corner. State format: `icon,label(optional),rotation(optional)` (e.g. `door-open,Front Door`). Labels containing underscores are automatically humanized. Return multiple items for a single sensor by using newlines. Rotation is a degree value for the icon (e.g. for wind direction). State format: `icon,label(optional),rotation(optional)` |
+| `sensor.timeframe_top_right_*` | None | Displays items in the top-right corner. State format: `icon,label(optional),rotation(optional)` (e.g. `door-open,Front Door`). Labels containing underscores are automatically humanized. Return multiple items for a single sensor by using newlines. Rotation is a degree value for the icon (e.g. for wind direction). |
 | `sensor.timeframe_top_left_*` | None | Displays items in the top-left corner. State format: `icon,label(optional),rotation(optional)` |
 | `sensor.timeframe_weather_status_*` | None | Displays weather status items. State format: `icon,label(optional),rotation(optional)`|
 | `sensor.timeframe_daily_event_*` | None | Adds all-day events to the timeline. State format: `icon,label(optional)` |
@@ -92,7 +96,7 @@ You can customize how an individual calendar event renders by adding one or more
 | `timeframe-title:TEXT` | Overrides the displayed title without changing the real event title. |
 | `timeframe-only:TOKENS` | Shows the event only on the listed devices. `TOKENS` is a comma-separated list of device names or ids, e.g. `timeframe-only:Kitchen, 12`. |
 | `timeframe-banner` (or `#banner`) | Shows the event as a full-width banner while it is active (see below). |
-| `timeframe-countdown:N` | Adds an all-day "(in Xd)" reminder on each of the `N` days leading up to the event (never on/after the event day). `N` is 1–365. Honored by the hosted Timeframe app. |
+| `timeframe-countdown:N` | Adds an all-day "(in Xd)" reminder on each of the `N` days leading up to the event (never on/after the event day). `N` is a positive number (up to 999). Honored by the hosted Timeframe app. |
 
 A recurring event whose title ends with a four-digit year in parentheses, e.g. `Ada (1990)`, renders that year as an elapsed count (`Ada (35)`) — this is how birthdays and anniversaries show an age.
 
@@ -114,7 +118,7 @@ Due to inclement weather, <b>all schools</b> will be closed today. Stay safe!
 
 ### Configuration:
 
-Create `config/timeframe.yml` from `config/timeframe.yml.example with your settings.
+Create `config/timeframe.yml` from `config/timeframe.yml.example` with your settings.
 
 ### Environment variables
 
@@ -124,9 +128,8 @@ Create `config/timeframe.yml` from `config/timeframe.yml.example with your setti
 
 ### Setup
 
-1) `bundle config set local.timeframe-core ../core`
-2) `bundle install`
-3) `rails s`
+1) `bundle install`
+2) `bin/rails s`
 3) Visit [http://localhost:3000](http://localhost:3000)
 
 ### Testing

@@ -31,7 +31,7 @@
   },
   "schema": {
     "speed_unit": "list(mph|kph)",
-    "precipitation_unit": "list(in|mm)",
+    "precipitation_unit": "list(in|mm|cm)",
     "temperature_unit": "list(F|C)"
   }
 }

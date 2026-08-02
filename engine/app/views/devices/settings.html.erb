@@ -19,7 +19,7 @@
       <% end %>
     <% end %>
     <div class="mb-4 flex items-center">
-      <h3 class="mb-0 text-3xl font-bold" id="device-title"><%= @device.name %></h3>
+      <h3 class="mb-0 text-xl font-semibold" id="device-title"><%= @device.name %></h3>
       <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
         <span class="ml-2 text-body-tertiary text-sm"><%= @device.model_name_label %></span>
       <% end %>
