@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 52) do
+ActiveRecord::Schema[8.1].define(version: 53) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -279,6 +279,9 @@ ActiveRecord::Schema[8.1].define(version: 52) do
     t.text "google_uid", null: false
     t.text "refresh_token", null: false
     t.text "scopes"
+    t.datetime "sync_disabled_at"
+    t.datetime "sync_disabled_notified_at"
+    t.string "sync_disabled_reason"
     t.datetime "token_expires_at"
     t.datetime "updated_at", null: false
     t.index ["account_id", "google_uid"], name: "index_google_accounts_on_account_id_and_google_uid", unique: true
@@ -321,6 +324,9 @@ ActiveRecord::Schema[8.1].define(version: 52) do
     t.text "email", null: false
     t.text "microsoft_uid", null: false
     t.text "refresh_token", null: false
+    t.datetime "sync_disabled_at"
+    t.datetime "sync_disabled_notified_at"
+    t.string "sync_disabled_reason"
     t.datetime "token_expires_at"
     t.datetime "updated_at", null: false
     t.index ["account_id", "microsoft_uid"], name: "index_microsoft_accounts_on_account_id_and_microsoft_uid", unique: true
