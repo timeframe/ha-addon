@@ -1,0 +1,66 @@
+<% content_for :title, "Set up Timeframe" %>
+
+<div class="mt-3 w-full">
+  <div class="mb-4">
+    <h1 class="mb-1 text-2xl font-semibold">Set up your device</h1>
+    <p class="mb-0 text-gray-500">A few quick steps to get your display running.</p>
+  </div>
+
+  <ol class="tf-vstepper mb-0 list-none">
+    <% @flow.stepper.each do |item| %>
+      <li class="tf-vstep tf-vstep-<%= item[:status] %> flex">
+        <div class="tf-vstep-rail mr-3">
+          <div class="tf-vstep-marker flex items-center justify-center rounded-full">
+            <% if item[:status] == :complete %>
+              <span class="mdi mdi-check"></span>
+            <% else %>
+              <%= item[:number] %>
+            <% end %>
+          </div>
+        </div>
+        <div class="tf-vstep-body flex-1 pb-4">
+          <div class="tf-vstep-label pt-1 font-semibold"><%= item[:label] %></div>
+          <% if item[:status] == :current %>
+            <div class="tf-card mr-2 mt-3 sm:mr-3">
+              <%= render "onboarding/step_#{@step}", flow: @flow, account: @account %>
+            </div>
+          <% end %>
+        </div>
+      </li>
+    <% end %>
+  </ol>
+</div>
+
+<style>
+  .tf-vstep-rail { position: relative; width: 2rem; flex: 0 0 2rem; }
+  .tf-vstep-body { min-width: 0; }
+  .tf-vstep-body .tf-card { overflow-wrap: break-word; word-break: break-word; }
+  .tf-vstep-marker {
+    width: 2rem; height: 2rem;
+    border: 2px solid rgba(0, 0, 0, 0.15);
+    background: #fff;
+    color: #6b7280;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+  }
+  .tf-vstep:not(:last-child) .tf-vstep-rail::after {
+    content: "";
+    position: absolute;
+    top: 2rem;
+    bottom: -1rem;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.15);
+  }
+  .tf-vstep-current .tf-vstep-marker { border-color: #1a1a1a; color: #1a1a1a; }
+  .tf-vstep-complete .tf-vstep-marker {
+    border-color: #6b7280;
+    background: #6b7280;
+    color: #fff;
+  }
+  .tf-vstep-complete .tf-vstep-rail::after { background: #6b7280; }
+  .tf-vstep-current .tf-vstep-label { color: #1a1a1a; }
+  .tf-vstep-upcoming .tf-vstep-label { color: #6b7280; }
+</style>

@@ -14,6 +14,44 @@ class DeviceEventTest < Minitest::Test
     assert_equal("6 - 7p", event.time)
   end
 
+  def visible_event(starts_at, ends_at)
+    DeviceEvent.new(starts_at: starts_at, ends_at: ends_at, summary: "X", timezone: "UTC")
+  end
+
+  def test_visible_dates_single_day
+    event = visible_event("2026-08-10T09:00:00Z", "2026-08-10T10:00:00Z")
+    assert_equal [Date.new(2026, 8, 10)], event.visible_dates(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
+  end
+
+  def test_visible_dates_multi_day_spans_each_day
+    event = visible_event("2026-08-10T09:00:00Z", "2026-08-12T15:00:00Z")
+    assert_equal [Date.new(2026, 8, 10), Date.new(2026, 8, 11), Date.new(2026, 8, 12)],
+      event.visible_dates(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
+  end
+
+  def test_visible_dates_all_day_ending_at_midnight_excludes_final_day
+    event = visible_event("2026-08-10T00:00:00Z", "2026-08-12T00:00:00Z")
+    assert_equal [Date.new(2026, 8, 10), Date.new(2026, 8, 11)],
+      event.visible_dates(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
+  end
+
+  def test_visible_dates_ending_after_midnight_keeps_final_day
+    event = visible_event("2026-08-10T00:00:00Z", "2026-08-12T00:30:00Z")
+    assert_equal [Date.new(2026, 8, 10), Date.new(2026, 8, 11), Date.new(2026, 8, 12)],
+      event.visible_dates(Date.new(2026, 8, 1), Date.new(2026, 8, 31))
+  end
+
+  def test_visible_dates_drops_events_before_the_window
+    event = visible_event("2026-08-01T09:00:00Z", "2026-08-01T10:00:00Z")
+    assert_equal [], event.visible_dates(Date.new(2026, 8, 10), Date.new(2026, 8, 17))
+  end
+
+  def test_visible_dates_clamps_a_running_event_to_the_window
+    event = visible_event("2026-08-05T09:00:00Z", "2026-08-15T09:00:00Z")
+    assert_equal (Date.new(2026, 8, 10)..Date.new(2026, 8, 15)).to_a,
+      event.visible_dates(Date.new(2026, 8, 10), Date.new(2026, 8, 17))
+  end
+
   def test_assigns_time_from_datetime
     event = DeviceEvent.new(
       starts_at: Time.at(1675123200),

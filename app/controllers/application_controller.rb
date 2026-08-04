@@ -13,15 +13,15 @@ class ApplicationController < ActionController::Base
 
     user = User.first
     unless user
-      account = Account.first || Account.create!(name: "Home")
+      config = begin
+        HomeAssistantApi.new.config_data
+      rescue
+        {}
+      end
+
+      account = Account.first || Account.create!(name: "Home", **host_display_units(config))
 
       unless account.locations.exists?
-        config = begin
-          HomeAssistantApi.new.config_data
-        rescue
-          {}
-        end
-
         account.locations.create!(
           name: config[:location_name] || "Home",
           latitude: config[:latitude] || 0,
@@ -35,6 +35,17 @@ class ApplicationController < ActionController::Base
     end
 
     warden.set_user(user, scope: :user)
+  end
+
+  # Display units for a new account, derived from the Home Assistant host
+  # unit_system (the settings page can override them afterwards).
+  def host_display_units(config)
+    system = config[:unit_system] || {}
+    {
+      temperature_unit: (system[:temperature] == "°C") ? "C" : "F",
+      speed_unit: {"km/h" => "kph", "mi/h" => "mph"}[system[:wind_speed]] || "mph",
+      precipitation_unit: %w[mm cm].include?(system[:accumulated_precipitation]) ? system[:accumulated_precipitation] : "in"
+    }
   end
 
   def authenticate_user!

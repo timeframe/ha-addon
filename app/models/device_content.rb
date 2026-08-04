@@ -26,7 +26,7 @@ class DeviceContent
     day_groups_limit: nil,
     include_minutely: true
   )
-    home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph)
+    home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph, account: device&.location&.account)
     current_time ||= Time.now.utc.in_time_zone(home_assistant_api.time_zone)
 
     out = {}

@@ -28,7 +28,7 @@
   <span class="ml-auto inline-flex items-center rounded-full px-3 py-1 font-semibold <%= meta[:badge] %>"><%= @state.to_s.upcase %></span>
 </div>
 
-<div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+<div class="mb-4 grid grid-cols-2 gap-3">
   <% @uptime_windows.each do |label, pct| %>
     <div class="tf-card text-center">
       <div class="text-2xl font-semibold"><%= fmt_pct.call(pct) %></div>

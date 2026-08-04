@@ -1,0 +1,50 @@
+<%# Mobile-app style bottom navigation for the add-on. Four fixed tabs. There is
+    no Calendars tab and no add-event menu (Home Assistant calendars import
+    automatically); devices are added from the Devices screen. %>
+<%
+  events_active = current_page?(events_path)
+  devices_active = current_page?(root_path) || controller_name == "devices" || controller_name == "onboarding"
+  settings_active = current_page?(settings_path)
+  status_active = current_page?(status_path)
+  has_device = Device.exists?
+%>
+<nav class="fixed bottom-[calc(env(safe-area-inset-bottom)+5px)] left-1/2 z-40 w-[calc(100%-10px)] max-w-[375px] -translate-x-1/2 rounded-2xl border border-black/10 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.15)]" aria-label="Primary">
+  <div class="mx-auto grid w-full grid-cols-4 items-end px-1">
+    <%= link_to events_path, class: "flex flex-col items-center gap-0.5 px-1 py-2 no-underline", aria: {current: events_active ? "page" : nil} do %>
+      <span class="flex h-8 w-14 items-center justify-center rounded-full <%= events_active ? "bg-ink text-white" : "text-gray-500" %>">
+        <span class="mdi mdi-calendar-check text-2xl leading-none" aria-hidden="true"></span>
+      </span>
+      <span class="text-xs <%= events_active ? "font-semibold text-ink" : "text-gray-500" %>">Events</span>
+    <% end %>
+
+    <% if has_device %>
+      <%= link_to root_path, class: "flex flex-col items-center gap-0.5 px-1 py-2 no-underline", aria: {current: devices_active ? "page" : nil} do %>
+        <span class="flex h-8 w-14 items-center justify-center rounded-full <%= devices_active ? "bg-ink text-white" : "text-gray-500" %>">
+          <span class="mdi mdi-tablet text-2xl leading-none" aria-hidden="true"></span>
+        </span>
+        <span class="text-xs <%= devices_active ? "font-semibold text-ink" : "text-gray-500" %>">Devices</span>
+      <% end %>
+    <% else %>
+      <%= link_to onboarding_path, class: "flex flex-col items-center gap-0.5 px-1 py-2 no-underline", aria: {current: devices_active ? "page" : nil} do %>
+        <span class="flex h-8 w-14 items-center justify-center rounded-full <%= devices_active ? "bg-ink text-white" : "text-gray-500" %>">
+          <span class="mdi mdi-plus text-2xl leading-none" aria-hidden="true"></span>
+        </span>
+        <span class="text-xs <%= devices_active ? "font-semibold text-ink" : "text-gray-500" %>">Device</span>
+      <% end %>
+    <% end %>
+
+    <%= link_to settings_path, class: "flex flex-col items-center gap-0.5 px-1 py-2 no-underline", aria: {current: settings_active ? "page" : nil} do %>
+      <span class="flex h-8 w-14 items-center justify-center rounded-full <%= settings_active ? "bg-ink text-white" : "text-gray-500" %>">
+        <span class="mdi mdi-cog text-2xl leading-none" aria-hidden="true"></span>
+      </span>
+      <span class="text-xs <%= settings_active ? "font-semibold text-ink" : "text-gray-500" %>">Settings</span>
+    <% end %>
+
+    <%= link_to status_path, class: "flex flex-col items-center gap-0.5 px-1 py-2 no-underline", aria: {current: status_active ? "page" : nil} do %>
+      <span class="flex h-8 w-14 items-center justify-center rounded-full <%= status_active ? "bg-ink text-white" : "text-gray-500" %>">
+        <span class="mdi mdi-heart-pulse text-2xl leading-none" aria-hidden="true"></span>
+      </span>
+      <span class="text-xs <%= status_active ? "font-semibold text-ink" : "text-gray-500" %>">Status</span>
+    <% end %>
+  </div>
+</nav>

@@ -1,0 +1,40 @@
+<%#
+  Countdown option shared by the add/edit/managed event forms. Locals:
+    id_prefix - unique prefix for element ids (required)
+    enabled   - whether the checkbox starts checked (default false)
+    days      - initial days value (default 7)
+%>
+<% id_prefix = local_assigns.fetch(:id_prefix) %>
+<% enabled = local_assigns.fetch(:enabled, false) %>
+<% days = local_assigns.fetch(:days, 7) %>
+<div class="mb-3">
+  <%# Hidden 0 so an unchecked box still submits "countdown" (turning it off);
+      forms WITHOUT this control omit the key entirely, which the controller
+      treats as "leave the existing countdown unchanged". %>
+  <input type="hidden" name="countdown" value="0">
+  <label class="mb-1 flex items-center gap-2">
+    <input class="tf-check" type="checkbox" name="countdown" value="1" id="<%= id_prefix %>-countdown"
+      data-countdown-toggle="<%= id_prefix %>-countdown-fields" <% if enabled %>checked<% end %>>
+    <span class="font-bold">Show a countdown</span>
+  </label>
+  <div class="ml-6 flex items-center gap-2<%= " hidden" unless enabled %>" id="<%= id_prefix %>-countdown-fields">
+    <label class="tf-label mb-0" for="<%= id_prefix %>-countdown-days">Starting</label>
+    <input type="number" min="1" max="365" value="<%= days %>" class="tf-input w-20" id="<%= id_prefix %>-countdown-days" name="countdown_days">
+    <span class="text-sm text-gray-500">days before</span>
+  </div>
+  <p class="mt-1 text-xs text-gray-500">Shows a &ldquo;(in Xd)&rdquo; all-day reminder on your devices each day leading up to the event.</p>
+</div>
+
+<% unless @tf_countdown_script_rendered %>
+  <% @tf_countdown_script_rendered = true %>
+  <script>
+    // Toggle the "days before" field whenever a countdown checkbox flips. Uses
+    // event delegation so it works for every add/edit/managed modal at once.
+    document.addEventListener("change", function (e) {
+      var toggle = e.target.closest("[data-countdown-toggle]");
+      if (!toggle) return;
+      var fields = document.getElementById(toggle.getAttribute("data-countdown-toggle"));
+      if (fields) fields.classList.toggle("hidden", !toggle.checked);
+    });
+  </script>
+<% end %>

@@ -15,22 +15,10 @@
     <link rel="stylesheet" href="/css/mdi/materialdesignicons.css">
     <%= javascript_importmap_tags %>
   </head>
-  <body class="bg-white font-body text-ink antialiased">
-    <nav class="mb-4 bg-surface">
-      <div class="mx-auto flex w-full max-w-[1140px] items-center px-3 py-2">
-        <a class="inline-flex items-center gap-1.5 text-xl font-bold leading-none text-black no-underline" style="font-family: 'Lato', system-ui, sans-serif" href="/">
-          <i class="mdi mdi-sun-angle text-2xl leading-none" aria-hidden="true"></i>
-          <span>timeframe</span>
-        </a>
-        <ul class="ml-auto flex items-center gap-2">
-          <li>
-            <a class="block px-2 py-1 text-black no-underline hover:opacity-70" href="/status">Status</a>
-          </li>
-        </ul>
-      </div>
-    </nav>
+  <body class="bg-white font-body text-ink antialiased pb-24">
+    <%= render "layouts/bottom_nav" %>
 
-    <div class="mx-auto w-full max-w-[1140px] px-3">
+    <div class="mx-auto w-full max-w-[375px] px-3 pt-3">
       <% flash.each do |key, value| %>
         <div class="relative mb-3 flex items-center gap-3 rounded-md border py-3 pl-4 pr-10 <%= key == 'notice' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800' %>" role="alert" data-controller="alert">
           <span class="mr-auto"><%= value %></span>
@@ -40,9 +28,5 @@
 
       <%= yield %>
     </div>
-
-    <footer class="mx-auto mb-3 mt-4 w-full max-w-[1140px] px-3 text-center text-sm text-gray-500">
-      <a href="https://github.com/timeframe/timeframe" class="text-gray-500 no-underline hover:underline" target="_blank" rel="noopener">GitHub</a>
-    </footer>
   </body>
 </html>

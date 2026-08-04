@@ -235,6 +235,22 @@ class DeviceEvent
     end.gsub(/\p{Emoji_Presentation}/, "").strip
   end
 
+  # The dates this event occupies within the inclusive [window_start, window_end]
+  # range, in the event's own time zone. Multi-day events surface on every day
+  # they span; an event that began before the window appears under the first
+  # visible day. Mirrors cloud CalendarEvent#visible_dates.
+  def visible_dates(window_start, window_end)
+    start_date = @starts_at.to_date
+    end_date = @ends_at.to_date
+    # An end that lands exactly on midnight doesn't occupy that final day.
+    end_date -= 1 if end_date > start_date && @ends_at.hour.zero? && @ends_at.min.zero?
+    first = [start_date, window_start].max
+    last = [end_date, window_end].min
+    return [] if first > last
+
+    (first..last).to_a
+  end
+
   # The "(N)" count shown after a summary whose description contains a 4-digit
   # year (e.g. a birthday/anniversary's original year written in the notes of a
   # yearly recurring event): the current year minus that year, or nil when the

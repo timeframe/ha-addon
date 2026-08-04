@@ -16,12 +16,5 @@ class TimeframeConfig < Anyway::Config
       self.home_assistant_token = ENV["SUPERVISOR_TOKEN"]
       self.home_assistant_url = "http://supervisor/core"
     end
-
-    if File.exist?("/data/options.json")
-      options = JSON.parse(File.read("/data/options.json"))
-      self.speed_unit = options["speed_unit"] if options["speed_unit"]
-      self.precipitation_unit = options["precipitation_unit"] if options["precipitation_unit"]
-      self.temperature_unit = options["temperature_unit"] if options["temperature_unit"]
-    end
   end
 end

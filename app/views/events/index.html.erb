@@ -1,0 +1,94 @@
+<% content_for :title, "Events" %>
+
+<div class="mt-3 w-full" data-controller="event-list">
+  <h2 class="mb-3 text-xl font-semibold">Events</h2>
+
+  <% if @calendars.any? %>
+    <div class="mb-2">
+      <select class="tf-select w-full" data-event-calendar-select aria-label="Filter events by calendar">
+        <option value="all" selected>All calendars</option>
+        <% @calendars.each do |calendar| %>
+          <option value="cal:<%= calendar.id %>"><%= calendar.name %></option>
+        <% end %>
+      </select>
+    </div>
+  <% end %>
+
+  <% today = Time.current.in_time_zone(@timezone).to_date %>
+  <% window_end = today + 7 %>
+  <%
+    events_by_day = Hash.new { |hash, key| hash[key] = [] }
+    @rows.each do |row|
+      row[:event].visible_dates(today, window_end).each { |day| events_by_day[day] << row }
+    end
+    events_by_day = events_by_day.sort.to_h
+  %>
+
+  <% if events_by_day.empty? %>
+    <p class="py-6 text-center text-gray-500">
+      <i class="mdi mdi-calendar-blank-outline mb-2 block text-3xl"></i>
+      No upcoming Home Assistant events.
+    </p>
+  <% else %>
+    <% hidden_count = events_by_day.values.flatten.map { |row| row[:event] }.uniq.count(&:omit?) %>
+    <div class="mb-2 flex flex-wrap items-center gap-2">
+      <input type="search" class="tf-input tf-input-sm w-full" placeholder="Filter events..." aria-label="Filter events" data-bulk-filter autocomplete="off">
+      <button type="button" class="tf-btn tf-btn-sm tf-btn-outline whitespace-nowrap" data-bulk-select-all>
+        <span class="mdi mdi-select-all"></span> <span data-select-all-label>Select all</span>
+      </button>
+      <div class="inline-flex items-center gap-1" data-bulk-actions>
+        <button type="button" class="tf-btn tf-btn-sm tf-btn-outline" data-bulk-hide disabled>
+          <span class="mdi mdi-eye-off"></span> Hide (<span data-bulk-count>0</span>)
+        </button>
+      </div>
+      <% if hidden_count.positive? %>
+        <button type="button" class="ml-auto text-sm font-medium text-ink underline hover:no-underline" data-toggle-hidden="bulk-events" data-hidden-count="<%= hidden_count %>">
+          Show <%= hidden_count %> hidden
+        </button>
+      <% end %>
+    </div>
+
+    <p class="mb-2 text-xs text-gray-500">Events are synced from about 2 days ago through the next several days.</p>
+
+    <div id="bulk-events" data-bulk-list>
+      <% events_by_day.each do |day, day_rows| %>
+        <% day_label =
+             case (day - today).to_i
+             when 0 then "Today"
+             when 1 then "Tomorrow"
+             else day.strftime("%A, %b %-d")
+             end %>
+        <div class="bg-white px-0 pb-1 pt-3 <%= "tf-hidden-event" if day_rows.all? { |row| row[:event].omit? } %>" data-bulk-day-heading>
+          <span class="text-sm font-bold uppercase text-gray-500"><%= day_label %></span>
+        </div>
+        <% day_rows.sort_by { |row| [row[:event].daily? ? 0 : 1, row[:event].start_i] }.each do |row| %>
+          <% event = row[:event] %>
+          <% calendar = row[:calendar] %>
+          <% customization = calendar.customization_for(event.id) %>
+          <% time_text = event.daily? ? "All day" : event.starts_at.strftime("%-l:%M %p") %>
+          <%= render "events/customizable_row",
+                update_url: event_customization_path,
+                hide_url: toggle_omit_event_path,
+                calendar_id: calendar.id,
+                customization_key: event.id,
+                bulk_value: "#{calendar.id}::#{event.id}",
+                title: event.summary(day),
+                icon: event.icon,
+                time_text: time_text,
+                calendar_name: calendar.name,
+                hidden: event.omit?,
+                current_icon: customization&.icon.present? ? "mdi-#{customization.icon}" : nil,
+                current_title: customization&.title_override,
+                devices: @devices,
+                only_ids: customization ? customization.only_token_list : [],
+                banner_enabled: customization&.banner_enabled || false,
+                banner_message: customization&.banner_message,
+                countdown_days: customization&.countdown_days,
+                default_icon: calendar.icon.present? ? "mdi-#{calendar.icon}" : nil %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%= form_with url: bulk_hide_events_path, method: :patch, id: "bulk-hide-form", class: "hidden", data: {"bulk-hide-form": ""} do %><% end %>
+  <% end %>
+</div>

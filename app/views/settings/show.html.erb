@@ -1,0 +1,37 @@
+<% content_for :title, "Settings" %>
+
+<div class="mt-3 w-full">
+  <h2 class="mb-3 text-xl font-semibold">Settings</h2>
+
+  <div class="tf-card">
+    <%= form_with url: settings_path, method: :patch do |f| %>
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="tf-label"><strong>Temperature</strong></label>
+          <select name="account[temperature_unit]" class="tf-select">
+            <option value="F" <% if @account.temperature_unit == "F" %>selected<% end %>>°F</option>
+            <option value="C" <% if @account.temperature_unit == "C" %>selected<% end %>>°C</option>
+          </select>
+        </div>
+        <div>
+          <label class="tf-label"><strong>Wind Speed</strong></label>
+          <select name="account[speed_unit]" class="tf-select">
+            <option value="mph" <% if @account.speed_unit == "mph" %>selected<% end %>>mph</option>
+            <option value="kph" <% if @account.speed_unit == "kph" %>selected<% end %>>kph</option>
+          </select>
+        </div>
+        <div>
+          <label class="tf-label"><strong>Precipitation</strong></label>
+          <select name="account[precipitation_unit]" class="tf-select">
+            <option value="in" <% if @account.precipitation_unit == "in" %>selected<% end %>>in</option>
+            <option value="mm" <% if @account.precipitation_unit == "mm" %>selected<% end %>>mm</option>
+            <option value="cm" <% if @account.precipitation_unit == "cm" %>selected<% end %>>cm</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-4">
+        <%= submit_tag "Save", class: "tf-btn tf-btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

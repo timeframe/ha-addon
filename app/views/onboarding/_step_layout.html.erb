@@ -1,0 +1,81 @@
+<%
+  device = flow.onboarding_device
+  location = device.location
+  model_dims = Device::SUPPORTED_MODELS[device.model] || {}
+  subheads = {
+    "one_day" => "One day at a time",
+    "two_day" => "Today plus tomorrow",
+    "three_day" => "Three days at a glance",
+    "trmnl" => "Flexible, detailed schedule",
+    "reterminal" => "Portrait orientation",
+    "reterminal_landscape" => "Landscape orientation"
+  }
+  layouts = (device.template_options || []).map do |option|
+    landscape = option[:name] == "reterminal_landscape"
+    {
+      template: option[:name],
+      label: option[:label],
+      subhead: subheads[option[:name]],
+      width: landscape ? model_dims[:height] : model_dims[:width],
+      height: landscape ? model_dims[:width] : model_dims[:height]
+    }
+  end
+%>
+
+<p>Choose a layout for your display.</p>
+
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+  <% layouts.each do |layout| %>
+    <div class="h-full overflow-hidden rounded-md border border-ink/10">
+      <div class="tf-layout-preview" style="aspect-ratio: <%= layout[:width] %> / <%= layout[:height] %>;">
+        <iframe src="<%= preview_frame_account_location_device_path(account, location, device, template: layout[:template], layout: "device") %>"
+                style="width: <%= layout[:width] %>px; height: <%= layout[:height] %>px;" data-preview-width="<%= layout[:width] %>"
+                loading="lazy" scrolling="no" tabindex="-1" title="<%= layout[:label] %> preview"></iframe>
+      </div>
+      <div class="p-2">
+        <h3 class="mb-0 text-base font-semibold"><%= layout[:label] %></h3>
+        <% if layout[:subhead].present? %>
+          <p class="mb-2 text-sm text-gray-500"><%= layout[:subhead] %></p>
+        <% end %>
+        <%= form_with url: onboarding_layout_path, method: :patch do %>
+          <input type="hidden" name="display_template" value="<%= layout[:template] %>">
+          <button type="submit" class="tf-btn tf-btn-sm tf-btn-outline w-full">Select</button>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<%= render "onboarding/step_footer", flow: flow %>
+
+<style>
+  .tf-layout-preview {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  }
+  .tf-layout-preview iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+  }
+</style>
+
+<script>
+  (function() {
+    document.querySelectorAll(".tf-layout-preview").forEach(function(box) {
+      var frame = box.querySelector("iframe");
+      if (!frame) return;
+      var width = parseFloat(frame.getAttribute("data-preview-width")) || frame.offsetWidth;
+      function scale() {
+        var factor = box.clientWidth / width;
+        frame.style.transform = "scale(" + factor + ")";
+      }
+      scale();
+      window.addEventListener("resize", scale);
+    });
+  })();
+</script>

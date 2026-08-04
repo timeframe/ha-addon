@@ -1,0 +1,37 @@
+<%#
+  Shared wizard footer: a "Back" link and, for steps with a main form, a forward
+  "Next" button that submits it via the HTML5 form= attribute.
+
+  locals:
+    flow         - OnboardingFlow (required)
+    form_id      - id of the step's form the Next button submits (optional)
+    next_label   - optional, defaults to "Next"
+    autovalidate - when true, Next stays disabled until the form is valid
+%>
+<% autovalidate = local_assigns[:autovalidate] %>
+<%= form_with url: onboarding_back_path, method: :post, id: "onboarding-back-form" do %><% end %>
+<div class="mt-3 flex items-center justify-between">
+  <% if flow.can_go_back? %>
+    <button type="submit" form="onboarding-back-form" class="text-cta hover:underline">Back</button>
+  <% end %>
+  <div class="ml-auto">
+    <% if local_assigns[:form_id].present? %>
+      <%= button_tag(local_assigns[:next_label] || "Next",
+        type: "submit", form: form_id, id: "onboarding-next-btn",
+        class: "tf-btn tf-btn-primary", disabled: autovalidate) %>
+    <% end %>
+  </div>
+</div>
+
+<% if autovalidate && local_assigns[:form_id].present? %>
+  <script>
+    (function() {
+      var form = document.getElementById('<%= form_id %>');
+      var btn = document.getElementById('onboarding-next-btn');
+      if (!form || !btn) return;
+      function validate() { btn.disabled = !form.checkValidity(); }
+      form.addEventListener('input', validate);
+      validate();
+    })();
+  </script>
+<% end %>

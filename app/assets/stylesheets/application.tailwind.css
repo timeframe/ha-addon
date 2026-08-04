@@ -91,22 +91,22 @@
   .tf-input,
   .tf-select,
   .tf-textarea {
-    @apply w-full rounded-md border border-ink/20 bg-white px-3 py-2 text-ink focus:border-ink focus:outline-none;
+    @apply min-h-11 w-full rounded-md border border-ink/20 bg-white px-3 py-2 text-ink focus:border-ink focus:outline-none;
   }
   .tf-input-sm {
-    @apply w-full rounded-md border border-ink/20 bg-white px-2 py-1 text-sm text-ink focus:border-ink focus:outline-none;
+    @apply min-h-11 w-full rounded-md border border-ink/20 bg-white px-2 py-1 text-sm text-ink focus:border-ink focus:outline-none;
   }
   .tf-check {
     @apply h-4 w-4 rounded border-ink/30 text-ink focus:ring-ink;
   }
   .tf-btn {
-    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md px-4 py-2 font-medium no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 cursor-pointer appearance-none items-center justify-center gap-1.5 rounded-md px-4 py-2 font-medium no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
   .tf-btn-sm {
     @apply px-3 py-1 text-sm;
   }
   .tf-btn-primary {
-    @apply bg-ink text-white hover:bg-ink/90;
+    @apply bg-cta font-semibold text-ink hover:bg-cta-hover;
   }
   .tf-btn-outline {
     @apply border border-ink/30 text-ink hover:bg-ink/5;
@@ -158,4 +158,34 @@
 /* Native <dialog> backdrop dimming for Stimulus modal_controller dialogs. */
 dialog::backdrop {
   background: rgba(0, 0, 0, 0.5);
+}
+
+/* Hidden (omitted) events collapse until a .tf-show-hidden ancestor toggle. */
+.tf-hidden-event {
+  display: none !important;
+}
+.tf-show-hidden [data-bulk-row].tf-hidden-event {
+  display: flex !important;
+}
+.tf-show-hidden [data-bulk-day-heading].tf-hidden-event {
+  display: block !important;
+}
+
+/* A closed <dialog> stays hidden even when it carries a display utility; an open
+   one is centered on both axes and capped to the viewport. */
+dialog:not([open]) {
+  display: none;
+}
+dialog[open] {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  max-width: 92vw;
+  max-height: 90dvh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+html:has(dialog[open]),
+body:has(dialog[open]) {
+  overflow: hidden;
 }

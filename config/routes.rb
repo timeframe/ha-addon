@@ -6,6 +6,18 @@ Rails.application.routes.draw do
   root to: "dashboard#index"
   get "pair", to: "setup#index"
   get "status", to: "status#index"
+  get "settings", to: "settings#show"
+  patch "settings", to: "settings#update"
+  get "events", to: "events#index"
+  get "icon_suggestion", to: "icon_suggestions#show", as: :icon_suggestion
+  patch "events/customization", to: "events#update_customization", as: :event_customization
+  patch "events/toggle_omit", to: "events#toggle_omit", as: :toggle_omit_event
+  patch "events/bulk_hide", to: "events#bulk_hide", as: :bulk_hide_events
+  get "onboarding", to: "onboarding#show", as: :onboarding
+  post "onboarding/device", to: "onboarding#create_device", as: :onboarding_device
+  post "onboarding/pair", to: "onboarding#pair", as: :onboarding_pair
+  patch "onboarding/layout", to: "onboarding#set_layout", as: :onboarding_layout
+  post "onboarding/back", to: "onboarding#back", as: :onboarding_back
   post "claim_device", to: "dashboard#claim_device", as: :claim_device
 
   get "test_sign_in", to: "test_sessions#sign_in" if Rails.env.test?

@@ -1,0 +1,386 @@
+<%# Renders an icon picker button that opens a searchable modal.
+     Local vars:
+       field_name  - the form field name, e.g. "calendar[icon]"
+       picker_id   - unique DOM id for this picker instance
+       current_icon - the currently selected icon class (e.g. "mdi-calendar"), or nil
+       calendar_name - optional name of the calendar, shown in the modal title
+       inline       - when true, render the picker inline (no trigger button / modal)
+%>
+<% picker_id ||= "icon-picker-#{SecureRandom.hex(4)}" %>
+<% current_icon ||= nil %>
+<% calendar_name ||= nil %>
+<% select_label ||= "Select icon" %>
+<% inline ||= false %>
+<% input_data = local_assigns.fetch(:input_data, {}) %>
+<% preview_data = local_assigns.fetch(:preview_data, {}) %>
+<% preview_icon = local_assigns.fetch(:preview_icon, current_icon).presence %>
+<%# When suggest_from (a DOM id of a title/name field) and suggest_kind
+    ("event" or "calendar") are given, render a "Pick icon for me" button that
+    auto-assigns an icon from that field's text via /icon_suggestion. %>
+<% suggest_from = local_assigns.fetch(:suggest_from, nil) %>
+<% suggest_kind = local_assigns.fetch(:suggest_kind, "event") %>
+<%# Optional extra action button(s) rendered next to "Pick icon for me" (e.g. a
+    "Reset icon" button supplied by the event edit modal). %>
+<% suggest_extra = local_assigns.fetch(:suggest_extra, nil) %>
+<%# Optional overrides for the (non-inline) trigger button: a fixed label and a
+    leading glyph (e.g. the calendar's current icon). Both default to the
+    existing "Edit"/pencil behavior when omitted. %>
+<% trigger_label = local_assigns.fetch(:trigger_label, nil) %>
+<% trigger_icon = local_assigns.fetch(:trigger_icon, nil) %>
+
+<% if inline %>
+  <div id="<%= picker_id %>-wrapper">
+    <input type="hidden" name="<%= field_name %>" id="<%= picker_id %>-input" value="<%= current_icon %>" <%= tag.attributes(input_data) %>>
+    <div class="tf-ip-preview">
+      <span class="tf-ip-preview-label">Selected:</span>
+      <% if preview_icon && (letter = preview_icon[/\Amdi-alpha-([a-z])\z/i, 1]) %>
+        <span class="cal-letter" id="<%= picker_id %>-preview" style="font-size: 1.5rem;" <%= tag.attributes(preview_data) %>><%= letter.upcase %></span>
+      <% else %>
+        <span class="mdi <%= preview_icon || "mdi-calendar-blank-outline" %>" id="<%= picker_id %>-preview" style="font-size: 1.5rem;" <%= tag.attributes(preview_data) %>></span>
+      <% end %>
+    </div>
+    <% if suggest_from || suggest_extra %>
+      <div class="tf-ip-actions">
+        <% if suggest_from %>
+          <button type="button" class="tf-ip-suggest" id="<%= picker_id %>-suggest">
+            <span class="mdi mdi-auto-fix"></span> Pick icon for me
+          </button>
+        <% end %>
+        <%= suggest_extra %>
+      </div>
+    <% end %>
+    <div id="<%= picker_id %>-letters-grid" class="tf-ip-letters-grid tf-ip-letters-grid--inline">
+      <% ("a".."z").each do |letter| %>
+        <button type="button" class="tf-ip-btn" data-letter-icon="mdi-alpha-<%= letter %>">
+          <span class="cal-letter"><%= letter.upcase %></span>
+        </button>
+      <% end %>
+    </div>
+    <input type="text" class="tf-ip-search" placeholder="Search icons..." id="<%= picker_id %>-search" autocomplete="off">
+    <div id="<%= picker_id %>-results" class="tf-ip-results tf-ip-results--inline"></div>
+    <p class="tf-ip-hint" id="<%= picker_id %>-hint"></p>
+  </div>
+<% else %>
+  <div class="tf-ip" id="<%= picker_id %>-wrapper" data-controller="modal">
+    <input type="hidden" name="<%= field_name %>" id="<%= picker_id %>-input" value="<%= current_icon %>">
+    <button type="button" class="tf-ip-trigger" data-action="modal#open">
+      <% if trigger_icon.present? && (trigger_letter = trigger_icon[/\Amdi-alpha-([a-z])\z/i, 1]) %>
+        <span class="cal-letter"><%= trigger_letter.upcase %></span>
+      <% else %>
+        <span class="mdi <%= trigger_icon.presence || (current_icon.present? ? 'mdi-pencil' : 'mdi-image-edit-outline') %>"></span>
+      <% end %>
+      <span class="tf-ip-trigger-label"><%= trigger_label || (current_icon.present? ? "Edit" : select_label) %></span>
+    </button>
+
+    <dialog class="tf-ip-dialog" data-modal-target="dialog" data-action="click->modal#backdropClose" aria-labelledby="<%= picker_id %>-label">
+      <div class="tf-ip-dialog-inner">
+        <div class="tf-ip-dialog-header">
+          <h5 id="<%= picker_id %>-label">
+            Pick an Icon<% if calendar_name.present? %> for <%= calendar_name %><% end %>
+          </h5>
+          <button type="button" class="tf-ip-close" data-action="modal#close" aria-label="Close">&times;</button>
+        </div>
+        <div id="<%= picker_id %>-letters-grid" class="tf-ip-letters-grid">
+          <% ("a".."z").each do |letter| %>
+            <button type="button" class="tf-ip-btn" data-letter-icon="mdi-alpha-<%= letter %>">
+              <span class="cal-letter"><%= letter.upcase %></span>
+            </button>
+          <% end %>
+        </div>
+        <% if suggest_from || suggest_extra %>
+          <div class="tf-ip-actions">
+            <% if suggest_from %>
+              <button type="button" class="tf-ip-suggest" id="<%= picker_id %>-suggest">
+                <span class="mdi mdi-auto-fix"></span> Pick icon for me
+              </button>
+            <% end %>
+            <%= suggest_extra %>
+          </div>
+        <% end %>
+        <input type="text" class="tf-ip-search" placeholder="Search icons..." id="<%= picker_id %>-search" autocomplete="off" autofocus>
+        <div id="<%= picker_id %>-results" class="tf-ip-results"></div>
+        <p class="tf-ip-hint" id="<%= picker_id %>-hint"></p>
+      </div>
+    </dialog>
+  </div>
+<% end %>
+
+<% unless @mdi_icon_picker_assets_rendered %>
+  <% @mdi_icon_picker_assets_rendered = true %>
+  <style>
+    /* Self-contained icon-picker styling so the widget looks consistent under
+       both the Bootstrap and Tailwind layouts (it is shared across both during
+       the CSS migration). */
+    .tf-ip { display: inline-block; }
+    .tf-ip-preview { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .tf-ip-preview-label { color: #6c757d; font-size: 0.875rem; }
+    .tf-ip-trigger {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      min-height: 44px; padding: 0.25rem 0.6rem; font-size: 0.875rem;
+      border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 0.375rem;
+      background: #fff; color: inherit; cursor: pointer;
+    }
+    .tf-ip-trigger:hover { background: rgba(0, 0, 0, 0.04); }
+    .tf-ip-dialog {
+      padding: 0; border: none; border-radius: 0.5rem;
+      width: min(48rem, 92vw); max-width: 92vw;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    .tf-ip-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+    .tf-ip-dialog-inner { padding: 1rem; }
+    .tf-ip-dialog-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .tf-ip-dialog-header h5 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .tf-ip-close { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: none; background: none; font-size: 1.5rem; line-height: 1; cursor: pointer; opacity: 0.6; }
+    .tf-ip-close:hover { opacity: 1; }
+    .tf-ip-letters-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 4px; margin-bottom: 0.75rem; }
+    .tf-ip-letters-grid--inline { grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); }
+    .tf-ip-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 44px; padding: 0.25rem 0.5rem; font-size: 0.875rem;
+      border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 0.375rem;
+      background: #fff; color: inherit; cursor: pointer;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .tf-ip-btn:hover { background: rgba(0, 0, 0, 0.05); }
+    .tf-ip-search { width: 100%; min-height: 44px; padding: 0.4rem 0.6rem; border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 0.375rem; margin-bottom: 0.75rem; }
+    .tf-ip-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .tf-ip-suggest {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      min-height: 44px; padding: 0.25rem 0.7rem;
+      font-size: 0.875rem; font-weight: 600;
+      border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 0.375rem;
+      background: #fff; color: #1a1a1a; cursor: pointer;
+    }
+    .tf-ip-suggest:hover { background: rgba(0, 0, 0, 0.05); }
+    .tf-ip-suggest:disabled { opacity: 0.6; cursor: default; }
+    /* Only reserve the fixed scroll height once there are results, so the empty
+       state (before searching) stays collapsed. When populated the fixed height
+       keeps revealing/replacing results from shifting the surrounding layout
+       (e.g. the Add-event modal). */
+    .tf-ip-results { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 4px; align-content: start; }
+    .tf-ip-results:not(:empty) { height: 400px; }
+    .tf-ip-results--inline:not(:empty) { height: 220px; }
+    .tf-ip-hint { color: #6c757d; font-size: 0.875rem; margin-top: 0.5rem; margin-bottom: 0; }
+  </style>
+  <script>
+    window.timeframeMdiIcons = <%= mdi_icons_json %>;
+    window.timeframeMdiSearchIndex = <%= mdi_search_index_json %>;
+  </script>
+<% end %>
+
+<script>
+(function() {
+  var icons = window.timeframeMdiIcons || [];
+  var searchIndex = window.timeframeMdiSearchIndex || {};
+  var pickerId = '<%= picker_id %>';
+  var inline = <%= inline ? "true" : "false" %>;
+  var search = document.getElementById(pickerId + '-search');
+  var results = document.getElementById(pickerId + '-results');
+  var hint = document.getElementById(pickerId + '-hint');
+  var hiddenInput = document.getElementById(pickerId + '-input');
+  var wrapper = document.getElementById(pickerId + '-wrapper');
+  var preview = document.getElementById(pickerId + '-preview');
+  var dialog = wrapper ? wrapper.querySelector('dialog') : null;
+
+  function render(filter) {
+    results.innerHTML = '';
+    if (!filter || filter.length < 2) {
+      hint.textContent = 'Type at least 2 characters to search ' + icons.length + ' icons';
+      return;
+    }
+    var lower = filter.toLowerCase();
+    var exactName = [];
+    var nameStartsWith = [];
+    var nameContains = [];
+    var aliasTagMatches = [];
+
+    icons.forEach(function(name) {
+      var bare = name.replace('mdi-', '');
+      if (bare === lower || bare === lower.replace(/ /g, '-')) {
+        exactName.push(name);
+      } else if (bare.indexOf(lower) === 0 || bare.indexOf(lower.replace(/ /g, '-')) === 0) {
+        nameStartsWith.push(name);
+      } else if (bare.indexOf(lower) !== -1 || bare.indexOf(lower.replace(/ /g, '-')) !== -1) {
+        nameContains.push(name);
+      } else if (searchIndex[name] && searchIndex[name].indexOf(lower) !== -1) {
+        aliasTagMatches.push(name);
+      }
+    });
+
+    var matches = exactName.concat(nameStartsWith, nameContains, aliasTagMatches);
+    hint.textContent = matches.length + ' matches';
+    var max = 200;
+    matches.slice(0, max).forEach(function(name) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'tf-ip-btn';
+      btn.style.justifyContent = 'flex-start';
+      btn.innerHTML = '<span class="mdi ' + name + '" style="font-size:1.5rem;margin-right:0.5rem"></span><span>' + name.replace('mdi-', '') + '</span>';
+      btn.addEventListener('click', function() { selectIcon(name); });
+      results.appendChild(btn);
+    });
+    if (matches.length > max) {
+      hint.textContent = 'Showing ' + max + ' of ' + matches.length + ' matches - refine your search';
+    }
+  }
+
+  function selectIcon(name) {
+    hiddenInput.value = name;
+    hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+    if (inline) {
+      setPreview(name);
+      return;
+    }
+    var triggerBtn = wrapper.querySelector('.tf-ip-trigger');
+    if (triggerBtn) triggerBtn.innerHTML = '<span class="mdi mdi-pencil"></span> <span class="tf-ip-trigger-label">Edit</span>';
+    if (dialog && dialog.open) dialog.close();
+    var form = hiddenInput.closest('form[data-icon-autosubmit]');
+    if (form) form.requestSubmit();
+  }
+
+  // Single-letter "mdi-alpha-x" icons render as the letter text, matching how
+  // calendar_icon_tag displays them on the dashboard.
+  function setPreview(name) {
+    if (!preview) return;
+    var m = name && name.match(/^mdi-alpha-([a-z])$/i);
+    if (m) {
+      preview.className = 'cal-letter';
+      preview.textContent = m[1].toUpperCase();
+    } else {
+      preview.className = 'mdi ' + (name || 'mdi-calendar-blank-outline');
+      preview.textContent = '';
+    }
+  }
+
+  document.getElementById(pickerId + '-letters-grid').addEventListener('click', function(e) {
+    var b = e.target.closest('button[data-letter-icon]');
+    if (b) selectIcon(b.getAttribute('data-letter-icon'));
+  });
+
+  search.addEventListener('input', function() { render(search.value); });
+  if (dialog) {
+    dialog.addEventListener('close', function() { search.value = ''; render(''); });
+  }
+
+  // "Pick icon for me": auto-assign an icon from a title/name field's text.
+  var suggestBtn = document.getElementById(pickerId + '-suggest');
+  var suggestFrom = <%= raw(suggest_from ? "'#{escape_javascript(suggest_from)}'" : "null") %>;
+  var suggestKind = '<%= escape_javascript(suggest_kind.to_s) %>';
+  if (suggestBtn && suggestFrom) {
+    var suggestLabel = suggestBtn.innerHTML;
+    // Look the source field up lazily on every use: in some modals (the event
+    // edit modal) the title field is rendered AFTER this picker, so it doesn't
+    // exist yet when this script first runs.
+    function suggestSrcField() { return document.getElementById(suggestFrom); }
+    function suggestText() {
+      var srcField = suggestSrcField();
+      // Fall back to the field's placeholder: on the edit modal the input value
+      // holds only the (often blank) title override, while the real title is the
+      // placeholder.
+      return srcField ? (srcField.value.trim() || srcField.placeholder || '') : '';
+    }
+
+    // On-demand fetch (used for the calendar picker and as a fallback when no
+    // live suggestion is ready yet).
+    function runOnDemandSuggestion() {
+      var text = suggestText();
+      if (!text.trim()) {
+        if (hint) hint.textContent = 'Enter a title first, then try again.';
+        return;
+      }
+      // Guarantee the button never gets stuck: always re-enable, and abort the
+      // request if it takes too long instead of hanging indefinitely.
+      var settled = false;
+      var controller = ('AbortController' in window) ? new AbortController() : null;
+      var timer = setTimeout(function () { if (controller) controller.abort(); }, 8000);
+      function finish(message) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        suggestBtn.disabled = false;
+        suggestBtn.innerHTML = suggestLabel;
+        if (message && hint) hint.textContent = message;
+      }
+      suggestBtn.disabled = true;
+      suggestBtn.innerHTML = '<span class="mdi mdi-loading mdi-spin"></span> Finding an icon\u2026';
+      fetch('/icon_suggestion?kind=' + encodeURIComponent(suggestKind) + '&text=' + encodeURIComponent(text), {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        signal: controller ? controller.signal : undefined
+      })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (data) {
+          if (data && data.icon) { finish(); selectIcon(data.icon); }
+          else { finish('No icon suggestion for that text - try searching.'); }
+        })
+        .catch(function () { finish("Couldn't fetch a suggestion - try searching."); });
+    }
+
+    if (suggestKind === 'event') {
+      // Event titles get a LIVE suggestion: the button stays hidden until there
+      // is a title to suggest from, then shows "Use suggested icon (slug) <icon>"
+      // and clicking it applies that icon. It updates as the title is typed.
+      var suggestedIcon = null;
+      var suggestTimer = null;
+      var suggestSeq = 0;
+      function iconGlyphHtml(name) {
+        var m = name && name.match(/^mdi-alpha-([a-z])$/i);
+        if (m) { return '<span class="cal-letter">' + m[1].toUpperCase() + '</span>'; }
+        return '<span class="mdi ' + name + '"></span>';
+      }
+      // Hidden until a suggestion is available.
+      suggestBtn.style.display = 'none';
+      function resetSuggestLabel() {
+        suggestedIcon = null;
+        suggestBtn.innerHTML = suggestLabel;
+        suggestBtn.style.display = 'none';
+      }
+      function fetchLiveSuggestion() {
+        var text = suggestText();
+        var seq = ++suggestSeq;
+        if (!text.trim()) { resetSuggestLabel(); return; }
+        fetch('/icon_suggestion?kind=event&text=' + encodeURIComponent(text), {
+          headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
+        })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+            if (seq !== suggestSeq) { return; } // a newer keystroke superseded this
+            if (data && data.icon) {
+              suggestedIcon = data.icon;
+              var slug = data.icon.replace(/^mdi-/, '');
+              suggestBtn.innerHTML = 'Use suggested icon (' + slug + ') ' + iconGlyphHtml(data.icon);
+              suggestBtn.style.display = '';
+            } else {
+              resetSuggestLabel();
+            }
+          })
+          .catch(function () { /* keep the current state on error */ });
+      }
+      // Attach the input listener and prime the suggestion once the source
+      // field exists. It may be rendered after this picker (event edit modal),
+      // so defer to DOMContentLoaded when the document is still parsing.
+      function bindLiveSuggestion() {
+        var srcField = suggestSrcField();
+        if (!srcField) { return; }
+        srcField.addEventListener('input', function() {
+          if (suggestTimer) { clearTimeout(suggestTimer); }
+          suggestTimer = setTimeout(fetchLiveSuggestion, 350);
+        });
+        // Prime from any existing title (e.g. the edit modal's placeholder).
+        if (suggestText().trim()) { fetchLiveSuggestion(); }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindLiveSuggestion);
+      } else {
+        bindLiveSuggestion();
+      }
+      suggestBtn.addEventListener('click', function() {
+        if (suggestedIcon) { selectIcon(suggestedIcon); return; }
+        runOnDemandSuggestion();
+      });
+    } else {
+      suggestBtn.addEventListener('click', runOnDemandSuggestion);
+    }
+  }
+})();
+</script>

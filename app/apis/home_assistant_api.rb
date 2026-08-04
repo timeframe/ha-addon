@@ -24,10 +24,11 @@ class HomeAssistantApi
   CALENDAR_DOMAIN = "home_assistant_calendar_api"
   WEATHER_DOMAIN = "home_assistant_weather_api"
 
-  def initialize(config = TimeframeConfig.new, store: Rails.cache, wind_gust_threshold_mph: 20.0)
+  def initialize(config = TimeframeConfig.new, store: Rails.cache, wind_gust_threshold_mph: 20.0, account: nil)
     @config = config
     @store = store
     @wind_gust_threshold_mph = wind_gust_threshold_mph.to_f
+    @account = account
   end
 
   def home_assistant_base_url
@@ -144,7 +145,7 @@ class HomeAssistantApi
 
   def feels_like_temperature
     ha_unit = ha_temperature_unit
-    display_unit = @config.temperature_unit
+    display_unit = temperature_unit
 
     override = data.find { it[:entity_id].end_with?("timeframe_weather_feels_like_entity_id") }
 
@@ -277,7 +278,27 @@ class HomeAssistantApi
   end
 
   def calendar_events
-    @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map { DeviceEvent.new(**it.symbolize_keys!, timezone: time_zone) }
+    @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map do |raw|
+      event = raw.symbolize_keys
+      event[:description] = customized_description(event)
+      DeviceEvent.new(**event, timezone: time_zone)
+    end
+  end
+
+  # Merge any locally-stored per-event customization (icon/title/hide) onto the
+  # Home Assistant event description so it applies on the rendered device. No-op
+  # when the API has no account (e.g. isolated unit tests).
+  def customized_description(event)
+    return event[:description] unless @account
+
+    customization = customization_index.dig(event[:entity_id], event[:id])
+    customization ? customization.merged_description(event[:description]) : event[:description]
+  end
+
+  def customization_index
+    @customization_index ||= @account.calendars.includes(:event_customizations).each_with_object({}) do |calendar, index|
+      index[calendar.external_id] = calendar.event_customizations.index_by(&:customization_key)
+    end
   end
 
   def calendar_entities
@@ -371,16 +392,19 @@ class HomeAssistantApi
     CONDITION_ICONS[condition] || "help-circle"
   end
 
+  # Display units come from the Account (edited on the settings page, seeded
+  # from the Home Assistant host config). Fall back to the TimeframeConfig
+  # defaults when no account is passed (e.g. isolated API unit tests).
   def speed_unit
-    @config.speed_unit
+    @account&.speed_unit || @config.speed_unit
   end
 
   def precipitation_unit
-    @config.precipitation_unit
+    @account&.precipitation_unit || @config.precipitation_unit
   end
 
   def temperature_unit
-    @config.temperature_unit
+    @account&.temperature_unit || @config.temperature_unit
   end
 
   # Conversion factors to mph (base unit for internal conversion)

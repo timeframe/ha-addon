@@ -3,8 +3,6 @@
 # Timeframe will auto-create a user and pull location/calendar data from HA.
 # home_assistant_token: your_long_lived_access_token
 # home_assistant_url: "http://homeassistant.local:8123"  # default
-# These options can also be set in the Home Assistant App Configuration UI
-# speed_unit: "mph"           # or "kph"
-# temperature_unit: "F"       # or "C"
-# precipitation_unit: "in"    # or "mm" or "cm"
+# Units (temperature, wind speed, precipitation) are configured on the
+# Settings page in the web interface, seeded from your Home Assistant units.
 

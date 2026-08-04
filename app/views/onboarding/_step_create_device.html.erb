@@ -1,0 +1,19 @@
+<p>Name your display and choose which device you have.</p>
+
+<%= form_with url: onboarding_device_path, method: :post, id: "onboarding-device-form" do %>
+  <div class="mb-3">
+    <label class="tf-label">Name</label>
+    <input type="text" id="device-name" name="device_name" class="tf-input" required autocomplete="off"
+           placeholder="e.g. Kitchen Display" value="<%= flow.onboarding_device&.name %>">
+  </div>
+  <div class="mb-3">
+    <label class="tf-label">Device</label>
+    <select name="device_model" class="tf-select" required>
+      <% Device::SUPPORTED_MODELS.sort_by { |_, info| info[:name].to_s.downcase }.each do |key, info| %>
+        <option value="<%= key %>" <% if flow.onboarding_device&.model == key %>selected<% end %>><%= info[:name] %></option>
+      <% end %>
+    </select>
+  </div>
+<% end %>
+
+<%= render "onboarding/step_footer", flow: flow, form_id: "onboarding-device-form", autovalidate: true %>

@@ -14,6 +14,7 @@ scheduler.in "5s" do
   api = HomeAssistantApi.new
   api.fetch_calendars
   api.fetch_weather
+  HomeAssistantCalendarImport.new(account: Account.first).call if Account.first
   DeviceBroadcaster.broadcast_all_mira_devices
 end
 
@@ -24,6 +25,7 @@ end
 
 scheduler.every "1m" do
   HomeAssistantApi.new.fetch_calendars
+  HomeAssistantCalendarImport.new(account: Account.first).call if Account.first
   DeviceBroadcaster.broadcast_all_mira_devices
 end
 

@@ -1,0 +1,37 @@
+<% device = flow.onboarding_device %>
+
+<p>Power on your device, complete the Wi‑Fi setup, and enter the pairing code it shows.</p>
+
+<% if device.model == "boox_mira" || device.model == "boox_mira_pro" %>
+  <p class="text-sm text-gray-500">On your Boox device, open <code><%= request.base_url %>/pair</code> to get a pairing code.</p>
+<% end %>
+
+<%= form_with url: onboarding_pair_path, method: :post, id: "pair-form" do %>
+  <div class="mb-3 max-w-[16rem]">
+    <input type="text" id="pairing-code" name="pairing_code" class="tf-input"
+           placeholder="123456" autocomplete="off" inputmode="numeric"
+           minlength="6" maxlength="6" pattern="[0-9]{6}" required>
+  </div>
+<% end %>
+
+<%= form_with url: onboarding_back_path, method: :post, id: "onboarding-back-form" do %><% end %>
+
+<div class="mt-3 flex items-center justify-between">
+  <% if flow.can_go_back? %>
+    <button type="submit" form="onboarding-back-form" class="text-cta hover:underline">Back</button>
+  <% end %>
+  <div class="ml-auto flex items-center gap-2">
+    <button type="submit" form="pair-form" id="pair-submit" class="tf-btn tf-btn-primary" disabled>Pair</button>
+  </div>
+</div>
+
+<script>
+  (function() {
+    var input = document.getElementById('pairing-code');
+    var btn = document.getElementById('pair-submit');
+    if (!input || !btn) return;
+    function validate() { btn.disabled = !input.checkValidity(); }
+    input.addEventListener('input', validate);
+    validate();
+  })();
+</script>

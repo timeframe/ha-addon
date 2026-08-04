@@ -135,6 +135,21 @@ class HomeAssistantApiTest < Minitest::Test
     end
   end
 
+  def test_units_prefer_account_over_config
+    account = Struct.new(:temperature_unit, :speed_unit, :precipitation_unit).new("C", "kph", "mm")
+    api = HomeAssistantApi.new(TimeframeConfig.new, account: account)
+    assert_equal "C", api.temperature_unit
+    assert_equal "kph", api.speed_unit
+    assert_equal "mm", api.precipitation_unit
+  end
+
+  def test_units_fall_back_to_config_without_account
+    api = HomeAssistantApi.new(TimeframeConfig.new(temperature_unit: "C", speed_unit: "kph", precipitation_unit: "mm"))
+    assert_equal "C", api.temperature_unit
+    assert_equal "kph", api.speed_unit
+    assert_equal "mm", api.precipitation_unit
+  end
+
   def test_feels_like_override_entity_missing
     api = HomeAssistantApi.new
     api.stub :data, [
@@ -821,8 +836,38 @@ class HomeAssistantApiTest < Minitest::Test
     assert_equal "calendar.family", api.calendar_events.first.entity_id
   end
 
+  def test_calendar_events_apply_local_customizations
+    account = test_user.accounts.first
+    CalendarEventCustomization.delete_all
+    Calendar.delete_all
+    calendar = account.calendars.create!(external_id: "calendar.family", name: "Family", source_type: "home_assistant")
+    calendar.event_customizations.create!(customization_key: "evt-1", icon: "cake-variant", title_override: "Birthday")
+
+    store = ActiveSupport::Cache::MemoryStore.new
+    api = HomeAssistantApi.new(TimeframeConfig.new, store: store, account: account)
+    api.seed_config(DEFAULT_TEST_CONFIG)
+
+    cal = {"entity_id" => "calendar.family"}
+    customized = {"summary" => "Party", "uid" => "evt-1", "start" => {"dateTime" => "2024-09-05T10:00:00-06:00"}, "end" => {"dateTime" => "2024-09-05T11:00:00-06:00"}}
+    plain = {"summary" => "Meeting", "uid" => "evt-2", "start" => {"dateTime" => "2024-09-06T10:00:00-06:00"}, "end" => {"dateTime" => "2024-09-06T11:00:00-06:00"}}
+
+    api.stub :fetch_calendar_list, [cal] do
+      api.stub :fetch_calendar_icons, {} do
+        HTTParty.stub :get, [customized, plain] do
+          api.fetch_calendars
+        end
+      end
+    end
+
+    events = api.calendar_events
+    assert_equal "cake-variant", events[0].icon
+    assert_equal "Birthday", events[0].summary
+    assert_equal "Meeting", events[1].summary
+  end
+
   def test_calendar_entities
     api = new_test_api
+
     api.stub :fetch_calendar_list, [{"entity_id" => "calendar.family", "name" => "Family"}, {"entity_id" => "calendar.work"}] do
       api.stub :fetch_calendar_icons, {"calendar.family" => "home"} do
         entities = api.calendar_entities

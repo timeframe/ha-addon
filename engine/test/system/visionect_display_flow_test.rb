@@ -12,7 +12,6 @@ class VisionectDisplayFlowTest < ApplicationSystemTestCase
   test "add Visionect device, enable demo mode, and view display via token URL" do
     # Step 1: Sign in and visit dashboard
     visit "/test_sign_in"
-    assert_text "timeframe"
     assert_text "Add Device"
 
     # Step 2: Add a Visionect device
