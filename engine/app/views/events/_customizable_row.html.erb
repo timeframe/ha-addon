@@ -15,6 +15,7 @@
     time_text         - preformatted date/time string
     calendar_name     - owning calendar name
     hidden            - whether the event is currently hidden
+    customized        - whether a local customization is stored for the event
     current_icon      - stored icon as an mdi class (e.g. "mdi-cake-variant") or nil
     current_title     - stored title override
     hide_url          - form action for the show/hide toggle
@@ -35,6 +36,9 @@
     <div class="min-w-0">
       <div class="truncate text-sm"><%= title %></div>
       <div class="truncate text-xs text-gray-500"><%= time_text %> &middot; <%= calendar_name %></div>
+      <% if customized %>
+        <span class="tf-badge" title="This edit is saved in Timeframe only and doesn't change your Home Assistant calendar.">Saved in Timeframe</span>
+      <% end %>
     </div>
   </div>
 
@@ -72,6 +76,10 @@
           <button type="button" class="flex min-h-11 min-w-11 items-center justify-center border-0 bg-transparent text-xl leading-none opacity-60 hover:opacity-100" data-action="modal#close" aria-label="Close">&times;</button>
         </div>
         <div class="space-y-4 p-4">
+          <div class="rounded-md border border-ink/15 bg-ink/5 p-3 text-sm text-gray-600">
+            <span class="mdi mdi-content-save-outline"></span>
+            Home Assistant calendar events are read-only, so these changes are saved in Timeframe only. They won't change the event in Home Assistant.
+          </div>
           <div>
             <label class="mb-2 block font-bold">Icon</label>
             <% reset_icon_button = capture do %>

@@ -36,6 +36,17 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Family"
     assert_includes response.body, "Party"
+    assert_includes response.body, "Home Assistant calendar events are read-only"
+    refute_includes response.body, "Saved in Timeframe"
+  end
+
+  test "index badges events with local customizations" do
+    @calendar.event_customizations.create!(customization_key: "evt-1", icon: "star")
+
+    get events_path
+
+    assert_response :success
+    assert_select ".tf-badge", text: "Saved in Timeframe"
   end
 
   test "index skips events whose calendar is not imported" do

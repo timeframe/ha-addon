@@ -77,6 +77,7 @@
                 time_text: time_text,
                 calendar_name: calendar.name,
                 hidden: event.omit?,
+                customized: customization.present?,
                 current_icon: customization&.icon.present? ? "mdi-#{customization.icon}" : nil,
                 current_title: customization&.title_override,
                 devices: @devices,
