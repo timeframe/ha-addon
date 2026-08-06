@@ -1,3 +1,21 @@
+## [2.15.0] - 2026-08-06
+
+### Added
+- Guided onboarding flow that walks through creating and pairing devices
+- Events page to customize individual calendar events: set a custom icon, title, or countdown, add a banner, hide an event, or show it only on specific devices
+- Icon picker for calendars and events, with automatic icon suggestions
+- Battery level display for supported devices
+- Mobile bottom navigation
+- reTerminal E1003 landscape layout
+
+### Changed
+- Admin and settings pages redesigned (migrated to Tailwind and Stimulus)
+- Expanded icon mappings, including holidays
+- Overnight refreshes run less frequently to save battery
+
+### Fixed
+- Duplicate work from background jobs running more than once
+
 ## [2.14.0] - 2026-06-11
 
 ### Added
