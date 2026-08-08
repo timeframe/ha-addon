@@ -60,6 +60,28 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_hide_today_after_cutoff_keeps_future_air_quality_event
+    travel_time = DateTime.new(2023, 8, 27, 20, 15, 0, "-0600")
+    travel_to travel_time do
+      api = new_test_api
+      air_quality_event = DeviceEvent.new(
+        id: "_aqi_#{(travel_time + 1.hour).to_i}_unhealthy",
+        starts_at: travel_time + 1.hour,
+        ends_at: travel_time.tomorrow.beginning_of_day,
+        summary: "AQI 160: Unhealthy",
+        icon: "face-mask-outline",
+        timezone: "America/Denver"
+      )
+      api.stub :calendar_events, [air_quality_event] do
+        result = DeviceContent.new.call(home_assistant_api: api)
+
+        today = result[:day_groups].find { |day| day[:date] == travel_time.to_date }
+        assert today, "expected future air quality alert to keep Today visible"
+        assert today[:periodic].any? { |event| event[:summary] == "AQI 160: Unhealthy" }
+      end
+    end
+  end
+
   def test_hide_events_after_cutoff_if_periodic_extends_to_tomorrow
     travel_time = DateTime.new(2023, 8, 27, 20, 15, 0, "-0600")
     travel_to travel_time do

@@ -75,6 +75,7 @@ class DeviceEvent
     @weather_flag = id.to_s.match?(/\A_(?:ha|wk)_weather_/)
     @weather_hourly_flag = @start_i == @end_i && @weather_flag
     @weather_ranged_flag = id.to_s.match?(/_(precip|wind|alert)/) && @start_i != @end_i
+    @air_quality_flag = id.to_s.start_with?("_aqi_")
   end
 
   def daily?
@@ -148,6 +149,10 @@ class DeviceEvent
 
   def weather_ranged?
     @weather_ranged_flag
+  end
+
+  def air_quality?
+    @air_quality_flag
   end
 
   def full_start_time

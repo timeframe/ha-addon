@@ -131,11 +131,12 @@ class DeviceContent
         # Attempt to hide Today after the configured cutoff if there are no events.
         # Weather events are ignored here: on their own they don't render a visible
         # timeline row in the evening, so they should not keep an otherwise-empty
-        # Today visible.
+        # Today visible. Air quality alerts are visible rows even when they end
+        # at midnight, so they keep Today visible.
         if day_index.zero? && current_minutes_in_day >= hide_today_after_minutes && !always_show_today
           remaining_today = events[:periodic].reject(&:weather?)
           next if remaining_today.empty? ||
-            remaining_today.all? { it.ends_at > date.end_of_day.utc }
+            remaining_today.all? { it.ends_at > date.end_of_day.utc && !it.air_quality? }
         end
 
         # The cutoff only hides the entire day (above) when no periodic events
