@@ -19,6 +19,11 @@ class MdiIconMatcherTest < Minitest::Test
     assert_equal "firework", MdiIconMatcher.match("Fourth of July")
   end
 
+  def test_match_curated_phrase_waterpark
+    assert_equal "waves", MdiIconMatcher.match("Waterpark")
+    assert_equal "waves", MdiIconMatcher.match("Water park")
+  end
+
   def test_match_custom_mapping_nap
     assert_equal "bed", MdiIconMatcher.match("Nap")
   end

@@ -11,7 +11,8 @@ class MdiIconMatcher
   # Curated multi-word phrase overrides matched against the whole title (before
   # tokenized matching) for holidays/phrases that don't map to a single token.
   CURATED_PHRASES = [
-    [/\b(independence day|fourth of july|4th of july)\b/, "firework"]
+    [/\b(independence day|fourth of july|4th of july)\b/, "firework"],
+    [/\bwater[\s-]?park\b/, "waves"]
   ].freeze
 
   class << self
