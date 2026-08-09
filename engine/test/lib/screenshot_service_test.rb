@@ -5,7 +5,6 @@ require "test_helper"
 class ScreenshotServiceTest < Minitest::Test
   def teardown
     ScreenshotService.instance_variable_set(:@browser, nil)
-    ScreenshotService.instance_variable_set(:@last_screenshot_at, nil)
   end
 
   def test_capture_with_deadline_returns_worker_result

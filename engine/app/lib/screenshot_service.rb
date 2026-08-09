@@ -25,7 +25,7 @@ class ScreenshotService
       MUTEX.synchronize do
         png_base64 = capture_with_deadline(url, width: width, height: height)
 
-        result = if raw
+        if raw
           png_base64
         elsif grayscale_only
           image = MiniMagick::Image.read(Base64.decode64(png_base64), ".png")
@@ -41,10 +41,11 @@ class ScreenshotService
         else
           process_image(Base64.decode64(png_base64), grayscale_depth: grayscale_depth, rotate: rotate, dither: dither)
         end
-
-        quit_idle_browser!
-
-        result
+      ensure
+        # Quit Chromium after every capture so the worker never holds a browser
+        # while idle between refresh cycles; a persistent browser kept the dyno
+        # over its 512MB quota (R14). Relaunch cost is negligible at this cadence.
+        reset!
       end
     end
 
@@ -70,13 +71,6 @@ class ScreenshotService
     def reset!
       @browser&.quit
       @browser = nil
-    end
-
-    def quit_idle_browser!
-      return unless @browser
-      return if @last_screenshot_at && @last_screenshot_at > 2.minutes.ago
-
-      reset!
     end
 
     private
@@ -127,7 +121,6 @@ class ScreenshotService
           # Page or browser already gone; nothing to clean up.
         end
       end
-      @last_screenshot_at = Time.current
       png_base64
     end
 
