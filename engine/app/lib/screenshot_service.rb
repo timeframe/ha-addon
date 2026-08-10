@@ -53,6 +53,10 @@ class ScreenshotService
       @browser ||= Ferrum::Browser.new(
         headless: "new",
         browser_path: find_browser_path,
+        env: {
+          "LD_PRELOAD" => nil,
+          "MALLOC_CONF" => nil
+        },
         window_size: [VIEWPORT_WIDTH, VIEWPORT_HEIGHT],
         timeout: COMMAND_TIMEOUT,
         process_timeout: PROCESS_TIMEOUT,

@@ -7,6 +7,18 @@ class ScreenshotServiceTest < Minitest::Test
     ScreenshotService.instance_variable_set(:@browser, nil)
   end
 
+  def test_browser_does_not_preload_jemalloc
+    browser = Object.new
+
+    Ferrum::Browser.stub(:new, ->(**options) {
+      assert_nil options.dig(:env, "LD_PRELOAD")
+      assert_nil options.dig(:env, "MALLOC_CONF")
+      browser
+    }) do
+      assert_same browser, ScreenshotService.browser
+    end
+  end
+
   def test_capture_with_deadline_returns_worker_result
     result = ScreenshotService.stub(:capture_screenshot_with_retry, "png-data") do
       ScreenshotService.send(:capture_with_deadline, "http://example.test", width: 100, height: 100, deadline: 5)
