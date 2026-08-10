@@ -66,6 +66,7 @@ class ScreenshotService
           "disable-gpu" => nil,
           "disable-dev-shm-usage" => nil,
           "disable-software-rasterizer" => nil,
+          "renderer-process-limit" => "1",
           "font-render-hinting" => "none",
           "disable-font-subpixel-positioning" => nil
         }

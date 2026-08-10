@@ -44,12 +44,11 @@ class RefreshDeviceScreenshotJobTest < ActiveJob::TestCase
     end
   end
 
-  def test_perform_swallows_and_logs_capture_errors
+  def test_perform_propagates_capture_errors
     @device.stub(:refresh_screenshot!, -> { raise "capture boom" }) do
       Device.stub(:find_by, @device) do
-        assert_nothing_raised do
-          RefreshDeviceScreenshotJob.new.perform(@device.id)
-        end
+        error = assert_raises(RuntimeError) { RefreshDeviceScreenshotJob.new.perform(@device.id) }
+        assert_equal "capture boom", error.message
       end
     end
   end

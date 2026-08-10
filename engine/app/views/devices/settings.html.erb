@@ -97,7 +97,7 @@
                   Generated <%= (@device.cached_image_at > 1.minute.ago) ? "<1m" : time_ago_in_words(@device.cached_image_at) %> ago
                 <% end %>
               </span>
-              <button type="button" class="tf-btn tf-btn-outline tf-btn-sm" id="regen-screenshot-btn">Regenerate</button>
+              <button type="button" class="tf-btn tf-btn-outline tf-btn-sm" data-regenerate-screenshot>Regenerate</button>
             </div>
           </div>
         <% end %>
@@ -147,33 +147,42 @@
           window.addEventListener('resize', scaleToFit);
         })();
       </script>
-      <% if has_screenshot %>
+      <% if @device.screenshotted? %>
         <script>
           (function() {
-            var btn = document.getElementById('regen-screenshot-btn');
+            var buttons = document.querySelectorAll('[data-regenerate-screenshot]');
             var img = document.getElementById('screenshot-img');
             var loading = document.getElementById('screenshot-loading');
             var generatedAt = document.getElementById('screenshot-generated-at');
-            btn.addEventListener('click', function() {
-              btn.disabled = true;
-              btn.textContent = 'Regenerating\u2026';
-              img.style.display = 'none';
-              loading.style.display = '';
-              var newImg = new Image();
-              newImg.onload = function() {
-                img.src = newImg.src;
-                img.style.display = '';
-                loading.style.display = 'none';
-                btn.disabled = false;
-                btn.textContent = 'Regenerate';
-                if (generatedAt) generatedAt.textContent = 'Generated <1m ago';
-              };
-              newImg.onerror = function() {
-                loading.textContent = 'Failed to regenerate screenshot.';
-                btn.disabled = false;
-                btn.textContent = 'Regenerate';
-              };
-              newImg.src = '<%= screenshot_account_location_device_path(@account, @location, @device) %>' + '?force=true&_=' + Date.now();
+            buttons.forEach(function(btn) {
+              btn.addEventListener('click', function() {
+                buttons.forEach(function(button) {
+                  button.disabled = true;
+                  button.textContent = 'Regenerating\u2026';
+                });
+                if (img) img.style.display = 'none';
+                if (loading) loading.style.display = '';
+                var newImg = new Image();
+                newImg.onload = function() {
+                  if (!img) return window.location.reload();
+                  img.src = newImg.src;
+                  img.style.display = '';
+                  loading.style.display = 'none';
+                  buttons.forEach(function(button) {
+                    button.disabled = false;
+                    button.textContent = 'Regenerate';
+                  });
+                  if (generatedAt) generatedAt.textContent = 'Generated <1m ago';
+                };
+                newImg.onerror = function() {
+                  if (loading) loading.textContent = 'Failed to regenerate screenshot.';
+                  buttons.forEach(function(button) {
+                    button.disabled = false;
+                    button.textContent = 'Regenerate';
+                  });
+                };
+                newImg.src = '<%= screenshot_account_location_device_path(@account, @location, @device) %>' + '?force=true&_=' + Date.now();
+              });
             });
           })();
         </script>
@@ -417,6 +426,7 @@
               <% end %>
               <% if @device.screenshotted? %>
                 <a href="<%= screenshot_account_location_device_path(@account, @location, @device) %>" class="tf-btn tf-btn-outline tf-btn-sm">Screenshot</a>
+                <button type="button" class="tf-btn tf-btn-outline tf-btn-sm" data-regenerate-screenshot>Regenerate</button>
               <% end %>
             </div>
 

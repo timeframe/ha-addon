@@ -2,6 +2,7 @@
 
 class RefreshDeviceScreenshotJob < ActiveJob::Base
   queue_as :screenshots
+  retry_on StandardError, wait: 30.seconds, attempts: 2
 
   # Collapse duplicate screenshot refreshes for the same device, but ONLY against
   # jobs that are already due (scheduled_at in the past/unset) or running.
@@ -17,8 +18,6 @@ class RefreshDeviceScreenshotJob < ActiveJob::Base
     return unless device
 
     device.refresh_screenshot!
-  rescue => e
-    Rails.logger.error "[RefreshDeviceScreenshotJob] Failed for device #{device_id}: #{e.message}"
   end
 
   # True when the device already has a due-now or running screenshot job.

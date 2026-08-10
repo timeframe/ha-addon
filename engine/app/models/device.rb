@@ -87,9 +87,9 @@ class Device < ActiveRecord::Base
   # hour the interval is capped so a device wakes back up around 05:00 rather
   # than sleeping well past it, and floored at the normal rate so that after
   # ~04:45 it simply resumes the regular 15-minute cadence.
-  def refresh_rate
+  def refresh_rate(at: Time.current)
     tz = location&.time_zone.presence || "UTC"
-    now = Time.current.in_time_zone(tz)
+    now = at.in_time_zone(tz)
     return REFRESH_RATE_SECONDS unless now.hour >= NIGHT_START_HOUR || now.hour < MORNING_RESUME_HOUR
 
     morning = now.change(hour: MORNING_RESUME_HOUR, min: 0, sec: 0)
@@ -556,6 +556,8 @@ class Device < ActiveRecord::Base
   end
 
   def refresh_screenshot!(base_url = nil)
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    stage = "render"
     base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
     url = token_device_url(host: base_url)
 
@@ -567,37 +569,48 @@ class Device < ActiveRecord::Base
     # so every device refreshes exactly once after a release.
     crc = display_content_crc
     if crc && crc == display_state_crc && cached_image.present?
-      log_screenshot_refresh("skipped", crc: crc)
+      log_screenshot_refresh("skipped", crc: crc, duration_ms: elapsed_milliseconds(started_at))
       return
     end
 
     previous_crc = display_state_crc
+    stage = "capture"
     self.cached_image = capture_screenshot(url)
+    stage = "persist"
     self.cached_image_at = Time.current
     self.display_state_crc = crc
     save!
 
-    log_screenshot_refresh("regenerated", crc: crc, previous_crc: previous_crc)
-
+    stage = "encode"
     encode_visionect_image! if visionect?
+    log_screenshot_refresh("regenerated", crc: crc, previous_crc: previous_crc, duration_ms: elapsed_milliseconds(started_at))
+  rescue => e
+    log_screenshot_refresh("failed", duration_ms: elapsed_milliseconds(started_at), stage: stage, error: e)
+    raise
   end
 
   # Records the screenshot refresh decision (skipped vs regenerated) as an audit
   # log so the content-hash short-circuit is observable in the admin audit view.
   # CreateAuditLogJob/AuditLog only exist in the cloud app, so this is a no-op
   # in deployments without them.
-  def log_screenshot_refresh(result, crc: nil, previous_crc: nil)
+  def log_screenshot_refresh(result, crc: nil, previous_crc: nil, duration_ms: nil, stage: nil, error: nil)
     return unless defined?(CreateAuditLogJob)
 
+    metadata = {content_crc: crc, previous_content_crc: previous_crc, duration_ms: duration_ms, stage: stage}.compact
+    metadata[:error] = {class: error.class.name, message: error.message} if error
     CreateAuditLogJob.perform_later(
       subject_type: self.class.name,
       subject_id: id,
       event_type: "devices.screenshot_refresh",
       result_type: result,
-      metadata: {content_crc: crc, previous_content_crc: previous_crc}.compact
+      metadata: metadata
     )
   rescue => e
     Rails.logger.warn("[Screenshot] audit log failed for #{name}: #{e.message}")
+  end
+
+  def elapsed_milliseconds(started_at)
+    ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
   end
 
   # CRC of the rendered display HTML combined with the deploy id. Returns nil if

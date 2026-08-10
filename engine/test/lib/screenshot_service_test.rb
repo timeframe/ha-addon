@@ -13,6 +13,7 @@ class ScreenshotServiceTest < Minitest::Test
     Ferrum::Browser.stub(:new, ->(**options) {
       assert_nil options.dig(:env, "LD_PRELOAD")
       assert_nil options.dig(:env, "MALLOC_CONF")
+      assert_equal "1", options.dig(:browser_options, "renderer-process-limit")
       browser
     }) do
       assert_same browser, ScreenshotService.browser

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 53) do
+ActiveRecord::Schema[8.1].define(version: 54) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -296,6 +296,17 @@ ActiveRecord::Schema[8.1].define(version: 53) do
     t.datetime "synced_at", null: false
     t.datetime "updated_at", null: false
     t.index ["location_id"], name: "index_ha_syncs_on_location_id", unique: true
+  end
+
+  create_table "health_probes", force: :cascade do |t|
+    t.datetime "checked_at", null: false
+    t.integer "consecutive_failures", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.jsonb "details"
+    t.string "key", null: false
+    t.boolean "successful", default: true, null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_health_probes_on_key", unique: true
   end
 
   create_table "locations", force: :cascade do |t|

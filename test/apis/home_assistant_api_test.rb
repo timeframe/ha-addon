@@ -627,6 +627,21 @@ class HomeAssistantApiTest < Minitest::Test
     end
   end
 
+  def test_daily_events_multiple_values_from_one_sensor
+    data = [{entity_id: "sensor.timeframe_daily_event_ages", state: "alpha-j,3y\nalpha-c,1y"}]
+
+    api = HomeAssistantApi.new({})
+    travel_to DateTime.new(2023, 8, 27, 12, 0, 0, "-0600") do
+      api.stub :data, data do
+        events = api.daily_events
+        feed = CalendarFeed.new.events_for(Time.current.beginning_of_day, Time.current.end_of_day, events)
+
+        assert_equal(2, events.map(&:id).uniq.length)
+        assert_equal(["3y", "1y"], feed[:daily].map(&:summary))
+      end
+    end
+  end
+
   def test_daily_events_invalid_format
     data = [{entity_id: "sensor.timeframe_daily_event_test", state: "just-an-icon"}]
 

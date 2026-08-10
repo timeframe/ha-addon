@@ -100,9 +100,9 @@ class HomeAssistantApi
     day_start = current_time.beginning_of_day
     day_end = day_start + 1.day
 
-    sensor_parts("sensor.timeframe_daily_event").filter_map do |entity_id, parts|
+    sensor_parts("sensor.timeframe_daily_event").filter_map do |entity_id, parts, line_index|
       DeviceEvent.new(
-        id: "_daily_event_#{entity_id}",
+        id: "_daily_event_#{entity_id}_#{line_index}",
         starts_at: day_start,
         ends_at: day_end,
         icon: parts.first,
@@ -687,11 +687,11 @@ class HomeAssistantApi
     data
       .select { it[:entity_id].start_with?(prefix) && it[:state].present? }
       .flat_map do |entity|
-        entity[:state].split("\n").filter_map do |line|
+        entity[:state].split("\n").each_with_index.filter_map do |line, line_index|
           next if line.strip.empty?
           parts = line.split(",").map(&:strip)
           next if parts.empty?
-          [entity[:entity_id], parts]
+          [entity[:entity_id], parts, line_index]
         end
       end
   end
