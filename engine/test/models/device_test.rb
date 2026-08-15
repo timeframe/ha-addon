@@ -364,6 +364,30 @@ class DeviceTest < Minitest::Test
     assert_equal 1872, device.display_height
   end
 
+  def test_reterminal_sticky_uses_portrait_one_day_dimensions
+    device = Device.new(name: "test", model: "reterminal_sticky")
+    assert device.reterminal_sticky?
+    assert device.portrait?
+    assert_equal "sticky_one_day", device.active_template
+    assert_equal [{name: "sticky_one_day", label: "1-Day Portrait"}], device.template_options
+    assert_equal 480, device.display_width
+    assert_equal 800, device.display_height
+  end
+
+  def test_reterminal_sticky_capture_rotates_portrait_image_for_panel
+    device = Device.new(name: "test", model: "reterminal_sticky")
+    captured = nil
+    ScreenshotService.stub(:capture, ->(_url, **opts) {
+      captured = opts
+      "img"
+    }) do
+      device.send(:capture_screenshot, "http://example.test")
+    end
+    assert_equal true, captured[:rotate]
+    assert_equal 480, captured[:width]
+    assert_equal 800, captured[:height]
+  end
+
   def test_reterminal_e1003_landscape_template_options
     device = Device.new(name: "test", model: "reterminal_e1003")
     labels = device.template_options.map { |t| t[:label] }
@@ -471,6 +495,7 @@ class DeviceTest < Minitest::Test
   def test_screenshotted_models_derived_from_supported_models
     assert_includes Device::SCREENSHOTTED_MODELS, "trmnl_og"
     assert_includes Device::SCREENSHOTTED_MODELS, "reterminal_e1001"
+    assert_includes Device::SCREENSHOTTED_MODELS, "reterminal_sticky"
     assert_includes Device::SCREENSHOTTED_MODELS, "reterminal_e1003"
     assert_includes Device::SCREENSHOTTED_MODELS, "trmnl_x"
     refute_includes Device::SCREENSHOTTED_MODELS, "visionect_13"

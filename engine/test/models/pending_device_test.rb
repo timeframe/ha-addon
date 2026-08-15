@@ -12,6 +12,7 @@ class PendingDeviceTest < Minitest::Test
     assert_equal "trmnl_og", PendingDevice.model_key_for_firmware("og")
     assert_equal "trmnl_x", PendingDevice.model_key_for_firmware("X")
     assert_equal "reterminal_e1001", PendingDevice.model_key_for_firmware("reTerminal E1001")
+    assert_equal "reterminal_sticky", PendingDevice.model_key_for_firmware("reTerminal Sticky")
     assert_equal "reterminal_e1003", PendingDevice.model_key_for_firmware("reTerminal E1003")
     assert_nil PendingDevice.model_key_for_firmware("waveshare")
     assert_nil PendingDevice.model_key_for_firmware(nil)
@@ -163,6 +164,22 @@ class PendingDeviceTest < Minitest::Test
     assert_equal device.id, result.id
     assert_equal device.id, pd.claimed_device_id
     assert pd.claimed?
+  end
+
+  def test_link_to_accepts_a_browser_registration_without_hardware_credentials
+    placeholder_mac = SecureRandom.hex(6)
+    device = test_location.devices.create!(
+      name: "Browser #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: placeholder_mac,
+      confirmed_at: Time.current
+    )
+    pending = PendingDevice.create!
+
+    pending.link_to!(device)
+
+    assert_equal device.id, pending.reload.claimed_device_id
+    assert_equal placeholder_mac, device.reload.mac_address
   end
 
   # When a reset device is claimed by a DIFFERENT device (paired into a new

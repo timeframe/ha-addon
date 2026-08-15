@@ -112,13 +112,13 @@ class DeviceSettingsOptions
     @options << {key: key, label: label, type: :time, default: default, depends_on: depends_on}
   end
 
-  def one_day? = template == "one_day"
+  def one_day? = %w[one_day sticky_one_day].include?(template)
 
   def two_day? = template == "two_day"
 
   def trmnl? = template == "trmnl"
 
-  def compact? = %w[two_day three_day one_day].include?(template)
+  def compact? = %w[two_day three_day one_day sticky_one_day].include?(template)
 
   def reterminal? = %w[reterminal reterminal_landscape].include?(template)
 
@@ -141,12 +141,12 @@ class DeviceSettingsOptions
     end
     switch(
       "show_weather_alerts", "Weather alerts",
-      default_on: !%w[one_day two_day].include?(template),
+      default_on: !%w[one_day sticky_one_day two_day].include?(template),
       description: WEATHER_ALERTS_DESCRIPTION
     )
     switch(
       "show_air_quality_events", "Air quality alerts",
-      default_on: !%w[one_day two_day].include?(template),
+      default_on: !%w[one_day sticky_one_day two_day].include?(template),
       description: AIR_QUALITY_ALERTS_DESCRIPTION
     )
     if %w[mira boox_mira].include?(template)

@@ -1,0 +1,117 @@
+<style>
+  :root { --sticky-black: #000; --sticky-dark: #555; --sticky-light: #aaa; --sticky-white: #fff; }
+  html, body { width: 480px; height: 800px; margin: 0; padding: 0; overflow: hidden; background: var(--sticky-white); color: var(--sticky-black); }
+  .sticky-day { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; width: 480px; height: 800px; box-sizing: border-box; padding: 24px 26px 20px; }
+  .sticky-day-header { padding-bottom: 18px; border-bottom: 3px solid var(--sticky-black); }
+  .sticky-day-kicker { color: var(--sticky-dark); font-size: 24px; font-weight: 700; text-transform: uppercase; }
+  .sticky-day-title { margin-top: 2px; font-size: 70px; font-weight: 800; line-height: 1; }
+  .sticky-day-weather { display: flex; align-items: center; gap: 12px; margin-top: 14px; color: var(--sticky-dark); font-size: 34px; font-weight: 700; }
+  .sticky-day-weather i { color: var(--sticky-black); font-size: 48px; }
+  .sticky-day-events { min-height: 0; padding: 16px 0; overflow: hidden; }
+  .sticky-day-events table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 31px; line-height: 1.12; }
+  .sticky-day-events td { padding: 8px 0; vertical-align: top; border-bottom: 2px solid var(--sticky-light); }
+  .sticky-day-event-icon { width: 44px; padding-right: 8px !important; text-align: center; }
+  .sticky-day-event-time { width: 1%; padding-right: 10px !important; overflow: hidden; color: var(--sticky-dark); font-size: 23px; font-weight: 700; white-space: nowrap; }
+  .sticky-day-event-time-inner { display: inline-block; }
+  .sticky-day-event-summary { overflow-wrap: break-word; }
+  .sticky-day-empty { display: grid; height: 100%; place-items: center; color: var(--sticky-dark); font-size: 32px; text-align: center; }
+  .sticky-day-footer { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 3px solid var(--sticky-black); color: var(--sticky-dark); font-size: 21px; font-weight: 700; }
+  .sticky-day-footer > :last-child { text-align: right; }
+</style>
+
+<% day = @view_object[:day_groups]&.first %>
+<% if day %>
+  <% daily_weather = day[:weather_row]&.find { |weather| weather[:start_time] == "12p" } || day[:weather_row]&.first %>
+  <% day_label = (day[:date].to_date == @view_object[:current_time].to_date) ? "Today" : "Tomorrow" %>
+  <% only_icons = @view_object.dig(:configuration, "only_show_events_with_icons") == "true" %>
+  <% show_times = @view_object.dig(:configuration, "show_event_times") == "true" %>
+  <% show_icons = @view_object.dig(:configuration, "show_icons") != "false" %>
+  <% keep_only_icons = ->(event) { event[:timeframe_icon] || event[:weather] || event[:weather_ranged] } %>
+  <% daily_events = day[:show_daily] && day[:daily].any? ? day[:daily] : [] %>
+  <% events = daily_events.map { |event| [event, true] } + (day[:periodic] || []).map { |event| [event, false] } %>
+  <% events = events.select { |event, _all_day| keep_only_icons.call(event) } if only_icons %>
+
+  <main class="sticky-day">
+    <header class="sticky-day-header">
+      <div class="sticky-day-kicker"><%= day[:date].to_date.strftime("%A, %B %-d") %></div>
+      <div class="sticky-day-title"><%= day_label %></div>
+      <% if daily_weather %>
+        <div class="sticky-day-weather">
+          <i class="mdi mdi-<%= daily_weather[:icon_class] %>"></i>
+          <span><%= daily_weather[:summary] %></span>
+        </div>
+      <% end %>
+    </header>
+
+    <section class="sticky-day-events">
+      <% if events.any? %>
+        <table>
+          <% events.each do |event, all_day| %>
+            <tr>
+              <% if show_times %>
+                <td class="sticky-day-event-time">
+                  <% unless all_day %>
+                    <span class="sticky-day-event-time-inner"><%= event[:time_html]&.html_safe %></span>
+                  <% end %>
+                </td>
+              <% end %>
+              <% if show_icons %>
+                <td class="sticky-day-event-icon">
+                  <% if event[:icon_class] %>
+                    <i class="mdi mdi-<%= event[:icon_class] %>"></i>
+                  <% elsif event[:icon_text] %>
+                    <%= event[:icon_text] %>
+                  <% end %>
+                </td>
+              <% end %>
+              <td class="sticky-day-event-summary"><%= event[:summary] %></td>
+            </tr>
+          <% end %>
+        </table>
+      <% else %>
+        <div class="sticky-day-empty">No events scheduled</div>
+      <% end %>
+    </section>
+
+    <footer class="sticky-day-footer">
+      <span><%= @view_object[:timestamp] %></span>
+      <% if @view_object[:battery] %>
+        <span><i class="mdi mdi-<%= @view_object[:battery][:icon] %>"></i> <%= @view_object[:battery][:level] %>%</span>
+      <% end %>
+    </footer>
+  </main>
+<% end %>
+
+<script>
+  (function() {
+    function syncStickyTimeColumns() {
+      var container = document.querySelector('.sticky-day-events');
+      var cells = Array.prototype.slice.call(document.querySelectorAll('.sticky-day-event-time'));
+      if (!container || !cells.length) return;
+
+      cells.forEach(function(cell) { cell.style.width = ''; });
+      var visibleBottom = Math.min(container.getBoundingClientRect().bottom, window.innerHeight);
+      var max = 0;
+      cells.forEach(function(cell) {
+        if (cell.getBoundingClientRect().top >= visibleBottom) return;
+        var inner = cell.querySelector('.sticky-day-event-time-inner');
+        var width = inner ? inner.getBoundingClientRect().width : 0;
+        if (width > max) max = width;
+      });
+
+      if (max > 0) {
+        cells.forEach(function(cell) { cell.style.width = Math.ceil(max) + 'px'; });
+      }
+    }
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(syncStickyTimeColumns);
+    }
+    window.addEventListener('load', syncStickyTimeColumns);
+    if (document.readyState === 'complete') {
+      syncStickyTimeColumns();
+    } else {
+      document.addEventListener('DOMContentLoaded', syncStickyTimeColumns);
+    }
+  })();
+</script>

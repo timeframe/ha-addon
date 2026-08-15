@@ -108,12 +108,10 @@ class PendingDevice < ActiveRecord::Base
   # pending device's real mac_address (plus api_key/friendly_id) for the hardware
   # to reach the existing record.
   def link_to!(device)
-    attrs = {
-      mac_address: mac_address,
-      api_key: api_key,
-      friendly_id: friendly_id,
-      confirmed_at: Time.current
-    }
+    attrs = {confirmed_at: Time.current}
+    attrs[:mac_address] = mac_address if mac_address.present?
+    attrs[:api_key] = api_key if api_key.present?
+    attrs[:friendly_id] = friendly_id if friendly_id.present?
     # Adopt the firmware-reported model so the device is set up as the right type
     # (and gets the matching template suggestions).
     attrs[:model] = resolved_model if resolved_model.present?

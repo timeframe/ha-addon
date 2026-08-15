@@ -57,6 +57,10 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
     end
   end
 
+  def test_sticky_one_day_uses_one_day_options
+    assert_equal keys_for("one_day"), keys_for("sticky_one_day")
+  end
+
   def test_reterminal_options
     assert_equal(
       %w[show_current_day only_show_events_with_icons show_temperature_events show_precip_events
@@ -113,7 +117,7 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
   end
 
   def test_text_options_are_trmnl_only
-    %w[reterminal thirteen two_day one_day three_day mira].each do |template|
+    %w[reterminal thirteen two_day one_day sticky_one_day three_day mira].each do |template|
       refute_includes keys_for(template), "truncate_event_text"
       refute_includes keys_for(template), "larger_text"
     end

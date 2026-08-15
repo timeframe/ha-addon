@@ -23,7 +23,7 @@ class Device < ActiveRecord::Base
   # Templates that render without the top status bar (the compact day layouts).
   # A low battery can't be shown up top on these, so it's surfaced as a bottom
   # banner instead (see Device.low_battery_banner).
-  NO_STATUS_BAR_TEMPLATES = %w[one_day two_day three_day].freeze
+  NO_STATUS_BAR_TEMPLATES = %w[one_day sticky_one_day two_day three_day].freeze
 
   SUPPORTED_MODELS = {
     "visionect_13" => {name: "Visionect Place & Play 13\"", template: "thirteen", width: 1200, height: 1600},
@@ -31,6 +31,7 @@ class Device < ActiveRecord::Base
     "boox_mira" => {name: "Boox Mira 13.3\"", template: "boox_mira", width: 1650, height: 2200, realtime: true},
     "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
     "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true, product_slug: "timeframe-7"},
+    "reterminal_sticky" => {name: "reTerminal Sticky 3.97\"", template: "sticky_one_day", width: 800, height: 480, templates: [{name: "sticky_one_day", label: "1-Day Portrait"}], screenshotted: true},
     "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1414, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true, product_slug: "timeframe-10"},
     "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true}
   }.freeze
@@ -104,6 +105,10 @@ class Device < ActiveRecord::Base
 
   def reterminal_e1001?
     model == "reterminal_e1001"
+  end
+
+  def reterminal_sticky?
+    model == "reterminal_sticky"
   end
 
   def reterminal_e1003?
@@ -287,7 +292,7 @@ class Device < ActiveRecord::Base
   end
 
   def portrait?
-    false
+    reterminal_sticky?
   end
 
   # The reTerminal 10" / TRMNL X panels can be mounted landscape. When the
@@ -428,9 +433,9 @@ class Device < ActiveRecord::Base
   # duplicated copy that drifts.
   def content_args(timezone: nil, current_time: nil)
     tz = timezone || location&.time_zone || "UTC"
-    compact_view = %w[three_day two_day one_day].include?(active_template)
+    compact_view = %w[three_day two_day one_day sticky_one_day].include?(active_template)
     two_day = active_template == "two_day"
-    one_day = active_template == "one_day"
+    one_day = %w[one_day sticky_one_day].include?(active_template)
     three_day = active_template == "three_day"
     include_ranged_weather_events = !one_day
     include_temperature_events = if two_day || one_day
@@ -517,7 +522,7 @@ class Device < ActiveRecord::Base
   end
 
   def one_day_start_offset(current_time, timezone: nil)
-    return 0 unless active_template == "one_day"
+    return 0 unless %w[one_day sticky_one_day].include?(active_template)
     return 0 if configuration&.dig("one_day_rollover_enabled") == "false"
 
     display_time = current_time.in_time_zone(timezone || location&.time_zone || "UTC")
@@ -663,7 +668,7 @@ class Device < ActiveRecord::Base
         grayscale_only: true,
         rotate: !landscape_template?
       )
-    elsif trmnl? || reterminal_e1001?
+    elsif trmnl? || reterminal_e1001? || reterminal_sticky?
       ScreenshotService.capture(url, width: display_width, height: display_height, rotate: portrait?)
     else
       ScreenshotService.capture(url, width: display_width, height: display_height)

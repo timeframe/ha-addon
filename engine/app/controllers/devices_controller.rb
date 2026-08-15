@@ -14,6 +14,7 @@ class DevicesController < ApplicationController
     "three_day" => "Devices::ThreeDayComponent",
     "two_day" => "Devices::TwoDayComponent",
     "one_day" => "Devices::OneDayComponent",
+    "sticky_one_day" => "Devices::StickyOneDayComponent",
     "reterminal" => "Devices::ReterminalComponent",
     "reterminal_landscape" => "Devices::ReterminalLandscapeComponent",
     "boox_mira" => "Devices::BooxMiraComponent",
