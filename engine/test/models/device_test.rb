@@ -358,6 +358,21 @@ class DeviceTest < Minitest::Test
     assert_nil Device.low_battery_banner("three_day", {})
   end
 
+  def test_charge_reminder_below_the_critical_threshold_when_not_charging
+    assert Device.charge_reminder?({battery: {level: 9, low: true, charging: false}})
+    assert Device.charge_reminder?({battery: {level: 0, low: true, charging: false}})
+  end
+
+  def test_charge_reminder_suppressed_when_charging_fine_or_missing
+    # Charging: the owner is already recharging, so no nag.
+    refute Device.charge_reminder?({battery: {level: 5, low: true, charging: true}})
+    # At or above the threshold.
+    refute Device.charge_reminder?({battery: {level: 10, low: true, charging: false}})
+    refute Device.charge_reminder?({battery: {level: 80, low: false, charging: false}})
+    # No reading at all.
+    refute Device.charge_reminder?({})
+  end
+
   def test_reterminal_e1003_display_dimensions
     device = Device.new(name: "test", model: "reterminal_e1003")
     assert_equal 1414, device.display_width

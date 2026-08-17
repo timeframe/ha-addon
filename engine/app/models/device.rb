@@ -20,6 +20,10 @@ class Device < ActiveRecord::Base
   LOW_BATTERY_THRESHOLD = 25
   LOW_BATTERY_CLEAR_THRESHOLD = 30
 
+  # Below this charge the display is replaced entirely with a recharge reminder
+  # (see Device.charge_reminder?).
+  CRITICAL_BATTERY_THRESHOLD = 10
+
   # Templates that render without the top status bar (the compact day layouts).
   # A low battery can't be shown up top on these, so it's surfaced as a bottom
   # banner instead (see Device.low_battery_banner).
@@ -175,6 +179,17 @@ class Device < ActiveRecord::Base
     return nil unless NO_STATUS_BAR_TEMPLATES.include?(template.to_s)
 
     battery
+  end
+
+  # Whether the display should be replaced with a full-screen recharge reminder,
+  # which happens once the battery falls below CRITICAL_BATTERY_THRESHOLD and the
+  # device is not currently charging.
+  def self.charge_reminder?(view_object)
+    battery = view_object[:battery]
+    return false unless battery
+    return false if battery[:charging]
+
+    battery[:level] < CRITICAL_BATTERY_THRESHOLD
   end
 
   # Next value for the persisted low_battery_warning flag given a fresh reading.

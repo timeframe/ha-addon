@@ -26,6 +26,12 @@ class TokenDevicesController < ApplicationController
     current_time = params[:at].present? ? ActiveSupport::TimeZone[tz].parse(params[:at]) : nil
     view_object = @device.device_content(current_time: current_time)
     view_object[:configuration] = @device.try(:configuration) || {}
+
+    if Device.charge_reminder?(view_object)
+      render Devices::ChargeReminderComponent.new(view_object: view_object), layout: params[:layout] != "false"
+      return
+    end
+
     @banner = view_object[:banner] unless template == "mira"
     @low_battery_banner = Device.low_battery_banner(template, view_object)
 
