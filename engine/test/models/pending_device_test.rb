@@ -145,6 +145,53 @@ class PendingDeviceTest < Minitest::Test
     assert device.confirmed_at.present?
   end
 
+  # Adopting a firmware model whose templates don't include the device's current
+  # display_template must reset it to "default" so the model change doesn't fail
+  # the display_template inclusion validation.
+  def test_link_to_resets_incompatible_display_template_when_adopting_model
+    device = test_location.devices.create!(
+      name: "Pre #{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      display_template: "one_day",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    pd = PendingDevice.create!(
+      mac_address: "AB:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase,
+      model: "reterminal_e1003"
+    )
+
+    pd.link_to!(device)
+    device.reload
+
+    assert_equal "reterminal_e1003", device.model
+    assert_equal "default", device.display_template
+  end
+
+  # A display_template still valid for the adopted model is preserved.
+  def test_link_to_keeps_compatible_display_template_when_adopting_model
+    device = test_location.devices.create!(
+      name: "Pre #{SecureRandom.hex(4)}",
+      model: "reterminal_e1003",
+      display_template: "reterminal_landscape",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+    pd = PendingDevice.create!(
+      mac_address: "AC:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      api_key: SecureRandom.hex(16),
+      friendly_id: SecureRandom.alphanumeric(6).upcase,
+      model: "reterminal_e1003"
+    )
+
+    pd.link_to!(device)
+    device.reload
+
+    assert_equal "reterminal_landscape", device.display_template
+  end
+
   def test_link_to_sets_claimed_device_and_returns_device
     device = test_location.devices.create!(
       name: "Pre #{SecureRandom.hex(4)}",

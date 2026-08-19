@@ -114,7 +114,15 @@ class PendingDevice < ActiveRecord::Base
     attrs[:friendly_id] = friendly_id if friendly_id.present?
     # Adopt the firmware-reported model so the device is set up as the right type
     # (and gets the matching template suggestions).
-    attrs[:model] = resolved_model if resolved_model.present?
+    if resolved_model.present?
+      attrs[:model] = resolved_model
+      # The device's current template may not exist for the newly adopted model
+      # (e.g. a "one_day" reTerminal 7" template on a paired reTerminal 10"),
+      # which would fail the display_template inclusion validation. Fall back to
+      # "default" (always valid) so the model change doesn't strand pairing.
+      valid_templates = ["default"] + (Device::SUPPORTED_MODELS.dig(resolved_model, :templates)&.map { |t| t[:name] } || [])
+      attrs[:display_template] = "default" unless valid_templates.include?(device.display_template)
+    end
     device.update!(attrs)
     update!(claimed_device: device)
     delete_superseded_device!(device)
