@@ -31,6 +31,8 @@ class TrmnlVisualRegressionTest < ApplicationSystemTestCase
     visit "/test_sign_in"
     visit "/accounts/#{device.account.id}/locations/#{device.location.id}/devices/#{device.id}/preview_frame?at=#{CURRENT_TIME}"
 
+    assert_text "Thursday, Mar. 19"
+    assert_text "72°"
     assert_text "Front Door"
     assert_text "Morning standup"
     assert_visual_match "trmnl_demo"

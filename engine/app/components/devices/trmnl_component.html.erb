@@ -2,7 +2,7 @@
 <style>
   html { font-size: <%= @view_object.dig(:configuration, "larger_text") == "true" ? "19.2px" : "16px" %>; }
 </style>
-<% if @view_object.dig(:configuration, "show_current_day") == "true" %>
+<% if @view_object.dig(:configuration, "show_current_day") != "false" %>
   <div style="clear: both; display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 2rem; line-height: 1; margin-bottom: .75rem;">
     <div><%= @view_object[:current_time].strftime("%A, %b. %-d") %></div>
     <div style="text-align: right;"><%= @view_object[:current_temperature] %></div>

@@ -51,6 +51,15 @@ class OnboardingFlowTest < ActiveSupport::TestCase
     assert_equal :pairing, f.natural_step
   end
 
+  test "a sticky device needs pairing but no layout since it has one layout" do
+    device = create_device("reterminal_sticky")
+    f = flow(onboarding_device_id: device.id)
+    assert f.needs_pairing?
+    refute f.needs_layout?
+    assert_equal %i[create_device pairing], f.visible_steps
+    assert_equal :pairing, f.natural_step
+  end
+
   test "advances to layout once paired and completes once a layout is chosen" do
     device = create_device("reterminal_e1001")
     PendingDevice.create!(claimed_device: device, mac_address: SecureRandom.hex(6))

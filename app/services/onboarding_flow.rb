@@ -55,7 +55,7 @@ class OnboardingFlow
   end
 
   def needs_layout?
-    onboarding_device.present? && onboarding_device.template_options.present?
+    onboarding_device.present? && onboarding_device.template_options.to_a.size > 1
   end
 
   def paired?
