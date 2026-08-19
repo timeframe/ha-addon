@@ -230,8 +230,10 @@ class DeviceTest < Minitest::Test
   def test_refresh_screenshot_skips_capture_when_content_unchanged
     device = Device.create!(location: test_location, name: "test_hash_skip_#{SecureRandom.hex(3)}", model: "trmnl_og", mac_address: "CA:#{SecureRandom.hex(5).scan(/../).join(":").upcase}", api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, display_key: SecureRandom.alphanumeric(24))
     captures = 0
-    capture = ->(_url) {
+    capture_url = nil
+    capture = ->(url) {
       captures += 1
+      capture_url = url
       "img-#{captures}"
     }
     device.stub(:rendered_display_html, "<html>stable</html>") do
@@ -241,7 +243,11 @@ class DeviceTest < Minitest::Test
       end
     end
     assert_equal 1, captures, "unchanged content must not capture a second time"
-    assert_equal "img-1", device.reload.cached_image
+    assert_includes capture_url, "generation=true"
+    device.reload
+    assert_equal "img-1", device.cached_image
+    assert_in_delta device.cached_image_at, device.last_generated_at, 0.001
+    assert_nil device.last_connection_at
   end
 
   def test_refresh_screenshot_recaptures_when_content_changes
@@ -548,49 +554,100 @@ class DeviceTest < Minitest::Test
     end
   end
 
-  def test_one_day_start_offset_returns_zero_when_rollover_disabled
-    device = Device.new(model: "trmnl_og", display_template: "one_day")
-    device.configuration = {"one_day_rollover_enabled" => "false"}
-    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 23, 0))
+  def test_current_day_rollover_enabled_reads_per_template_config
+    two_day = Device.new(model: "trmnl_og", display_template: "two_day")
+    assert two_day.current_day_rollover_enabled?, "two_day rollover defaults on"
+    two_day.configuration = {"two_day_rollover_enabled" => "false"}
+    refute two_day.current_day_rollover_enabled?
+
+    one_day = Device.new(model: "trmnl_og", display_template: "one_day")
+    assert one_day.current_day_rollover_enabled?, "one_day rollover defaults on"
+    one_day.configuration = {"one_day_rollover_enabled" => "false"}
+    refute one_day.current_day_rollover_enabled?
+
+    three_day = Device.new(model: "trmnl_og", display_template: "three_day")
+    assert three_day.current_day_rollover_enabled?, "three_day defers to hide_current_day"
+    three_day.configuration = {"hide_current_day_enabled" => "false"}
+    refute three_day.current_day_rollover_enabled?
   end
 
-  def test_one_day_start_offset_defaults_to_rollover_enabled
-    device = Device.new(model: "trmnl_og", display_template: "one_day")
-    device.configuration = nil
-    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 17, 59), timezone: "UTC")
-    assert_equal 1, device.one_day_start_offset(Time.utc(2026, 1, 1, 18, 0), timezone: "UTC")
+  def test_current_day_rollover_after_minutes_reads_per_template_config
+    two_day = Device.new(model: "trmnl_og", display_template: "two_day")
+    two_day.configuration = {"two_day_rollover_time" => "20:30"}
+    assert_equal (20 * 60) + 30, two_day.current_day_rollover_after_minutes
+
+    one_day = Device.new(model: "trmnl_og", display_template: "one_day")
+    one_day.configuration = {"one_day_rollover_time" => "21:15"}
+    assert_equal (21 * 60) + 15, one_day.current_day_rollover_after_minutes
+
+    three_day = Device.new(model: "trmnl_og", display_template: "three_day")
+    three_day.configuration = {"hide_current_day_time" => "17:00"}
+    assert_equal 17 * 60, three_day.current_day_rollover_after_minutes
   end
 
-  def test_one_day_start_offset_rolls_over_after_configured_time
-    device = Device.new(model: "trmnl_og", display_template: "one_day")
-    device.configuration = {"one_day_rollover_enabled" => "true", "one_day_rollover_time" => "18:00"}
-    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 17, 59), timezone: "UTC")
-    assert_equal 1, device.one_day_start_offset(Time.utc(2026, 1, 1, 18, 0), timezone: "UTC")
-    assert_equal 1, device.one_day_start_offset(Time.utc(2026, 1, 1, 21, 30), timezone: "UTC")
-  end
-
-  def test_one_day_start_offset_only_applies_when_template_is_one_day
+  # Every template now defers the actual current-day hiding to DeviceContent's
+  # event-aware skip (always_show_today false + an over-generated day capped by
+  # day_groups_limit) instead of blindly shifting the window past the cutoff.
+  def test_two_day_defers_current_day_hiding_to_device_content
     device = Device.new(model: "trmnl_og", display_template: "two_day")
-    device.configuration = {"one_day_rollover_enabled" => "true", "one_day_rollover_time" => "18:00"}
-    assert_equal 0, device.one_day_start_offset(Time.utc(2026, 1, 1, 20, 0))
-  end
+    args = device.content_args(timezone: "UTC")
+    assert_equal false, args[:always_show_today]
+    assert_equal 3, args[:days]
+    assert_equal 0, args[:start_offset]
+    assert_equal 2, args[:day_groups_limit]
 
-  def test_two_day_start_offset_returns_zero_when_rollover_disabled
-    device = Device.new(model: "trmnl_og", display_template: "two_day")
     device.configuration = {"two_day_rollover_enabled" => "false"}
-    assert_equal 0, device.two_day_start_offset(Time.utc(2026, 1, 1, 23, 0))
+    disabled = device.content_args(timezone: "UTC")
+    assert_equal true, disabled[:always_show_today]
+    assert_equal 2, disabled[:days]
   end
 
-  def test_two_day_start_offset_rolls_over_after_configured_time
-    device = Device.new(model: "trmnl_og", display_template: "two_day")
-    device.configuration = {"two_day_rollover_enabled" => "true", "two_day_rollover_time" => "18:00"}
-    assert_equal 0, device.two_day_start_offset(Time.utc(2026, 1, 1, 17, 59), timezone: "UTC")
-    assert_equal 1, device.two_day_start_offset(Time.utc(2026, 1, 1, 18, 0), timezone: "UTC")
-  end
-
-  def test_two_day_start_offset_only_applies_when_template_is_two_day
+  def test_one_day_defers_current_day_hiding_to_device_content
     device = Device.new(model: "trmnl_og", display_template: "one_day")
-    assert_equal 0, device.two_day_start_offset(Time.utc(2026, 1, 1, 20, 0))
+    args = device.content_args(timezone: "UTC")
+    assert_equal false, args[:always_show_today]
+    assert_equal 2, args[:days]
+    assert_equal 0, args[:start_offset]
+    assert_equal 1, args[:day_groups_limit]
+
+    device.configuration = {"one_day_rollover_enabled" => "false"}
+    disabled = device.content_args(timezone: "UTC")
+    assert_equal true, disabled[:always_show_today]
+    assert_equal 1, disabled[:days]
+  end
+
+  def test_one_day_uses_today_before_rollover_time
+    device = Device.create!(
+      location: test_location,
+      name: "test_one_day_rollover_before_#{SecureRandom.hex(4)}",
+      model: "trmnl_og",
+      mac_address: "OB:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      display_template: "one_day",
+      demo_mode_enabled: true
+    )
+    current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 17, 59)
+
+    result = device.device_content(timezone: "America/Chicago", current_time: current_time)
+
+    assert_equal [Date.new(2026, 3, 19)], result[:day_groups].map { |day| day[:date] }
+  end
+
+  def test_one_day_rolls_over_after_rollover_time_when_no_events_remain
+    device = Device.create!(
+      location: test_location,
+      name: "test_one_day_rollover_after_#{SecureRandom.hex(4)}",
+      model: "trmnl_og",
+      mac_address: "OA:#{SecureRandom.hex(5).scan(/../).join(":").upcase}",
+      display_template: "one_day",
+      demo_mode_enabled: true
+    )
+    # By 10pm the demo day only has an overnight event left, which spills into
+    # tomorrow, so the current day rolls forward to the next day.
+    current_time = ActiveSupport::TimeZone["America/Chicago"].local(2026, 3, 19, 22)
+
+    result = device.device_content(timezone: "America/Chicago", current_time: current_time)
+
+    assert_equal [Date.new(2026, 3, 20)], result[:day_groups].map { |day| day[:date] }
   end
 
   def test_calendar_excluded_checks_the_excluded_identifiers_list

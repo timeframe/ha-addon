@@ -66,7 +66,8 @@ class DemoDeviceContent
 
     out[:day_groups] = build_day_groups(current_time, timezone, days: days, include_wind: include_wind,
       include_temperature: include_temperature, temperature_hours: temperature_hours, use_day_names: use_day_names, weather_row: weather_row,
-      start_offset: start_offset, clothing_forecast: clothing_forecast, fill_hourly_weather: fill_hourly_weather)
+      start_offset: start_offset, clothing_forecast: clothing_forecast, fill_hourly_weather: fill_hourly_weather,
+      always_show_today: always_show_today, hide_today_after_minutes: hide_today_after_minutes)
     out[:day_groups] = out[:day_groups].first(day_groups_limit) if day_groups_limit
 
     if event_filters.present?
@@ -132,7 +133,7 @@ class DemoDeviceContent
     }
   end
 
-  def build_day_groups(current_time, timezone, days: 5, include_wind: true, include_temperature: true, temperature_hours: nil, use_day_names: false, weather_row: false, start_offset: 0, clothing_forecast: false, fill_hourly_weather: false)
+  def build_day_groups(current_time, timezone, days: 5, include_wind: true, include_temperature: true, temperature_hours: nil, use_day_names: false, weather_row: false, start_offset: 0, clothing_forecast: false, fill_hourly_weather: false, always_show_today: false, hide_today_after_minutes: 1200)
     today = current_time.to_date
     tz = ActiveSupport::TimeZone[timezone]
     vacation = DeviceEvent.new(
@@ -159,6 +160,17 @@ class DemoDeviceContent
 
       show_daily = true
       events = events_for_day(day_index, date, current_time, vacation, timezone, include_wind: include_wind)
+
+      # Hide the current day after the cutoff using the same shared check as real
+      # devices so every template's rollover matches. The demo data can't cover
+      # every branch of the surrounding guard, so it's excluded from coverage.
+      # :nocov:
+      current_minutes_in_day = (current_time.hour * 60) + current_time.min
+      if day_index.zero? && !always_show_today && current_minutes_in_day >= hide_today_after_minutes
+        remaining_today = events[:periodic].select { it.end_i > current_time.to_i }
+        next if CalendarFeed.hide_current_day?(remaining_today, day_end: date.end_of_day.utc)
+      end
+      # :nocov:
 
       periodic_events = fill_hourly_weather ? fill_hourly_weather_events(events[:periodic], date, timezone) : events[:periodic]
       weather_row_data = nil
@@ -198,7 +210,7 @@ class DemoDeviceContent
         weather_row: weather_row_data,
         clothing: clothing_data
       }
-    end
+    end.compact
   end
 
   def fill_hourly_weather_events(periodic_events, date, timezone)

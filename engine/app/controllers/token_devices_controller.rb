@@ -16,7 +16,7 @@ class TokenDevicesController < ApplicationController
       return
     end
 
-    @device.update_column(:last_connection_at, Time.current) unless params[:at].present?
+    @device.update_column(:last_connection_at, Time.current) unless params[:at].present? || params[:generation] == "true"
 
     template = @device.active_template
     refresh = @device.realtime_display? && params[:refresh] != "false"

@@ -83,7 +83,7 @@
       </div>
     <% end %>
     <div class="mt-auto flex items-center justify-between border-t border-ink/10 px-3 py-2">
-      <% updated_at = device.cached_image_at || device.last_connection_at || device.updated_at %>
+      <% updated_at = device.last_generated_at || device.cached_image_at || device.last_connection_at || device.updated_at %>
       <% updated_label = if updated_at > 1.minute.ago
         "<1m"
       else

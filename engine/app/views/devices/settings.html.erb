@@ -93,8 +93,9 @@
             </div>
             <div class="flex items-center justify-between border-t border-ink/10 px-3 py-2">
               <span class="text-sm text-gray-400" id="screenshot-generated-at">
-                <% if @device.cached_image_at %>
-                  Generated <%= (@device.cached_image_at > 1.minute.ago) ? "<1m" : time_ago_in_words(@device.cached_image_at) %> ago
+                <% generated_at = @device.last_generated_at || @device.cached_image_at %>
+                <% if generated_at %>
+                  Generated <%= (generated_at > 1.minute.ago) ? "<1m" : time_ago_in_words(generated_at) %> ago
                 <% end %>
               </span>
               <button type="button" class="tf-btn tf-btn-outline tf-btn-sm" data-regenerate-screenshot>Regenerate</button>

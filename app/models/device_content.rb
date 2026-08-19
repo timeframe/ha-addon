@@ -128,15 +128,12 @@ class DeviceContent
 
         current_minutes_in_day = (current_time.hour * 60) + current_time.min
 
-        # Attempt to hide Today after the configured cutoff if there are no events.
-        # Weather events are ignored here: on their own they don't render a visible
-        # timeline row in the evening, so they should not keep an otherwise-empty
-        # Today visible. Air quality alerts are visible rows even when they end
-        # at midnight, so they keep Today visible.
+        # Hide Today after the configured cutoff when no events remain. Shared
+        # with cloud + demo (CalendarFeed.hide_current_day?) so every template
+        # behaves alike: weather-only days count as empty, events that only spill
+        # into tomorrow roll forward, and air quality alerts keep Today visible.
         if day_index.zero? && current_minutes_in_day >= hide_today_after_minutes && !always_show_today
-          remaining_today = events[:periodic].reject(&:weather?)
-          next if remaining_today.empty? ||
-            remaining_today.all? { it.ends_at > date.end_of_day.utc && !it.air_quality? }
+          next if CalendarFeed.hide_current_day?(events[:periodic], day_end: date.end_of_day.utc)
         end
 
         # The cutoff only hides the entire day (above) when no periodic events

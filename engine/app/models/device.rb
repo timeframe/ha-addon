@@ -447,7 +447,6 @@ class Device < ActiveRecord::Base
   # renders through the same per-template rules as real devices instead of a
   # duplicated copy that drifts.
   def content_args(timezone: nil, current_time: nil)
-    tz = timezone || location&.time_zone || "UTC"
     compact_view = %w[three_day two_day one_day sticky_one_day].include?(active_template)
     two_day = active_template == "two_day"
     one_day = %w[one_day sticky_one_day].include?(active_template)
@@ -461,30 +460,33 @@ class Device < ActiveRecord::Base
     temperature_hours = include_temperature_events ? temperature_event_hours : nil
     include_precip_events = include_ranged_weather_events && weather_event_enabled?("show_precip_events")
     include_wind_events = include_ranged_weather_events && weather_event_enabled?("show_wind_events")
-    effective_current_time = current_time || Time.now.utc.in_time_zone(tz)
-    hide_today_enabled = hide_current_day_enabled?
-    hide_today_minutes = hide_today_enabled ? hide_current_day_after_minutes : (24 * 60)
-    always_show_today_value = if two_day || one_day
-      true
-    else
-      !hide_today_enabled
-    end
+    hide_today_enabled = current_day_rollover_enabled?
+    hide_today_minutes = hide_today_enabled ? current_day_rollover_after_minutes : (24 * 60)
+    always_show_today_value = !hide_today_enabled
     # Auto-assign icons is available on every template. It defaults ON for the
     # timeline (trmnl) and compact layouts (their historical behavior) and OFF
     # for all other templates.
     auto_icons_default_on = compact_view
     auto_icons_value = configuration&.dig("auto_assign_icons")
     auto_icons_enabled = auto_icons_value.nil? ? auto_icons_default_on : auto_icons_value == "true"
-    # The 3-day template always renders three day columns. When the current day
-    # can be hidden after the rollover cutoff, over-generate one extra future day
-    # and cap the rendered groups to three so a hidden "today" is backfilled.
-    day_groups_limit = three_day ? 3 : nil
+    # Compact templates render a fixed number of day columns. When the current
+    # day can be hidden after the rollover cutoff, over-generate one extra future
+    # day (below) and cap the rendered groups here so a hidden "today" is
+    # backfilled with the next day instead of leaving a short display.
+    day_groups_limit =
+      if two_day
+        2
+      elsif one_day
+        1
+      elsif three_day
+        3
+      end
     args = {
       days:
         if two_day
-          2
+          (hide_today_enabled ? 3 : 2)
         elsif one_day
-          1
+          (hide_today_enabled ? 2 : 1)
         elsif active_template == "trmnl"
           14
         elsif active_template == "reterminal" || active_template == "reterminal_landscape"
@@ -494,14 +496,7 @@ class Device < ActiveRecord::Base
         else
           (compact_view ? 3 : 5)
         end,
-      start_offset:
-        if two_day
-          two_day_start_offset(effective_current_time, timezone: tz)
-        elsif one_day
-          one_day_start_offset(effective_current_time, timezone: tz)
-        else
-          0
-        end,
+      start_offset: 0,
       include_precip: include_precip_events,
       include_wind: include_wind_events,
       include_weather_alerts: weather_alerts_enabled?,
@@ -523,29 +518,30 @@ class Device < ActiveRecord::Base
     args
   end
 
-  def two_day_start_offset(current_time, timezone: nil)
-    return 0 unless active_template == "two_day"
-    return 0 if configuration&.dig("two_day_rollover_enabled") == "false"
-
-    display_time = current_time.in_time_zone(timezone || location&.time_zone || "UTC")
-    current_minutes = (display_time.hour * 60) + display_time.min
-    if current_minutes >= self.class.time_string_to_minutes(configuration&.dig("two_day_rollover_time"))
-      1
+  # Unified "hide current day" rollover for every template. The toggle and time
+  # live under template-specific config keys (two_day_rollover_*,
+  # one_day_rollover_*, hide_current_day_*) but all mean the same thing, and all
+  # now defer the actual hiding to DeviceContent so the current day is only
+  # dropped after the cutoff when no events remain.
+  def current_day_rollover_enabled?
+    case active_template
+    when "two_day"
+      configuration&.dig("two_day_rollover_enabled") != "false"
+    when "one_day", "sticky_one_day"
+      configuration&.dig("one_day_rollover_enabled") != "false"
     else
-      0
+      hide_current_day_enabled?
     end
   end
 
-  def one_day_start_offset(current_time, timezone: nil)
-    return 0 unless %w[one_day sticky_one_day].include?(active_template)
-    return 0 if configuration&.dig("one_day_rollover_enabled") == "false"
-
-    display_time = current_time.in_time_zone(timezone || location&.time_zone || "UTC")
-    current_minutes = (display_time.hour * 60) + display_time.min
-    if current_minutes >= self.class.time_string_to_minutes(configuration&.dig("one_day_rollover_time"))
-      1
+  def current_day_rollover_after_minutes
+    case active_template
+    when "two_day"
+      self.class.time_string_to_minutes(configuration&.dig("two_day_rollover_time").presence)
+    when "one_day", "sticky_one_day"
+      self.class.time_string_to_minutes(configuration&.dig("one_day_rollover_time").presence)
     else
-      0
+      hide_current_day_after_minutes
     end
   end
 
@@ -566,8 +562,9 @@ class Device < ActiveRecord::Base
     update!(display_key: SecureRandom.alphanumeric(24))
   end
 
-  def token_device_url(host:)
-    "#{host}/d/#{id}?key=#{display_key}"
+  def token_device_url(host:, generation: false)
+    url = "#{host}/d/#{id}?key=#{display_key}"
+    generation ? "#{url}&generation=true" : url
   end
 
   def signed_screenshot_url(host:)
@@ -579,7 +576,7 @@ class Device < ActiveRecord::Base
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     stage = "render"
     base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
-    url = token_device_url(host: base_url)
+    url = token_device_url(host: base_url, generation: true)
 
     # Skip regenerating the screenshot when the rendered page (plus the deploy
     # id) is byte-for-byte the same as last time. Keeping the existing
@@ -598,6 +595,7 @@ class Device < ActiveRecord::Base
     self.cached_image = capture_screenshot(url)
     stage = "persist"
     self.cached_image_at = Time.current
+    self.last_generated_at = cached_image_at
     self.display_state_crc = crc
     save!
 

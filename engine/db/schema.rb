@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 54) do
+ActiveRecord::Schema[8.1].define(version: 55) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -170,6 +170,7 @@ ActiveRecord::Schema[8.1].define(version: 54) do
     t.string "firmware_version"
     t.string "friendly_id"
     t.datetime "last_connection_at"
+    t.datetime "last_generated_at"
     t.bigint "location_id"
     t.boolean "low_battery_warning", default: false, null: false
     t.text "mac_address"

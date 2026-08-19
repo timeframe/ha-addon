@@ -25,6 +25,15 @@ class TokenDevicesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Tomorrow"
   end
 
+  test "screenshot generation does not count as a device connection" do
+    @device.update_column(:last_connection_at, nil)
+
+    get "/d/#{@device.id}?key=#{@device.display_key}&generation=true"
+
+    assert_response :success
+    assert_nil @device.reload.last_connection_at
+  end
+
   test "show with valid id and wrong key returns 401" do
     get "/d/#{@device.id}?key=wrongkey"
     assert_response :unauthorized

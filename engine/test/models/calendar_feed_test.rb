@@ -28,6 +28,51 @@ class CalendarFeedTest < Minitest::Test
     end
   end
 
+  def test_hide_current_day_hides_when_no_ordinary_events_remain
+    tz = "America/Denver"
+    day_end = ActiveSupport::TimeZone[tz].local(2023, 8, 27).end_of_day.utc
+    weather = DeviceEvent.new(
+      id: "_ha_weather_hour_x", starts_at: ActiveSupport::TimeZone[tz].local(2023, 8, 27, 22),
+      ends_at: ActiveSupport::TimeZone[tz].local(2023, 8, 27, 22), summary: "60°", icon: "weather-night", timezone: tz
+    )
+
+    assert CalendarFeed.hide_current_day?([], day_end: day_end), "empty list hides the day"
+    assert CalendarFeed.hide_current_day?([weather], day_end: day_end), "weather-only hides the day"
+  end
+
+  def test_hide_current_day_keeps_day_for_same_day_event
+    tz = "America/Denver"
+    day_end = ActiveSupport::TimeZone[tz].local(2023, 8, 27).end_of_day.utc
+    event = DeviceEvent.new(
+      id: "evt", starts_at: ActiveSupport::TimeZone[tz].local(2023, 8, 27, 21),
+      ends_at: ActiveSupport::TimeZone[tz].local(2023, 8, 27, 22), summary: "Dinner", icon: "food", timezone: tz
+    )
+
+    refute CalendarFeed.hide_current_day?([event], day_end: day_end)
+  end
+
+  def test_hide_current_day_when_event_only_spills_into_tomorrow
+    tz = "America/Denver"
+    day_end = ActiveSupport::TimeZone[tz].local(2023, 8, 27).end_of_day.utc
+    overnight = DeviceEvent.new(
+      id: "evt", starts_at: ActiveSupport::TimeZone[tz].local(2023, 8, 27, 23),
+      ends_at: ActiveSupport::TimeZone[tz].local(2023, 8, 28, 1), summary: "Movie night", icon: "movie", timezone: tz
+    )
+
+    assert CalendarFeed.hide_current_day?([overnight], day_end: day_end)
+  end
+
+  def test_hide_current_day_keeps_day_for_air_quality_alert
+    tz = "America/Denver"
+    day_end = ActiveSupport::TimeZone[tz].local(2023, 8, 27).end_of_day.utc
+    aqi = DeviceEvent.new(
+      id: "_aqi_1_unhealthy", starts_at: ActiveSupport::TimeZone[tz].local(2023, 8, 27, 22),
+      ends_at: ActiveSupport::TimeZone[tz].local(2023, 8, 28), summary: "AQI 160", icon: "smog", timezone: tz
+    )
+
+    refute CalendarFeed.hide_current_day?([aqi], day_end: day_end)
+  end
+
   def test_events_for_duplicate_plus
     calendar_events = [
       DeviceEvent.new(

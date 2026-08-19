@@ -1,6 +1,16 @@
 # frozen_string_literal: true
 
 class CalendarFeed
+  # Whether the current day should be hidden after the rollover cutoff. Shared by
+  # every template (via DeviceContent + DemoDeviceContent) so the rollover check
+  # behaves identically everywhere: weather events never keep the day, events that
+  # only spill into tomorrow belong to that day, but air-quality alerts keep it.
+  # `remaining_events` must already be limited to events still remaining today.
+  def self.hide_current_day?(remaining_events, day_end:)
+    events = remaining_events.reject(&:weather?)
+    events.empty? || events.all? { |event| event.ends_at > day_end && !event.air_quality? }
+  end
+
   # Returns calendar events for a given UTC integer time range,
   # adding a `time` key for the time formatted for the user's timezone
   def events_for(starts_at, ends_at, events = [], device_name: nil, device_id: nil)
