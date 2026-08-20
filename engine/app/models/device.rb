@@ -63,8 +63,14 @@ class Device < ActiveRecord::Base
   validates :model, presence: true, inclusion: {in: SUPPORTED_MODELS.keys}
   validates :mac_address, uniqueness: true, allow_nil: true
   validates :mac_address, presence: true, if: :screenshotted?
-  validates :display_template, inclusion: {in: ->(device) { ["default"] + (SUPPORTED_MODELS.dig(device.model, :templates)&.map { |t| t[:name] } || []) }}
+  validates :display_template, inclusion: {in: ->(device) { device.valid_display_templates }}
   validates :visionect_serial, uniqueness: true, allow_nil: true
+
+  # When the model changes (e.g. during onboarding when a paired browser device
+  # picks its real hardware), a display_template that was valid for the old
+  # model may no longer be offered by the new one. Fall back to "default" so the
+  # model change doesn't raise a validation error.
+  before_validation :reset_invalid_display_template
 
   before_create :generate_api_key, if: :screenshotted?
   before_create :generate_friendly_id, if: :screenshotted?
@@ -304,6 +310,10 @@ class Device < ActiveRecord::Base
 
   def active_template
     (display_template == "default") ? SUPPORTED_MODELS.dig(model, :template) : display_template
+  end
+
+  def valid_display_templates
+    ["default"] + (SUPPORTED_MODELS.dig(model, :templates)&.map { |t| t[:name] } || [])
   end
 
   def portrait?
@@ -763,6 +773,13 @@ class Device < ActiveRecord::Base
   end
 
   private
+
+  def reset_invalid_display_template
+    return if display_template.blank?
+    return if valid_display_templates.include?(display_template)
+
+    self.display_template = "default"
+  end
 
   def generate_api_key
     self.api_key ||= SecureRandom.hex(16)

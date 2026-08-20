@@ -714,6 +714,22 @@ class DeviceTest < Minitest::Test
     assert_equal "boox_mira", device.active_template
   end
 
+  def test_changing_model_resets_now_invalid_display_template
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal_landscape")
+    device.model = "boox_mira_pro"
+    device.valid?
+    assert_empty device.errors[:display_template]
+    assert_equal "default", device.display_template
+  end
+
+  def test_valid_display_template_is_preserved_across_model_change
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal")
+    device.model = "trmnl_x"
+    device.valid?
+    assert_empty device.errors[:display_template]
+    assert_equal "reterminal", device.display_template
+  end
+
   def test_template_options_returns_hashes
     device = Device.new(model: "trmnl_og")
     options = device.template_options
