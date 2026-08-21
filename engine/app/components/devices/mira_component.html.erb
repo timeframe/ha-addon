@@ -73,35 +73,50 @@
 
 <script>
 (function() {
-  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var timeZone = <%= ERB::Util.json_escape(@view_object[:current_time].time_zone.tzinfo.name.to_json).html_safe %>;
+  var clockFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timeZone,
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  });
+  var dateFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: timeZone,
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  function clockParts() {
+    var parts = {};
+    clockFormatter.formatToParts(new Date()).forEach(function(part) {
+      parts[part.type] = part.value;
+    });
+    return parts;
+  }
 
   function updateClock() {
-    var now = new Date();
-    var h = now.getHours();
-    var m = now.getMinutes();
-    var ampm = h >= 12 ? 'pm' : 'am';
-    h = h % 12 || 12;
-    var timeStr = (h < 10 ? ' ' : '') + h + ':' + (m < 10 ? '0' : '') + m + ampm;
+    var parts = clockParts();
+    var timeStr = (parts.hour.length < 2 ? ' ' : '') + parts.hour + ':' + parts.minute + parts.dayPeriod.toLowerCase();
     var el = document.getElementById('mira-clock');
     if (el) el.textContent = timeStr;
   }
 
   function updateDate() {
-    var now = new Date();
-    var dateStr = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate();
     var el = document.getElementById('mira-date');
-    if (el) el.textContent = dateStr;
+    if (el) el.textContent = dateFormatter.format(new Date());
   }
 
   function checkFlash() {
-    var now = new Date();
+    var parts = clockParts();
     var overlay = document.getElementById('flash-overlay');
     if (!overlay) return;
-    var sec = now.getSeconds();
-    if (now.getMinutes() === 0 && sec >= 10 && sec < 18) {
+    var minute = Number(parts.minute);
+    var second = Number(parts.second);
+    if (minute === 0 && second >= 10 && second < 18) {
       overlay.style.display = 'block';
-      overlay.style.backgroundColor = ((sec - 10) % 4 < 2) ? 'black' : 'white';
+      overlay.style.backgroundColor = ((second - 10) % 4 < 2) ? 'black' : 'white';
     } else {
       overlay.style.display = 'none';
     }

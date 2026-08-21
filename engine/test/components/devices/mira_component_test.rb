@@ -27,13 +27,22 @@ class MiraComponentTest < ActiveSupport::TestCase
     assert_equal 1, html.scan("mdi-water").size
   end
 
+  test "uses the server time zone for the live clock" do
+    html = render_mira(
+      current_time: ActiveSupport::TimeZone["America/Chicago"].local(2026, 5, 25, 8, 0, 0)
+    )
+
+    assert_includes html, 'var timeZone = "America/Chicago";'
+    assert_includes html, "timeZone: timeZone"
+  end
+
   private
 
-  def render_mira(top_left: [], top_right: [], weather_status: [])
+  def render_mira(top_left: [], top_right: [], weather_status: [], current_time: Time.zone.local(2026, 5, 25, 8, 0, 0))
     ApplicationController.render(
       Devices::MiraComponent.new(
         view_object: {
-          current_time: Time.zone.local(2026, 5, 25, 8, 0, 0),
+          current_time: current_time,
           current_temperature: "70°",
           configuration: {},
           top_left: top_left,
