@@ -131,9 +131,26 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "display returns 401 for unknown MAC" do
+  test "display adopts an unknown MAC into a pending registration and returns 202" do
+    assert_nil PendingDevice.find_by(mac_address: "FF:EE:DD:CC:BB:AA")
+
     get "/api/display", headers: {"ID" => "FF:EE:DD:CC:BB:AA"}
-    assert_response :unauthorized
+    assert_response :success
+    assert_equal 202, JSON.parse(response.body)["status"]
+
+    # The orphaned hardware is re-enrolled into pairing instead of dead-ending
+    # on a 401, so the owner can pair it without a factory reset.
+    pending = PendingDevice.find_by(mac_address: "FF:EE:DD:CC:BB:AA")
+    assert pending.present?
+    assert pending.pairing_code.present?
+    assert pending.api_key.present?
+  end
+
+  test "display does not duplicate the pending for a repeatedly-polling unknown MAC" do
+    get "/api/display", headers: {"ID" => "FF:EE:DD:CC:BB:AA"}
+    get "/api/display", headers: {"ID" => "FF:EE:DD:CC:BB:AA"}
+
+    assert_equal 1, PendingDevice.where(mac_address: "FF:EE:DD:CC:BB:AA").count
   end
 
   test "display returns 202 status in body for pending device MAC" do

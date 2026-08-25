@@ -59,10 +59,18 @@ module Api
       Rails.logger.info("[API Display] mac=#{mac_address} device_id=#{@device&.id}")
 
       unless @device
-        # Keep an actively-waiting device's pending registration from expiring
-        # out from under the user: it polls here every few seconds while showing
-        # its pairing code, so refresh the expiry (same code) on each poll.
-        PendingDevice.find_by(mac_address: mac_address)&.keep_alive!
+        # Adopt any unrecognized MAC into a pending registration so a device
+        # whose server record was removed (deleted/detached, or whose pending
+        # was cleaned up) is re-enrolled into pairing instead of dead-ending on
+        # a 401. find_or_create keeps this idempotent across the device's poll
+        # loop; keep_alive! refreshes the expiry (same code) on each poll so an
+        # actively-waiting device's on-screen code stays pairable.
+        pending = PendingDevice.find_or_create_by!(mac_address: mac_address) do |pd|
+          pd.api_key = SecureRandom.hex(16)
+          pd.friendly_id = SecureRandom.alphanumeric(6).upcase
+          pd.model = PendingDevice.model_key_for_firmware(request.headers["Model"])
+        end
+        pending.keep_alive!
         render json: {status: 202}, status: :ok
         return
       end
@@ -209,17 +217,14 @@ module Api
       return head :unauthorized if mac_address.blank?
 
       @device = Device.find_by(mac_address: mac_address)
-      if @device
-        access_token = request.env["HTTP_ACCESS_TOKEN"].presence || request.env["ACCESS_TOKEN"].presence
-        return unless access_token
-        head :unauthorized unless @device.authenticate_api_key(access_token)
-        return
-      end
+      # Unknown MAC (no device record): allow through so #display can adopt the
+      # hardware into a fresh pending registration and return 202, rather than
+      # stranding a previously-paired device on a permanent 401.
+      return unless @device
 
-      # Allow pending devices through so display action can return 202
-      return if PendingDevice.find_by(mac_address: mac_address)
-
-      head :unauthorized
+      access_token = request.env["HTTP_ACCESS_TOKEN"].presence || request.env["ACCESS_TOKEN"].presence
+      return unless access_token
+      head :unauthorized unless @device.authenticate_api_key(access_token)
     end
   end
 end
