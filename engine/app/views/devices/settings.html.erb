@@ -549,6 +549,12 @@
               </div>
             <% end %>
           <% end %>
+          <% if @device.pairing_code_device? %>
+            <div class="mt-3">
+              <label class="mb-1 block text-sm"><strong>Reconnect</strong></label>
+              <%= render "devices/reconnect_form", device: @device %>
+            </div>
+          <% end %>
         </div>
       </div>
     <% end %>
@@ -588,34 +594,15 @@
     <% end %>
 
     <%# Reconnect %>
-    <% if @device.pairing_code_device? && @device.disconnected? %>
+    <% if !admin_context && @device.pairing_code_device? && @device.disconnected? %>
       <div class="mb-3 rounded-lg border border-ink/10 bg-white">
         <div class="border-b border-ink/10 px-3 py-2">
           <span>Reconnect</span>
         </div>
         <div class="p-4">
-          <% if @device.trmnl? || @device.reterminal_e1001? %>
-            <p class="text-sm text-gray-500">On your device, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
-          <% else %>
-            <p class="text-sm text-gray-500">On your device, visit <code><%= request.base_url %>/pair</code> to get a new pairing code.</p>
-          <% end %>
-          <%= form_with url: repair_account_location_device_path(@account, @location, @device), method: :post do %>
-            <div class="flex">
-              <input type="text" name="pairing_code" class="tf-input-sm rounded-r-none" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-repair-input="<%= @device.id %>">
-              <%= submit_tag "Reconnect", class: "tf-btn tf-btn-primary tf-btn-sm rounded-l-none", disabled: true, id: "repair-btn-#{@device.id}" %>
-            </div>
-          <% end %>
+          <%= render "devices/reconnect_form", device: @device %>
         </div>
       </div>
-      <script>
-        (function() {
-          var input = document.querySelector('[data-repair-input="<%= @device.id %>"]');
-          var btn = document.getElementById('repair-btn-<%= @device.id %>');
-          input.addEventListener('input', function() {
-            btn.disabled = !/^[0-9]{6}$/.test(input.value);
-          });
-        })();
-      </script>
     <% end %>
 
     <%# Danger zone %>

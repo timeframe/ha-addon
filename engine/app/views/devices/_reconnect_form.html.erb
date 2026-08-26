@@ -1,0 +1,20 @@
+<% if device.trmnl? || device.reterminal_e1001? %>
+  <p class="text-sm text-gray-500">On your device, reconnect to the API server at <code><%= request.base_url %></code> to get a new pairing code.</p>
+<% else %>
+  <p class="text-sm text-gray-500">On your device, visit <code><%= request.base_url %>/pair</code> to get a new pairing code.</p>
+<% end %>
+<%= form_with url: repair_account_location_device_path(@account, @location, device), method: :post do %>
+  <div class="flex">
+    <input type="text" name="pairing_code" class="tf-input-sm rounded-r-none" placeholder="e.g. 123456" autocomplete="off" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" data-repair-input="<%= device.id %>">
+    <%= submit_tag "Reconnect", class: "tf-btn tf-btn-primary tf-btn-sm rounded-l-none", disabled: true, id: "repair-btn-#{device.id}" %>
+  </div>
+<% end %>
+<script>
+  (function() {
+    var input = document.querySelector('[data-repair-input="<%= device.id %>"]');
+    var btn = document.getElementById('repair-btn-<%= device.id %>');
+    input.addEventListener('input', function() {
+      btn.disabled = !/^[0-9]{6}$/.test(input.value);
+    });
+  })();
+</script>
