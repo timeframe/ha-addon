@@ -27,7 +27,7 @@ class TokenDevicesController < ApplicationController
     view_object = @device.device_content(current_time: current_time)
     view_object[:configuration] = @device.try(:configuration) || {}
 
-    if Device.charge_reminder?(view_object)
+    if Device.charge_reminder?(view_object) && params[:charge_reminder] != "false"
       render Devices::ChargeReminderComponent.new(view_object: view_object), layout: params[:layout] != "false"
       return
     end

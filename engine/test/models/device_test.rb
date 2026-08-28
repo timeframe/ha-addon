@@ -348,12 +348,14 @@ class DeviceTest < Minitest::Test
     assert_equal "reTerminal E1003 10.3\"", device.model_name_label
   end
 
-  def test_low_battery_banner_only_for_low_battery_on_status_barless_templates
+  def test_low_battery_banner_for_low_or_charging_battery_on_status_barless_templates
     low = {level: 15, low: true, charging: false}
+    charging = {level: 80, low: false, charging: true}
 
     # Shown on the compact day layouts that have no top status bar.
     assert_equal low, Device.low_battery_banner("three_day", {battery: low})
     assert_equal low, Device.low_battery_banner("one_day", {battery: low})
+    assert_equal charging, Device.low_battery_banner("three_day", {battery: charging})
 
     # Not shown on templates that render the status bar (it appears up top).
     assert_nil Device.low_battery_banner("trmnl", {battery: low})
@@ -545,6 +547,12 @@ class DeviceTest < Minitest::Test
   def test_minutely_precip_disabled_for_non_realtime_models
     device = Device.new(model: "trmnl_og")
     refute device.minutely_precip_enabled?
+  end
+
+  def test_uv_warning_enabled_only_for_mira_pro_unless_disabled
+    assert Device.new(model: "boox_mira_pro").uv_warning_enabled?
+    refute Device.new(model: "boox_mira_pro", configuration: {"show_uv_warning" => "false"}).uv_warning_enabled?
+    refute Device.new(model: "boox_mira").uv_warning_enabled?
   end
 
   def test_one_day_template_available_for_trmnl_og_and_reterminal_e1001
@@ -1213,6 +1221,10 @@ class DeviceTest < Minitest::Test
     charging = Device.battery_descriptor(level: 50, charging: true)
     assert_equal true, charging[:charging]
     refute charging[:low]
+
+    fully_charged = Device.battery_descriptor(level: 100, charging: true)
+    assert fully_charged[:charging]
+    assert_equal 100, fully_charged[:level]
   end
 
   private

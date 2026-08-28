@@ -28,6 +28,15 @@ class StatusBarComponentTest < ActiveSupport::TestCase
     refute_includes html, "Front, Back"
   end
 
+  test "shows charge level when plugged in and fully charged" do
+    html = render_status_bar(
+      battery: {icon: "battery", level: 100, low: false, charging: true}
+    )
+
+    assert_includes html, "Charging 100%"
+    assert_includes html, "mdi-battery"
+  end
+
   private
 
   def render_status_bar(top_left: [], top_right: [], weather_status: [], battery: nil)

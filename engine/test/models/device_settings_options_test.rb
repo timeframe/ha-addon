@@ -108,6 +108,20 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
     end
   end
 
+  def test_mira_pro_includes_default_on_uv_warning
+    device = Device.new(model: "boox_mira_pro", display_template: "default")
+    option = DeviceSettingsOptions.call(device).find { |entry| entry[:key] == "show_uv_warning" }
+
+    assert option
+    assert option[:default_on]
+  end
+
+  def test_other_models_omit_uv_warning
+    device = Device.new(model: "boox_mira", display_template: "default")
+
+    refute_includes DeviceSettingsOptions.call(device).map { |entry| entry[:key] }, "show_uv_warning"
+  end
+
   def test_trmnl_text_options_defaults
     options = DeviceSettingsOptions.call(Device.new(display_template: "trmnl"))
     truncate = options.find { |o| o[:key] == "truncate_event_text" }

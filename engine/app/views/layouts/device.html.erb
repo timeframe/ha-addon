@@ -55,7 +55,7 @@
 <div style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;">
   <% if @low_battery_banner %>
     <div style="background: #000; color: #fff; padding: 0.5rem 1rem;">
-      <div style="font-weight: 700; font-size: 1.25rem; line-height: 1.2;">Recharge battery: <%= @low_battery_banner[:level] %>%</div>
+      <div style="font-weight: 700; font-size: 1.25rem; line-height: 1.2;"><%= @low_battery_banner[:charging] ? "Charging" : "Recharge battery:" %> <%= @low_battery_banner[:level] %>%</div>
     </div>
   <% end %>
   <% if @banner %>

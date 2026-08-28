@@ -20,6 +20,12 @@
     <% end %>
     <div class="mb-4 flex items-center">
       <h3 class="mb-0 text-xl font-semibold" id="device-title"><%= @device.name %></h3>
+      <% if @device.battery_level.present? %>
+        <span class="ml-2 <%= @device.battery_color_class %> text-sm" title="Battery">
+          <i class="mdi mdi-<%= @device.battery_icon %>"></i>
+          <%= @device.battery_level.to_i %>%
+        </span>
+      <% end %>
       <% unless defined?(current_user) && current_user && !current_user.is_admin? %>
         <span class="ml-2 text-body-tertiary text-sm"><%= @device.model_name_label %></span>
       <% end %>

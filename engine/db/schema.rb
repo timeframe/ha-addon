@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 55) do
+ActiveRecord::Schema[8.1].define(version: 56) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -39,6 +39,7 @@ ActiveRecord::Schema[8.1].define(version: 55) do
     t.boolean "subscription_cancel_at_period_end", default: false, null: false
     t.datetime "subscription_current_period_end"
     t.datetime "subscription_grace_until"
+    t.datetime "subscription_renewal_reminded_for"
     t.string "subscription_status"
     t.datetime "support_access_at"
     t.string "temperature_unit", default: "F", null: false

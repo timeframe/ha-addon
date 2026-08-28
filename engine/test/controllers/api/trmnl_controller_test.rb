@@ -5,7 +5,7 @@ require "test_helper"
 class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
   def setup
     PendingDevice.destroy_all
-    Device.where(model: "trmnl_og").destroy_all
+    Device.where(model: %w[trmnl_og reterminal_e1003]).destroy_all
   end
 
   # --- /api/setup ---
@@ -245,6 +245,30 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     refute device.low_battery_warning?
   end
 
+  test "display calibrates E1003 battery voltage to its usable range" do
+    device = create_trmnl_device!(model: "reterminal_e1003")
+
+    ScreenshotService.stub :capture, "fakeimagedatabase64" do
+      get "/api/display", headers: {
+        "ID" => device.mac_address,
+        "ACCESS_TOKEN" => device.api_key,
+        "Battery-Voltage" => "4.08"
+      }
+    end
+
+    assert_equal 100, device.reload.battery_level
+
+    get "/api/display", headers: {
+      "ID" => device.mac_address,
+      "ACCESS_TOKEN" => device.api_key,
+      "Battery-Voltage" => "3.144"
+    }
+
+    device.reload
+    assert_equal 0, device.battery_level
+    assert device.low_battery_warning?
+  end
+
   test "display sets low battery warning when discharging below threshold" do
     device = create_trmnl_device!
 
@@ -279,6 +303,24 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     device.reload
     assert device.charging?
     refute device.low_battery_warning?
+  end
+
+  test "display remains charging while USB is connected after active charging completes" do
+    device = create_trmnl_device!
+
+    ScreenshotService.stub :capture, "fakeimagedatabase64" do
+      get "/api/display", headers: {
+        "ID" => device.mac_address,
+        "ACCESS_TOKEN" => device.api_key,
+        "Percent-Charged" => "100",
+        "Battery-Charging" => "0",
+        "USB-Connected" => "true"
+      }
+    end
+
+    device.reload
+    assert_equal 100, device.battery_level
+    assert device.charging?
   end
 
   test "display clears the offline notification flag on reconnect" do
@@ -360,10 +402,10 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  def create_trmnl_device!(mac: "11:22:33:44:55:66")
+  def create_trmnl_device!(mac: "11:22:33:44:55:66", model: "trmnl_og")
     Device.create!(location: test_location,
       name: "Test TRMNL #{mac}",
-      model: "trmnl_og",
+      model: model,
       mac_address: mac,
       confirmed_at: Time.current,
       confirmation_code: nil)

@@ -22,8 +22,11 @@ When any of these change, update the corresponding README table/section in the s
 
 Before considering any task complete, always run all of the following checks and fix any issues:
 
-1. **Tests & Coverage (ha-addon):** `cd ha-addon && bundle exec rake test` — all tests must pass with 100% line coverage.
-2. **Tests & Coverage (cloud):** `cd cloud && bundle exec rake test` — all tests must pass with 100% line coverage.
-3. **StandardRB (ha-addon):** `cd ha-addon && bundle exec standardrb` — no violations.
-4. **StandardRB (cloud):** `cd cloud && bundle exec standardrb` — no violations.
-5. **Herb (ha-addon):** `cd ha-addon && bundle exec herb analyze` — all `.html.erb` files must be clean.
+Run every command through `mise`. Run both complete test suites even if a change appears isolated to only one app, because `cloud` and `ha-addon` consume the shared engine.
+
+1. **Tests & Coverage (cloud):** `cd cloud && mise exec -- bundle exec rake test` — all tests and coverage checks must pass.
+2. **Tests & Coverage (ha-addon):** `cd ha-addon && mise exec -- bundle exec rake test` — all tests and coverage checks must pass.
+3. **StandardRB (cloud):** `cd cloud && mise exec -- bundle exec standardrb` — no violations.
+4. **StandardRB (ha-addon):** `cd ha-addon && mise exec -- bundle exec standardrb` — no violations.
+5. **Herb (cloud):** `cd cloud && mise exec -- bundle exec herb analyze .` — all `.html.erb` files must be clean.
+6. **Herb (ha-addon):** `cd ha-addon && mise exec -- bundle exec herb analyze .` — all `.html.erb` files must be clean.

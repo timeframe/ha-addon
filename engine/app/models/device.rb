@@ -178,10 +178,11 @@ class Device < ActiveRecord::Base
 
   # The battery indicator to surface as a bottom banner for templates that have
   # no top status bar (the compact day layouts). Returns the battery descriptor
-  # when it is low, otherwise nil.
+  # when it is low or plugged in, otherwise nil.
   def self.low_battery_banner(template, view_object)
     battery = view_object[:battery]
-    return nil unless battery && battery[:low]
+    return nil unless battery
+    return nil unless battery[:low] || battery[:charging]
     return nil unless NO_STATUS_BAR_TEMPLATES.include?(template.to_s)
 
     battery
@@ -253,7 +254,7 @@ class Device < ActiveRecord::Base
 
     {
       level: battery_level.to_i,
-      charging: charging? && battery_level < 100,
+      charging: charging?,
       low: low,
       icon: battery_icon
     }
@@ -383,6 +384,10 @@ class Device < ActiveRecord::Base
     return false unless realtime_display?
 
     configuration&.dig("show_minutely_precip") != "false"
+  end
+
+  def uv_warning_enabled?
+    model == "boox_mira_pro" && configuration&.dig("show_uv_warning") != "false"
   end
 
   # The Home Assistant status bar (top-left/right, weather status, now playing)
@@ -673,7 +678,9 @@ class Device < ActiveRecord::Base
   # screenshot reminder email) without touching the persisted cached_image.
   def screenshot_at(current_time, base_url = nil)
     base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
-    url = "#{token_device_url(host: base_url)}&at=#{CGI.escape(current_time.iso8601)}"
+    # The daily preview email mentions a low battery in its copy, so the preview
+    # image itself skips the full-screen charge reminder.
+    url = "#{token_device_url(host: base_url)}&at=#{CGI.escape(current_time.iso8601)}&charge_reminder=false"
     capture_screenshot(url)
   end
 

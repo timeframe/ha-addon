@@ -23,6 +23,9 @@ class DeviceSettingsOptions
     "Shows a minute-by-minute chart of rain or snow expected over the next " \
     "hour at the bottom of the display."
 
+  UV_WARNING_DESCRIPTION =
+    "Shows the current UV index when it is above 3."
+
   DAILY_EMAIL_DESCRIPTION =
     "Each day at the time you choose we'll email a preview of how this " \
     "device will look tomorrow morning, as a reminder to update your calendar."
@@ -154,6 +157,13 @@ class DeviceSettingsOptions
         "show_minutely_precip", "Next-hour precipitation",
         default_on: true,
         description: MINUTELY_PRECIP_DESCRIPTION
+      )
+    end
+    if device.model == "boox_mira_pro"
+      switch(
+        "show_uv_warning", "UV warning",
+        default_on: true,
+        description: UV_WARNING_DESCRIPTION
       )
     end
   end

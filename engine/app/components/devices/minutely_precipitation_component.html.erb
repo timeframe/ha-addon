@@ -1,4 +1,4 @@
-<div class="hide-if-empty" style="background-color: #ddd; color: black; padding: 0.5rem 2rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
+<div class="hide-if-empty" style="background-color: black; color: white; padding: 0.5rem 2rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">
   <div>
     <div style="display: inline-block; padding-right: 1rem; vertical-align: super">
       <i class="mdi mdi-<%= @icon %>"></i>
@@ -9,7 +9,7 @@
           <% @bars.each do |bar_height| %>
             <td>
               <div style="height: 100px; position:relative; width: 25px;">
-                <div style="background-color:black; position: absolute; height: <%= bar_height %>px; left: 0; right: 10px; bottom: 0; border-radius: 25px;"></div>
+                <div style="background-color:white; position: absolute; height: <%= bar_height %>px; left: 0; right: 10px; bottom: 0; border-radius: 25px;"></div>
               </div>
             </td>
           <% end %>

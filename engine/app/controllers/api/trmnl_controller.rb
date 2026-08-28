@@ -8,6 +8,12 @@ module Api
     # can batch many locally-stored logs; this caps a single burst.
     MAX_LOG_ENTRIES_PER_REQUEST = 50
 
+    DEFAULT_BATTERY_VOLTAGE_RANGE = (3.0..4.2)
+    # The E1003 ADC reports about 4.09 V after a full charge and the hardware
+    # shuts down around 3.15 V. Using the wider generic range otherwise leaves
+    # the UI showing roughly 12% when the usable battery is already exhausted.
+    E1003_BATTERY_VOLTAGE_RANGE = (3.15..4.08)
+
     before_action :authenticate_device!
     skip_before_action :authenticate_device!, only: [:setup, :display]
     before_action :authenticate_or_identify_device!, only: [:display]
@@ -156,7 +162,7 @@ module Api
       attrs = {}
       attrs[:firmware_version] = request.headers["FW-Version"] if request.headers["FW-Version"].present?
 
-      level = battery_level_from_headers
+      level = battery_level_from_headers(device)
       attrs[:battery_level] = level unless level.nil?
 
       charging = charging_from_headers
@@ -173,13 +179,14 @@ module Api
 
     # Prefers the firmware's fuel-gauge Percent-Charged reading (TRMNL-X) and
     # falls back to a linear voltage-to-percent estimate for simpler hardware.
-    def battery_level_from_headers
+    def battery_level_from_headers(device)
       if request.headers["Percent-Charged"].present?
         return request.headers["Percent-Charged"].to_f.clamp(0, 100).round
       end
       if request.headers["Battery-Voltage"].present?
         voltage = request.headers["Battery-Voltage"].to_f
-        return ((voltage - 3.0) / 1.2 * 100).clamp(0, 100).round
+        range = device.reterminal_e1003? ? E1003_BATTERY_VOLTAGE_RANGE : DEFAULT_BATTERY_VOLTAGE_RANGE
+        return ((voltage - range.begin) / (range.end - range.begin) * 100).clamp(0, 100).round
       end
       nil
     end
@@ -187,13 +194,12 @@ module Api
     # Charging if the gauge reports it or USB power is connected. Returns nil
     # when the device sent no charging-related headers.
     def charging_from_headers
-      if request.headers["Battery-Charging"].present?
-        return %w[1 true].include?(request.headers["Battery-Charging"].to_s.strip.downcase)
-      end
-      if request.headers["USB-Connected"].present?
-        return request.headers["USB-Connected"].to_s.strip.downcase == "true"
-      end
-      nil
+      values = []
+      values << %w[1 true].include?(request.headers["Battery-Charging"].to_s.strip.downcase) if request.headers["Battery-Charging"].present?
+      values << (request.headers["USB-Connected"].to_s.strip.downcase == "true") if request.headers["USB-Connected"].present?
+      return nil if values.empty?
+
+      values.any?
     end
 
     def log_response_status
