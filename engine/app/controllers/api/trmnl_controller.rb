@@ -161,6 +161,7 @@ module Api
     def update_device_from_headers(device)
       attrs = {}
       attrs[:firmware_version] = request.headers["FW-Version"] if request.headers["FW-Version"].present?
+      attrs[:firmware_commit] = request.headers["FW-Commit"] if request.headers["FW-Commit"].present?
 
       level = battery_level_from_headers(device)
       attrs[:battery_level] = level unless level.nil?

@@ -501,6 +501,14 @@
                   <% end %>
                   <% if @device.rssi.present? %> &middot; WiFi RSSI <%= @device.rssi %> dBm<% end %>
                 </div>
+                <% if @device.firmware_version.present? || @device.firmware_commit.present? %>
+                  <div class="mt-1 text-sm text-gray-500">
+                    Firmware:
+                    <% if @device.firmware_version.present? %><%= @device.firmware_version %><% end %>
+                    <% if @device.firmware_version.present? && @device.firmware_commit.present? %> &middot; <% end %>
+                    <% if @device.firmware_commit.present? %>SHA <code><%= @device.firmware_commit %></code><% end %>
+                  </div>
+                <% end %>
               </div>
 
               <%# Audit Log %>
@@ -557,7 +565,7 @@
           <% end %>
           <% if @device.pairing_code_device? %>
             <div class="mt-3">
-              <label class="mb-1 block text-sm"><strong>Reconnect</strong></label>
+              <label class="mb-1 block text-sm"><strong>Pair or replace display</strong></label>
               <%= render "devices/reconnect_form", device: @device %>
             </div>
           <% end %>
@@ -599,11 +607,11 @@
       </script>
     <% end %>
 
-    <%# Reconnect %>
-    <% if !admin_context && @device.pairing_code_device? && @device.disconnected? %>
+    <%# Pair or replace display %>
+    <% if !admin_context && @device.pairing_code_device? %>
       <div class="mb-3 rounded-lg border border-ink/10 bg-white">
         <div class="border-b border-ink/10 px-3 py-2">
-          <span>Reconnect</span>
+          <span>Pair or replace display</span>
         </div>
         <div class="p-4">
           <%= render "devices/reconnect_form", device: @device %>

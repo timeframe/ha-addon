@@ -266,13 +266,12 @@ class DevicesController < ApplicationController
       return redirect_back fallback_location: root_path, alert: "Invalid or expired pairing code."
     end
 
-    if device.never_paired?
-      pending_device.link_to!(device)
-      notice = "\"#{device.name}\" paired successfully."
+    notice = if device.never_paired?
+      "\"#{device.name}\" paired successfully."
     else
-      pending_device.update!(claimed_device: device)
-      notice = "\"#{device.name}\" reconnected successfully."
+      "\"#{device.name}\" reconnected successfully."
     end
+    pending_device.link_to!(device)
     device.rotate_session_token!
     redirect_back fallback_location: root_path, notice: notice
   end

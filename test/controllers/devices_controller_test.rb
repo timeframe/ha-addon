@@ -201,8 +201,10 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
       d.confirmation_code = nil
     end
     # A reconnect is a device that has connected before.
-    device.update_columns(last_connection_at: 2.hours.ago)
-    pending = PendingDevice.create!
+    old_mac = "AA:#{SecureRandom.hex(5).scan(/../).join(":").upcase}"
+    new_mac = "BB:#{SecureRandom.hex(5).scan(/../).join(":").upcase}"
+    device.update_columns(last_connection_at: 2.hours.ago, mac_address: old_mac)
+    pending = PendingDevice.create!(mac_address: new_mac, api_key: SecureRandom.hex(16))
 
     post repair_account_location_device_path(@account, @location, device),
       params: {pairing_code: pending.pairing_code}
@@ -212,16 +214,34 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "reconnected"
     pending.reload
     assert_equal device.id, pending.claimed_device_id
+    assert_equal new_mac, device.reload.mac_address
   end
 
-  test "repair pairs a never-paired device by copying the pending credentials" do
-    device = Device.find_or_create_by!(name: "test-pair-new", model: "reterminal_e1001") do |d|
+  test "settings always offers pairing for a connected pairing-code device" do
+    device = Device.find_or_create_by!(name: "test-replace-connected", model: "trmnl_og") do |d|
       d.location = @location
-      d.mac_address = "PLACEHOLDER#{SecureRandom.hex(3)}"
+      d.mac_address = SecureRandom.hex(6).scan(/../).join(":")
       d.confirmed_at = Time.current
       d.confirmation_code = nil
     end
-    device.update_columns(last_connection_at: nil)
+    device.update_columns(last_connection_at: Time.current)
+
+    get settings_account_location_device_path(@account, @location, device)
+
+    assert_response :success
+    assert_includes response.body, "Pair or replace display"
+    assert_select "form[action='#{repair_account_location_device_path(@account, @location, device)}']"
+  end
+
+  test "repair pairs a never-paired device by copying the pending credentials" do
+    device = @location.devices.create!(
+      name: "test-pair-new-#{SecureRandom.hex(4)}",
+      model: "reterminal_e1001",
+      mac_address: "PLACEHOLDER#{SecureRandom.hex(3)}",
+      confirmed_at: Time.current,
+      confirmation_code: nil,
+      last_connection_at: nil
+    )
     real_mac = "AA:#{SecureRandom.hex(5).scan(/../).join(":").upcase}"
     pending = PendingDevice.create!(
       mac_address: real_mac,

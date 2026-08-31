@@ -192,6 +192,7 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
           "ACCESS_TOKEN" => device.api_key,
           "Battery-Voltage" => "4.1",
           "FW-Version" => "1.8.1",
+          "FW-Commit" => "f35414e",
           "RSSI" => "-69"
         }
 
@@ -212,6 +213,7 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
         assert device.last_connection_at.present?
         assert_equal 92, device.battery_level
         assert_equal "1.8.1", device.firmware_version
+        assert_equal "f35414e", device.firmware_commit
         assert_equal(-69, device.rssi)
       end
     end
