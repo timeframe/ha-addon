@@ -39,12 +39,22 @@ ActiveRecord::Schema[8.1].define(version: 57) do
     t.boolean "subscription_cancel_at_period_end", default: false, null: false
     t.datetime "subscription_current_period_end"
     t.datetime "subscription_grace_until"
+    t.datetime "subscription_renewal_reminded_for"
     t.string "subscription_status"
     t.datetime "support_access_at"
     t.string "temperature_unit", default: "F", null: false
     t.datetime "updated_at", null: false
     t.index ["stripe_customer_id"], name: "index_accounts_on_stripe_customer_id", unique: true
     t.index ["stripe_subscription_id"], name: "index_accounts_on_stripe_subscription_id", unique: true
+  end
+
+  create_table "air_quality_syncs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "fetched_at", null: false
+    t.bigint "location_id", null: false
+    t.jsonb "response_data", null: false
+    t.datetime "updated_at", null: false
+    t.index ["location_id", "fetched_at"], name: "index_air_quality_syncs_on_location_id_and_fetched_at"
   end
 
   create_table "apple_accounts", force: :cascade do |t|
@@ -98,6 +108,7 @@ ActiveRecord::Schema[8.1].define(version: 57) do
     t.datetime "ends_at", null: false
     t.string "external_id", null: false
     t.boolean "has_attachment", default: false, null: false
+    t.string "ical_uid"
     t.string "location"
     t.string "provider_etag"
     t.boolean "provider_read_only", default: false, null: false
@@ -271,6 +282,9 @@ ActiveRecord::Schema[8.1].define(version: 57) do
     t.text "google_uid", null: false
     t.text "refresh_token", null: false
     t.text "scopes"
+    t.datetime "sync_disabled_at"
+    t.datetime "sync_disabled_notified_at"
+    t.string "sync_disabled_reason"
     t.datetime "token_expires_at"
     t.datetime "updated_at", null: false
     t.index ["account_id", "google_uid"], name: "index_google_accounts_on_account_id_and_google_uid", unique: true
@@ -285,6 +299,17 @@ ActiveRecord::Schema[8.1].define(version: 57) do
     t.datetime "synced_at", null: false
     t.datetime "updated_at", null: false
     t.index ["location_id"], name: "index_ha_syncs_on_location_id", unique: true
+  end
+
+  create_table "health_probes", force: :cascade do |t|
+    t.datetime "checked_at", null: false
+    t.integer "consecutive_failures", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.jsonb "details"
+    t.string "key", null: false
+    t.boolean "successful", default: true, null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_health_probes_on_key", unique: true
   end
 
   create_table "locations", force: :cascade do |t|
@@ -313,6 +338,9 @@ ActiveRecord::Schema[8.1].define(version: 57) do
     t.text "email", null: false
     t.text "microsoft_uid", null: false
     t.text "refresh_token", null: false
+    t.datetime "sync_disabled_at"
+    t.datetime "sync_disabled_notified_at"
+    t.string "sync_disabled_reason"
     t.datetime "token_expires_at"
     t.datetime "updated_at", null: false
     t.index ["account_id", "microsoft_uid"], name: "index_microsoft_accounts_on_account_id_and_microsoft_uid", unique: true
@@ -468,7 +496,7 @@ ActiveRecord::Schema[8.1].define(version: 57) do
   add_foreign_key "orders", "accounts", on_delete: :cascade
   add_foreign_key "orders", "users", on_delete: :nullify
   add_foreign_key "pending_devices", "devices", column: "claimed_device_id"
-  add_foreign_key "pending_devices", "devices", column: "detached_device_id", name: "fk_pending_devices_detached_device", on_delete: :nullify
+  add_foreign_key "pending_devices", "devices", column: "detached_device_id", on_delete: :nullify
   add_foreign_key "sent_emails", "users", column: "receiving_user_id", on_delete: :nullify
   add_foreign_key "weather_syncs", "locations"
 end
