@@ -11,7 +11,7 @@ class AqiStatus
 
     {
       icon: (value >= UNHEALTHY_MIN) ? UNHEALTHY_ICON : HEALTHY_ICON,
-      label: "AQI #{value.to_i}"
+      label: value.to_i.to_s
     }
   end
 end
