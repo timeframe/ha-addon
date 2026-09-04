@@ -36,6 +36,13 @@ class MiraComponentTest < ActiveSupport::TestCase
     assert_includes html, "timeZone: timeZone"
   end
 
+  test "formats the live date like the Visionect 13 template" do
+    html = render_mira
+
+    assert_includes html, "month: 'short'"
+    assert_includes html, "parts.weekday + ', ' + parts.month + '. ' + parts.day"
+  end
+
   private
 
   def render_mira(top_left: [], top_right: [], weather_status: [], current_time: Time.zone.local(2026, 5, 25, 8, 0, 0))

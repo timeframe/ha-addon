@@ -83,7 +83,7 @@
   var dateFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timeZone,
     weekday: 'long',
-    month: 'long',
+    month: 'short',
     day: 'numeric'
   });
 
@@ -103,8 +103,12 @@
   }
 
   function updateDate() {
+    var parts = {};
+    dateFormatter.formatToParts(new Date()).forEach(function(part) {
+      parts[part.type] = part.value;
+    });
     var el = document.getElementById('mira-date');
-    if (el) el.textContent = dateFormatter.format(new Date());
+    if (el) el.textContent = parts.weekday + ', ' + parts.month + '. ' + parts.day;
   }
 
   function checkFlash() {
