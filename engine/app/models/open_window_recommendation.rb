@@ -9,7 +9,7 @@ class OpenWindowRecommendation
   def self.call(temperature_f:, aqi:, current_time:)
     return unless temperature_f && aqi
 
-    temperature = temperature_f.to_i
+    temperature = temperature_f.to_f
     return unless temperature > MIN_TEMPERATURE_F && temperature <= MAX_TEMPERATURE_F
     return unless aqi.to_i < MAX_AQI
 

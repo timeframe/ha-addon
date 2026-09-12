@@ -157,40 +157,47 @@
       <% if @device.screenshotted? %>
         <script>
           (function() {
-            var buttons = document.querySelectorAll('[data-regenerate-screenshot]');
-            var img = document.getElementById('screenshot-img');
-            var loading = document.getElementById('screenshot-loading');
-            var generatedAt = document.getElementById('screenshot-generated-at');
-            buttons.forEach(function(btn) {
-              btn.addEventListener('click', function() {
-                buttons.forEach(function(button) {
-                  button.disabled = true;
-                  button.textContent = 'Regenerating\u2026';
+            function bindRegenerateButtons() {
+              var buttons = document.querySelectorAll('[data-regenerate-screenshot]');
+              var img = document.getElementById('screenshot-img');
+              var loading = document.getElementById('screenshot-loading');
+              var generatedAt = document.getElementById('screenshot-generated-at');
+              buttons.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                  buttons.forEach(function(button) {
+                    button.disabled = true;
+                    button.textContent = 'Regenerating\u2026';
+                  });
+                  if (img) img.style.display = 'none';
+                  if (loading) loading.style.display = '';
+                  var newImg = new Image();
+                  newImg.onload = function() {
+                    if (!img) return window.location.reload();
+                    img.src = newImg.src;
+                    img.style.display = '';
+                    loading.style.display = 'none';
+                    buttons.forEach(function(button) {
+                      button.disabled = false;
+                      button.textContent = 'Regenerate';
+                    });
+                    if (generatedAt) generatedAt.textContent = 'Generated <1m ago';
+                  };
+                  newImg.onerror = function() {
+                    if (loading) loading.textContent = 'Failed to regenerate screenshot.';
+                    buttons.forEach(function(button) {
+                      button.disabled = false;
+                      button.textContent = 'Regenerate';
+                    });
+                  };
+                  newImg.src = '<%= screenshot_account_location_device_path(@account, @location, @device) %>' + '?force=true&_=' + Date.now();
                 });
-                if (img) img.style.display = 'none';
-                if (loading) loading.style.display = '';
-                var newImg = new Image();
-                newImg.onload = function() {
-                  if (!img) return window.location.reload();
-                  img.src = newImg.src;
-                  img.style.display = '';
-                  loading.style.display = 'none';
-                  buttons.forEach(function(button) {
-                    button.disabled = false;
-                    button.textContent = 'Regenerate';
-                  });
-                  if (generatedAt) generatedAt.textContent = 'Generated <1m ago';
-                };
-                newImg.onerror = function() {
-                  if (loading) loading.textContent = 'Failed to regenerate screenshot.';
-                  buttons.forEach(function(button) {
-                    button.disabled = false;
-                    button.textContent = 'Regenerate';
-                  });
-                };
-                newImg.src = '<%= screenshot_account_location_device_path(@account, @location, @device) %>' + '?force=true&_=' + Date.now();
               });
-            });
+            }
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', bindRegenerateButtons, { once: true });
+            } else {
+              bindRegenerateButtons();
+            }
           })();
         </script>
       <% end %>

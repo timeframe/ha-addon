@@ -5,7 +5,17 @@ require "test_helper"
 class DeviceMetricBucketTest < ActiveSupport::TestCase
   def setup
     DeviceMetricBucket.delete_all
-    @device = Device.where(model: "trmnl_og").first!
+    @device = Device.create!(
+      location: test_location,
+      name: "Metrics device #{SecureRandom.hex(4)}",
+      model: "trmnl_og",
+      mac_address: SecureRandom.hex(6),
+      confirmed_at: Time.current
+    )
+  end
+
+  def teardown
+    @device&.destroy!
   end
 
   test "aggregates battery readings and poll outcomes by hour" do

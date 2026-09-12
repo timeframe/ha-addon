@@ -14,6 +14,7 @@ class OpenWindowRecommendationTest < ActiveSupport::TestCase
 
     assert_nil described_class.call(temperature_f: 63, aqi: 42, current_time: time)
     assert_equal({icon: "window-open"}, described_class.call(temperature_f: 72, aqi: 42, current_time: time))
+    assert_nil described_class.call(temperature_f: 72.5, aqi: 42, current_time: time)
     assert_nil described_class.call(temperature_f: 73, aqi: 42, current_time: time)
     assert_nil described_class.call(temperature_f: 68, aqi: 70, current_time: time)
   end
