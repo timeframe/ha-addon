@@ -415,19 +415,27 @@ class DeviceTest < Minitest::Test
     device = Device.new(name: "test", model: "reterminal_e1003")
     labels = device.template_options.map { |t| t[:label] }
     names = device.template_options.map { |t| t[:name] }
-    assert_equal ["Portrait", "Landscape"], labels
-    assert_equal ["reterminal", "reterminal_landscape"], names
+    assert_equal ["Portrait", "Landscape", "2-Day Landscape"], labels
+    assert_equal ["reterminal", "reterminal_landscape", "two_day_landscape"], names
   end
 
   def test_trmnl_x_landscape_template_options
     device = Device.new(name: "test", model: "trmnl_x")
     labels = device.template_options.map { |t| t[:label] }
-    assert_equal ["Portrait", "Landscape"], labels
+    assert_equal ["Portrait", "Landscape", "2-Day Landscape"], labels
   end
 
   def test_landscape_template_swaps_display_dimensions
     device = Device.new(name: "test", model: "reterminal_e1003", display_template: "reterminal_landscape")
     assert device.landscape_template?
+    assert_equal 1872, device.display_width
+    assert_equal 1414, device.display_height
+  end
+
+  def test_two_day_landscape_template_swaps_display_dimensions
+    device = Device.new(name: "test", model: "reterminal_e1003", display_template: "two_day_landscape")
+    assert device.landscape_template?
+    assert device.two_day_template?
     assert_equal 1872, device.display_width
     assert_equal 1414, device.display_height
   end
@@ -608,6 +616,28 @@ class DeviceTest < Minitest::Test
     disabled = device.content_args(timezone: "UTC")
     assert_equal true, disabled[:always_show_today]
     assert_equal 2, disabled[:days]
+  end
+
+  def test_two_day_landscape_uses_two_day_content_and_rollover_rules
+    device = Device.new(model: "reterminal_e1003", display_template: "two_day_landscape")
+    args = device.content_args(timezone: "UTC")
+
+    assert_equal true, args[:always_show_today]
+    assert_equal 2, args[:days]
+    assert_equal 2, args[:day_groups_limit]
+    assert args[:weather_row]
+    assert_equal Device::COMPACT_TEMPERATURE_HOURS, args[:temperature_hours]
+    assert args[:include_weather_alerts]
+    assert args[:include_air_quality]
+    assert args[:clothing_forecast]
+
+    device.configuration = {"clothing_forecast" => "false"}
+    refute device.content_args(timezone: "UTC")[:clothing_forecast]
+
+    device.configuration = {"two_day_rollover_enabled" => "true"}
+    enabled = device.content_args(timezone: "UTC")
+    assert_equal false, enabled[:always_show_today]
+    assert_equal 3, enabled[:days]
   end
 
   def test_one_day_defers_current_day_hiding_to_device_content

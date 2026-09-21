@@ -117,11 +117,11 @@ class DeviceSettingsOptions
 
   def one_day? = %w[one_day sticky_one_day].include?(template)
 
-  def two_day? = template == "two_day"
+  def two_day? = %w[two_day two_day_landscape].include?(template)
 
   def trmnl? = template == "trmnl"
 
-  def compact? = %w[two_day three_day one_day sticky_one_day].include?(template)
+  def compact? = %w[two_day two_day_landscape three_day one_day sticky_one_day].include?(template)
 
   def reterminal? = %w[reterminal reterminal_landscape].include?(template)
 
@@ -198,7 +198,7 @@ class DeviceSettingsOptions
     end
     return unless compact?
 
-    switch("clothing_forecast", "Clothing forecast", default_on: false, description: CLOTHING_FORECAST_DESCRIPTION) unless one_day?
+    switch("clothing_forecast", "Clothing forecast", default_on: template == "two_day_landscape", description: CLOTHING_FORECAST_DESCRIPTION) unless one_day?
     switch("show_icons", "Icons", default_on: true, description: ICONS_DESCRIPTION)
     switch("auto_assign_icons", "Auto-assign icons based on event title", default_on: true, depends_on: "show_icons", description: AUTO_ICONS_DESCRIPTION)
     if template == "three_day"
@@ -207,7 +207,7 @@ class DeviceSettingsOptions
     if two_day?
       switch("show_dates", "Dates", default_on: true, description: DATES_DESCRIPTION)
       switch("show_event_times", "Event times", default_on: true, description: EVENT_TIMES_DESCRIPTION)
-      switch("two_day_rollover_enabled", "Hide current day if no events after", default_on: true, description: HIDE_CURRENT_DAY_DESCRIPTION)
+      switch("two_day_rollover_enabled", "Hide current day if no events after", default_on: template == "two_day", description: HIDE_CURRENT_DAY_DESCRIPTION)
     end
     if one_day?
       switch("show_event_times", "Event times", default_on: false, description: EVENT_TIMES_DESCRIPTION)

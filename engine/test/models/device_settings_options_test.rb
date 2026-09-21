@@ -45,6 +45,16 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
     refute alerts[:default_on]
   end
 
+  def test_two_day_landscape_uses_two_day_options_with_different_defaults
+    assert_equal keys_for("two_day"), keys_for("two_day_landscape")
+
+    options = DeviceSettingsOptions.call(Device.new(display_template: "two_day_landscape"))
+    refute options.find { |option| option[:key] == "two_day_rollover_enabled" }[:default_on]
+    assert options.find { |option| option[:key] == "show_weather_alerts" }[:default_on]
+    assert options.find { |option| option[:key] == "show_air_quality_events" }[:default_on]
+    assert options.find { |option| option[:key] == "clothing_forecast" }[:default_on]
+  end
+
   def test_one_day_options
     assert_equal(
       %w[only_show_events_with_icons show_weather_alerts show_air_quality_events show_icons auto_assign_icons

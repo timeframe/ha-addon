@@ -27,7 +27,7 @@ class Device < ActiveRecord::Base
   # Templates that render without the top status bar (the compact day layouts).
   # A low battery can't be shown up top on these, so it's surfaced as a bottom
   # banner instead (see Device.low_battery_banner).
-  NO_STATUS_BAR_TEMPLATES = %w[one_day sticky_one_day two_day three_day].freeze
+  NO_STATUS_BAR_TEMPLATES = %w[one_day sticky_one_day two_day two_day_landscape three_day].freeze
 
   SUPPORTED_MODELS = {
     "visionect_13" => {name: "Visionect Place & Play 13\"", template: "thirteen", width: 1200, height: 1600},
@@ -36,8 +36,8 @@ class Device < ActiveRecord::Base
     "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
     "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true, product_slug: "timeframe-7"},
     "reterminal_sticky" => {name: "reTerminal Sticky 3.97\"", template: "sticky_one_day", width: 800, height: 480, templates: [{name: "sticky_one_day", label: "1-Day Portrait"}], screenshotted: true},
-    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1414, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true, product_slug: "timeframe-10"},
-    "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}], screenshotted: true}
+    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1414, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}, {name: "two_day_landscape", label: "2-Day Landscape"}], screenshotted: true, product_slug: "timeframe-10"},
+    "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}, {name: "two_day_landscape", label: "2-Day Landscape"}], screenshotted: true}
   }.freeze
 
   REALTIME_MODELS = SUPPORTED_MODELS.select { |_, v| v[:realtime] }.keys.freeze
@@ -326,7 +326,11 @@ class Device < ActiveRecord::Base
   # landscape template is active the display is rendered at swapped (landscape)
   # dimensions and the previews skip the portrait -90deg rotation.
   def landscape_template?
-    active_template == "reterminal_landscape"
+    %w[reterminal_landscape two_day_landscape].include?(active_template)
+  end
+
+  def two_day_template?
+    %w[two_day two_day_landscape].include?(active_template)
   end
 
   def template_options
@@ -407,7 +411,7 @@ class Device < ActiveRecord::Base
   COMPACT_TEMPERATURE_HOURS = [8, 12, 16].freeze
 
   def default_temperature_hours
-    %w[three_day two_day].include?(active_template) ? COMPACT_TEMPERATURE_HOURS : DEFAULT_TEMPERATURE_HOURS
+    (active_template == "three_day" || two_day_template?) ? COMPACT_TEMPERATURE_HOURS : DEFAULT_TEMPERATURE_HOURS
   end
 
   def temperature_event_hours
@@ -463,8 +467,8 @@ class Device < ActiveRecord::Base
   # renders through the same per-template rules as real devices instead of a
   # duplicated copy that drifts.
   def content_args(timezone: nil, current_time: nil)
-    compact_view = %w[three_day two_day one_day sticky_one_day].include?(active_template)
-    two_day = active_template == "two_day"
+    compact_view = %w[three_day two_day two_day_landscape one_day sticky_one_day].include?(active_template)
+    two_day = two_day_template?
     one_day = %w[one_day sticky_one_day].include?(active_template)
     three_day = active_template == "three_day"
     include_ranged_weather_events = !one_day
@@ -479,6 +483,13 @@ class Device < ActiveRecord::Base
     hide_today_enabled = current_day_rollover_enabled?
     hide_today_minutes = hide_today_enabled ? current_day_rollover_after_minutes : (24 * 60)
     always_show_today_value = !hide_today_enabled
+    clothing_forecast_enabled = if one_day
+      true
+    elsif active_template == "two_day_landscape"
+      configuration&.dig("clothing_forecast") != "false"
+    else
+      configuration&.dig("clothing_forecast") == "true"
+    end
     # Auto-assign icons is available on every template. It defaults ON for the
     # timeline (trmnl) and compact layouts (their historical behavior) and OFF
     # for all other templates.
@@ -524,7 +535,7 @@ class Device < ActiveRecord::Base
       weather_row: compact_view, start_time_only: compact_view,
       always_show_today: always_show_today_value,
       hide_today_after_minutes: hide_today_minutes,
-      clothing_forecast: (compact_view || active_template == "trmnl" || active_template == "reterminal_landscape") && (one_day || configuration&.dig("clothing_forecast") == "true"),
+      clothing_forecast: (compact_view || active_template == "trmnl" || active_template == "reterminal_landscape") && clothing_forecast_enabled,
       auto_icons: auto_icons_enabled,
       wind_gust_threshold_mph: wind_gust_threshold_mph,
       event_filters: calendar_event_filters,
@@ -543,6 +554,8 @@ class Device < ActiveRecord::Base
     case active_template
     when "two_day"
       configuration&.dig("two_day_rollover_enabled") != "false"
+    when "two_day_landscape"
+      configuration&.dig("two_day_rollover_enabled") == "true"
     when "one_day", "sticky_one_day"
       configuration&.dig("one_day_rollover_enabled") != "false"
     else
@@ -552,7 +565,7 @@ class Device < ActiveRecord::Base
 
   def current_day_rollover_after_minutes
     case active_template
-    when "two_day"
+    when "two_day", "two_day_landscape"
       self.class.time_string_to_minutes(configuration&.dig("two_day_rollover_time").presence)
     when "one_day", "sticky_one_day"
       self.class.time_string_to_minutes(configuration&.dig("one_day_rollover_time").presence)

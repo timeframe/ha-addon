@@ -13,6 +13,7 @@ class DevicesController < ApplicationController
     "trmnl" => "Devices::TrmnlComponent",
     "three_day" => "Devices::ThreeDayComponent",
     "two_day" => "Devices::TwoDayComponent",
+    "two_day_landscape" => "Devices::TwoDayLandscapeComponent",
     "one_day" => "Devices::OneDayComponent",
     "sticky_one_day" => "Devices::StickyOneDayComponent",
     "reterminal" => "Devices::ReterminalComponent",

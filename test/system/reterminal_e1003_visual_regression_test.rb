@@ -45,6 +45,24 @@ class ReterminalE1003VisualRegressionTest < ApplicationSystemTestCase
     assert_visual_match "reterminal_e1003_landscape"
   end
 
+  test "renders the two-day layout in landscape" do
+    device = create_device("two_day_landscape", "two_day_landscape")
+
+    page.current_window.resize_to(1872, 1414)
+    visit_preview(device)
+
+    assert_no_selector ".current-day-header"
+    assert_selector ".two-day-col", count: 2
+    assert page.evaluate_script(<<~JS), "Every two-day event list should fit inside its visible container"
+      (function() {
+        return Array.from(document.querySelectorAll('.two-day-events')).every(function(container) {
+          return container.scrollHeight <= container.clientHeight + 1;
+        });
+      })()
+    JS
+    assert_visual_match "reterminal_e1003_two_day_landscape"
+  end
+
   private
 
   def create_device(name, template)
