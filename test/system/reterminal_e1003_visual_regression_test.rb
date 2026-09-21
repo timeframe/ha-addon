@@ -53,6 +53,7 @@ class ReterminalE1003VisualRegressionTest < ApplicationSystemTestCase
 
     assert_no_selector ".current-day-header"
     assert_selector ".two-day-col", count: 2
+    assert_text "72° / 50°", count: 2
     assert page.evaluate_script(<<~JS), "Every two-day event list should fit inside its visible container"
       (function() {
         return Array.from(document.querySelectorAll('.two-day-events')).every(function(container) {

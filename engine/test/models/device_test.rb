@@ -626,6 +626,7 @@ class DeviceTest < Minitest::Test
     assert_equal 2, args[:days]
     assert_equal 2, args[:day_groups_limit]
     assert args[:weather_row]
+    assert args[:include_daily_weather]
     assert_equal Device::COMPACT_TEMPERATURE_HOURS, args[:temperature_hours]
     assert args[:include_weather_alerts]
     assert args[:include_air_quality]
