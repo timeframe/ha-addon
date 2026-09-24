@@ -128,6 +128,7 @@
         cells.forEach(function(td) { td.style.width = Math.ceil(max) + 'px'; });
       }
     }
+    window.syncTimelineTimeColumns = syncTimeColumns;
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(syncTimeColumns);
     }

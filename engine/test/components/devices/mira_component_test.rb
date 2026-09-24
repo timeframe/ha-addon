@@ -43,9 +43,24 @@ class MiraComponentTest < ActiveSupport::TestCase
     assert_includes html, "parts.weekday + ', ' + parts.month + '. ' + parts.day"
   end
 
+  test "resizes timeline time columns after a partial refresh" do
+    html = render_mira(refresh: true)
+
+    assert_includes html, "window.syncTimelineTimeColumns = syncTimeColumns;"
+    assert_includes html, "window.syncTimelineTimeColumns();"
+  end
+
+  test "aborts a stalled partial refresh so it can retry" do
+    html = render_mira(refresh: true)
+
+    assert_includes html, "new AbortController()"
+    assert_includes html, "controller.abort(); }, 15000"
+    assert_includes html, "fetchOptions.signal = controller.signal"
+  end
+
   private
 
-  def render_mira(top_left: [], top_right: [], weather_status: [], current_time: Time.zone.local(2026, 5, 25, 8, 0, 0))
+  def render_mira(top_left: [], top_right: [], weather_status: [], current_time: Time.zone.local(2026, 5, 25, 8, 0, 0), refresh: false)
     ApplicationController.render(
       Devices::MiraComponent.new(
         view_object: {
@@ -66,7 +81,10 @@ class MiraComponentTest < ActiveSupport::TestCase
           ],
           timestamp: "8:00 AM",
           attribution: ""
-        }
+        },
+        refresh: refresh,
+        device: Device.new(id: 123),
+        device_url: "/d/test"
       ),
       layout: false
     )

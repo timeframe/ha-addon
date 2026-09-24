@@ -172,6 +172,7 @@
         tfLog('warn', 'tfMorph missing; full innerHTML swap');
       }
       window.initMiraClock();
+      window.syncTimelineTimeColumns();
     }
 
     // Fetch the latest rendered content and morph it in. During a backend
@@ -182,16 +183,22 @@
     function tfRefresh(attempt) {
       if (refreshInFlight && attempt === 0) return;
       refreshInFlight = true;
-      fetch(deviceUrl + '?layout=false', { cache: 'no-store' })
+      var controller = typeof AbortController === 'function' ? new AbortController() : null;
+      var timeoutId = controller ? setTimeout(function() { controller.abort(); }, 15000) : null;
+      var fetchOptions = { cache: 'no-store' };
+      if (controller) fetchOptions.signal = controller.signal;
+      fetch(deviceUrl + '?layout=false', fetchOptions)
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
           return r.text();
         })
         .then(function(html) {
+          if (timeoutId) clearTimeout(timeoutId);
           refreshInFlight = false;
           if (html && html.trim().length) tfApplyHtml(html);
         })
         .catch(function(e) {
+          if (timeoutId) clearTimeout(timeoutId);
           tfLog('error', 'refresh failed: ' + e);
           console.error('[Timeframe] Refresh failed:', e);
           setTimeout(function() { tfRefresh(attempt + 1); }, Math.min(30000, 5000 * (attempt + 1)));
