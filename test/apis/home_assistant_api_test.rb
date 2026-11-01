@@ -851,6 +851,27 @@ class HomeAssistantApiTest < Minitest::Test
     assert_equal "calendar.family", api.calendar_events.first.entity_id
   end
 
+  def test_calendar_events_ignore_unknown_event_fields
+    api = new_test_api
+    calendar = {"entity_id" => "calendar.family"}
+    event = {
+      "summary" => "Dentist",
+      "status" => "confirmed",
+      "start" => {"dateTime" => "2024-09-05T10:00:00-06:00"},
+      "end" => {"dateTime" => "2024-09-05T11:00:00-06:00"}
+    }
+
+    api.stub :fetch_calendar_list, [calendar] do
+      api.stub :fetch_calendar_icons, {} do
+        HTTParty.stub :get, [event] do
+          api.fetch_calendars
+        end
+      end
+    end
+
+    assert_equal "Dentist", api.calendar_events.first.summary
+  end
+
   def test_calendar_events_apply_local_customizations
     account = test_user.accounts.first
     CalendarEventCustomization.delete_all
