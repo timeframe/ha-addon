@@ -277,9 +277,14 @@ class HomeAssistantApi
     domain_last_fetched_at(CALENDAR_DOMAIN)
   end
 
+  # Keyword arguments DeviceEvent#initialize accepts. Home Assistant may add new
+  # fields to calendar events (e.g. `status`), so anything else is dropped
+  # rather than raising ArgumentError and breaking every page that lists events.
+  DEVICE_EVENT_KEYWORDS = DeviceEvent.instance_method(:initialize).parameters.map(&:last).freeze
+
   def calendar_events
     @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map do |raw|
-      event = raw.symbolize_keys
+      event = raw.symbolize_keys.slice(*DEVICE_EVENT_KEYWORDS)
       event[:description] = customized_description(event)
       DeviceEvent.new(**event, timezone: time_zone)
     end
