@@ -58,3 +58,9 @@ jobs:
         PGHOST: 127.0.0.1
         PGUSER: postgres
         PGPASSWORD: postgres
+        UPDATE_VISUALS: "1"
+    - name: Export refreshed visual baselines
+      uses: actions/upload-artifact@v4
+      with:
+        name: visual-baselines
+        path: test/fixtures/visual/*.png
