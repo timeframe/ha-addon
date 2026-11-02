@@ -69,6 +69,10 @@ Keep the `/data` volume across restarts — it holds the bundled Postgres databa
 
 > When installed as a Home Assistant add-on, Timeframe instead authenticates automatically via the Supervisor and reads unit options from the add-on configuration UI, so no environment variables are required in that mode.
 
+## Calendars
+
+Timeframe imports each Home Assistant calendar event's title, start and end times, description, location, and UID, together with its calendar's icon and entity ID. Additional Home Assistant fields, such as event status, are ignored.
+
 ## Configuration
 
 The following entities can be created in Home Assistant to customize behavior. Icon names are from [Material Design Icons](https://pictogrammers.com/library/mdi/) (without the `mdi-` prefix).
