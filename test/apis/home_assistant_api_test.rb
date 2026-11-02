@@ -851,6 +851,48 @@ class HomeAssistantApiTest < Minitest::Test
     assert_equal "calendar.family", api.calendar_events.first.entity_id
   end
 
+  def test_fetch_calendars_ignores_event_fields_device_event_does_not_know
+    api = new_test_api
+    calendar = {"entity_id" => "calendar.family"}
+    event = {
+      "summary" => "Dentist",
+      "uid" => "evt-1",
+      "start" => {"dateTime" => "2024-09-05T10:00:00-06:00"},
+      "end" => {"dateTime" => "2024-09-05T11:00:00-06:00"},
+      # Newer Home Assistant versions return an event status; future versions
+      # may add more fields.
+      "status" => "confirmed",
+      "some_future_field" => "x"
+    }
+
+    api.stub :fetch_calendar_list, [calendar] do
+      api.stub :fetch_calendar_icons, {} do
+        HTTParty.stub :get, [event] do
+          api.fetch_calendars
+        end
+      end
+    end
+
+    fetched = api.calendar_events.first
+    assert_equal "Dentist", fetched.summary
+    assert_equal "evt-1", fetched.id
+    assert_equal "calendar.family", fetched.entity_id
+  end
+
+  def test_calendar_events_ignore_unknown_fields_in_already_cached_events
+    api = new_test_api
+    api.seed_calendars([{
+      "summary" => "Dentist",
+      "starts_at" => "2024-09-05T10:00:00-06:00",
+      "ends_at" => "2024-09-05T11:00:00-06:00",
+      "entity_id" => "calendar.family",
+      "id" => "evt-1",
+      "status" => "tentative"
+    }])
+
+    assert_equal ["Dentist"], api.calendar_events.map(&:summary)
+  end
+
   def test_calendar_events_apply_local_customizations
     account = test_user.accounts.first
     CalendarEventCustomization.delete_all
