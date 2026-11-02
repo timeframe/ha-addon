@@ -6,7 +6,7 @@ module TimeframeCore
 
     initializer "timeframe_core.view_component" do |app|
       ActiveSupport.on_load(:view_component) do
-        ViewComponent::Base.config.view_component_path = TimeframeCore::Engine.root.join("app", "components")
+        ViewComponent::Base.config.generate.path = TimeframeCore::Engine.root.join("app", "components")
       end
     end
 
