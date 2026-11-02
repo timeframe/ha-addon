@@ -8,3 +8,8 @@ test
 .github
 docker-compose.yml
 config/timeframe.yml
+# Local runtime state and personal compose settings (may hold the database,
+# SECRET_KEY_BASE and a Home Assistant token) must never enter the image.
+data
+pgdata
+docker-compose.override.yml
