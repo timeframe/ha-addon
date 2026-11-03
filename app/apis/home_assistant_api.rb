@@ -279,20 +279,10 @@ class HomeAssistantApi
 
   def calendar_events
     @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map do |raw|
-      event = raw.symbolize_keys.slice(*device_event_keywords)
+      event = raw.symbolize_keys
       event[:description] = customized_description(event)
       DeviceEvent.new(**event, timezone: time_zone)
     end
-  end
-
-  # The event fields DeviceEvent accepts (its initializer takes only keyword
-  # arguments). Home Assistant adds fields to calendar events over time (e.g.
-  # `status`, confirmed/tentative), and passing one DeviceEvent doesn't know
-  # raises ArgumentError ("unknown keyword"), which breaks the Events and Status
-  # pages and every device that shows events. Filtering on read also covers
-  # events already cached before a Home Assistant upgrade.
-  def device_event_keywords
-    @device_event_keywords ||= DeviceEvent.instance_method(:initialize).parameters.map(&:last)
   end
 
   # Merge any locally-stored per-event customization (icon/title/hide) onto the
