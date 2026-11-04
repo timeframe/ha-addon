@@ -1,58 +1,40 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env ruby
+# frozen_string_literal: true
 
-CONFIG="config.json"
-CHANGELOG="CHANGELOG.md"
+require "optparse"
+require_relative "../lib/release_preparation"
 
-# Read current version
-current_version=$(ruby -rjson -e "puts JSON.parse(File.read('$CONFIG'))['version']")
-IFS='.' read -r major minor patch <<< "$current_version"
+begin
+  interactive = ARGV.empty?
+  notes_path = nil
+  OptionParser.new do |options|
+    options.banner = "Usage: script/release [major|minor|patch] [--notes FILE]"
+    options.on("--notes FILE", "Use already-generated changelog sections") { |path| notes_path = path }
+    options.on("-h", "--help") do
+      puts options
+      exit
+    end
+  end.parse!
 
-echo "Current version: $current_version"
-echo ""
-echo "Release type:"
-echo "  1) major ($(( major + 1 )).0.0)"
-echo "  2) minor ($major.$(( minor + 1 )).0)"
-echo "  3) patch ($major.$minor.$(( patch + 1 )))"
-echo ""
-read -rp "Select [1/2/3]: " choice
+  release = ReleasePreparation.new
+  bump = ARGV.shift
+  raise ReleasePreparation::Error, "Unexpected arguments: #{ARGV.join(" ")}" unless ARGV.empty?
 
-case "$choice" in
-  1|major)  major=$(( major + 1 )); minor=0; patch=0 ;;
-  2|minor)  minor=$(( minor + 1 )); patch=0 ;;
-  3|patch)  patch=$(( patch + 1 )) ;;
-  *)        echo "Invalid choice"; exit 1 ;;
-esac
-
-new_version="$major.$minor.$patch"
-today=$(date +%Y-%m-%d)
-
-echo ""
-echo "Bumping $current_version → $new_version"
-
-# Update config.json version
-ruby -rjson -e "
-  config = JSON.parse(File.read('$CONFIG'))
-  config['version'] = '$new_version'
-  File.write('$CONFIG', JSON.pretty_generate(config) + \"\n\")
-"
-
-# Add new changelog header
-ruby -e "
-  changelog = File.read('$CHANGELOG')
-  new_entry = \"## [$new_version] - $today\n\n### Added\n\n### Changed\n\n### Fixed\n\n\"
-  # Insert after the first ## header or after the preamble
-  if changelog.include?('## [')
-    changelog = changelog.sub(/^## \[/, new_entry + '## [')
-  else
-    changelog += \"\n\" + new_entry
+  if interactive
+    puts "Current version: #{release.version}\n\nRelease type:"
+    ReleasePreparation::BUMPS.each_with_index do |type, index|
+      puts "  #{index + 1}) #{type} (#{release.next_version(type)})"
+    end
+    print "\nSelect [1/2/3]: "
+    choice = $stdin.gets&.strip
+    bump = {"1" => "major", "2" => "minor", "3" => "patch"}.fetch(choice, choice)
   end
-  File.write('$CHANGELOG', changelog)
-"
 
-echo "✓ Updated $CONFIG to $new_version"
-echo "✓ Added changelog entry for $new_version"
-echo ""
-echo "Next steps:"
-echo "  1. Edit $CHANGELOG with release notes"
-echo "  2. Run script/publish to commit, tag, and push"
+  notes = File.read(notes_path) if notes_path
+  version = release.prepare(bump, notes: notes)
+  puts "\nUpdated config.json and CHANGELOG.md for v#{version}"
+  puts "\nNext steps:\n  1. Review CHANGELOG.md\n  2. Run script/publish to commit, tag, and push"
+rescue ReleasePreparation::Error, OptionParser::ParseError, JSON::ParserError, Errno::ENOENT => error
+  warn "Release preparation failed: #{error.message}"
+  exit 1
+end
