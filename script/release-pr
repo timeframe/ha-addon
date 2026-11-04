@@ -1,154 +1,54 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "json"
 require "open3"
-require "uri"
-require_relative "../lib/release_preparation"
 
-class ReleasePullRequest
-  Error = ReleasePreparation::Error
-  MARKER = "<!-- timeframe-release-pr -->"
-
-  def initialize
-    @repository = environment("GITHUB_REPOSITORY")
-    @default_branch = environment("RELEASE_DEFAULT_BRANCH")
-    @bump = environment("RELEASE_BUMP")
-    raise Error, "Invalid repository name" unless @repository.match?(/\A[\w.-]+\/[\w.-]+\z/)
-    unless environment("GITHUB_REF") == "refs/heads/#{@default_branch}"
-      raise Error, "Dispatch this workflow from the default branch #{@default_branch}"
-    end
-    environment("GH_TOKEN")
-    @release = ReleasePreparation.new
-    @version = @release.next_version(@bump)
-    ensure_clean!
-  end
-
-  def create
-    server = environment("GITHUB_SERVER_URL")
-    summary = environment("GITHUB_STEP_SUMMARY")
-    ensure_no_release_pr!
-    previous_tag = "v#{@release.version}"
-    source_sha = run("git", "rev-parse", "HEAD").strip
-    ensure_release_tags!(previous_tag, source_sha)
-    ensure_current_default!(source_sha)
-    run_id = environment("GITHUB_RUN_ID")
-    attempt = environment("GITHUB_RUN_ATTEMPT")
-    unless [run_id, attempt].all? { |value| value.match?(/\A[1-9]\d*\z/) }
-      raise Error, "Invalid Actions run ID or attempt"
-    end
-    branch = "release/v#{@version}-#{run_id}-#{attempt}"
-    unless run("git", "ls-remote", "--heads", "origin", "refs/heads/#{branch}").empty?
-      raise Error, "Release branch #{branch} already exists; refusing to overwrite it"
-    end
-    range = "#{previous_tag}..#{source_sha}"
-    commits = run("git", "log", "--reverse", "--topo-order", "--no-merges", "--abbrev=7", "--format=- %s (%h)", range)
-    raise Error, "No non-merge commits since #{previous_tag}" if commits.strip.empty?
-    notes = "### Changed\n#{commits}"
-    date = Time.now.utc.to_date
-    expected = @release.changes(@bump, notes: notes, date: date)
-    @release.prepare(@bump, notes: notes, date: date)
-    changed = run("git", "diff", "--name-only").lines.map(&:strip).sort
-    unless changed == expected.keys.sort && expected.all? { |path, content| File.read(path) == content } &&
-        run("git", "ls-files", "--others", "--exclude-standard").empty?
-      raise Error, "Release preparation changed files beyond the expected version and changelog"
-    end
-
-    run("git", "checkout", "-b", branch)
-    run("git", "config", "user.name", "github-actions[bot]")
-    run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
-    run("git", "add", "--", "config.json", "CHANGELOG.md")
-    run("git", "commit", "-m", "Release v#{@version}")
-    ensure_current_default!(source_sha)
-    ensure_no_release_pr!
-    run("git", "push", "origin", "HEAD:refs/heads/#{branch}")
-    pushed_branch = branch
-    body = <<~BODY
-      #{MARKER}
-
-      Bumps #{@release.version} to #{@version}.
-      Changelog drafted from commit subjects in [#{previous_tag}...#{source_sha[0, 7]}](#{server}/#{@repository}/compare/#{previous_tag}...#{source_sha}).
-
-      Review and edit the draft changelog, and approve the pull request workflows before merging.
-    BODY
-    response = JSON.parse(run("gh", "api", "repos/#{@repository}/pulls", "--method", "POST",
-      "-f", "base=#{@default_branch}", "-f", "head=#{branch}", "-f", "title=Release v#{@version}", "-f", "body=#{body}"))
-    unless response.is_a?(Hash) && response["html_url"].is_a?(String) &&
-        response["html_url"].match?(/\A#{Regexp.escape(server)}\/#{Regexp.escape(@repository)}\/pull\/[1-9]\d*\z/)
-      raise Error, "GitHub did not return a valid pull request URL"
-    end
-    url = response.fetch("html_url")
-    puts "Created #{url}"
-    File.open(summary, "a") do |file|
-      file.puts("Prepared [Release v#{@version}](#{url}) with a changelog draft from commit subjects. Review and edit it before merging. No tags or images were published.")
-    end
-  rescue Error, JSON::ParserError, KeyError, Errno::ENOENT
-    warn "Release branch #{pushed_branch} was pushed and may need manual cleanup." if pushed_branch
-    raise
-  end
-
-  private
-
-  def environment(name)
-    value = ENV[name]
-    raise Error, "Missing #{name}; run this helper from the configured Actions workflow" if value.nil? || value.empty?
-    value
-  end
-
-  def run(*arguments)
-    stdout, stderr, status = Open3.capture3(*arguments)
-    unless status.success?
-      detail = stderr.strip.empty? ? stdout.strip : stderr.strip
-      raise Error, "#{arguments.first(2).join(" ")} failed (exit #{status.exitstatus}): #{detail}"
-    end
-    stdout
-  end
-
-  def ensure_clean!
-    unless run("git", "status", "--porcelain").empty?
-      raise Error, "The release checkout must be clean"
-    end
-  end
-
-  def ensure_current_default!(sha)
-    current = run("git", "ls-remote", "--exit-code", "origin", "refs/heads/#{@default_branch}").split.first
-    raise Error, "The default branch moved; dispatch again to draft notes from its current commits" unless current == sha
-  end
-
-  def ensure_no_release_pr!
-    query = URI.encode_www_form("state" => "open", "base" => @default_branch, "per_page" => 100)
-    pages = JSON.parse(run("gh", "api", "--paginate", "--slurp", "repos/#{@repository}/pulls?#{query}"))
-    unless pages.is_a?(Array) && pages.all? { |page| page.is_a?(Array) }
-      raise Error, "Unexpected pull request API response"
-    end
-    existing = pages.flatten(1).find do |pull_request|
-      pull_request.fetch("head").fetch("ref").start_with?("release/v") ||
-        pull_request["body"].to_s.include?(MARKER) ||
-        pull_request.fetch("title").match?(/\ARelease v\d+\.\d+\.\d+\z/i)
-    end
-    raise Error, "A release pull request is already open: #{existing.fetch("html_url")}" if existing
-  end
-
-  def ensure_release_tags!(previous_tag, source_sha)
-    if run("git", "tag", "--list", previous_tag).strip.empty?
-      raise Error, "Missing baseline tag #{previous_tag}; tag the previous merged release first"
-    end
-    unless run("git", "tag", "--list", "v#{@version}").strip.empty?
-      raise Error, "Target release tag v#{@version} already exists"
-    end
-    unless run("git", "ls-remote", "--tags", "origin", "refs/tags/v#{@version}").empty?
-      raise Error, "Target release tag v#{@version} already exists"
-    end
-    tag_sha = run("git", "rev-parse", "#{previous_tag}^{commit}").strip
-    unless run("git", "merge-base", tag_sha, source_sha).strip == tag_sha
-      raise Error, "Baseline tag #{previous_tag} is not an ancestor of the release source"
-    end
-  end
+def run(*command, **options)
+  stdout, stderr, status = Open3.capture3(*command, **options)
+  abort "#{command.join(" ")} failed:\n#{stderr}#{stdout}" unless status.success?
+  stdout
 end
 
-begin
-  raise ReleasePreparation::Error, "Usage: ruby script/release-pr" unless ARGV.empty?
-  ReleasePullRequest.new.create
-rescue ReleasePreparation::Error, JSON::ParserError, KeyError, Errno::ENOENT => error
-  warn "Release pull request preparation failed: #{error.message}"
-  exit 1
+repository = ENV.fetch("GITHUB_REPOSITORY")
+base = ENV.fetch("RELEASE_DEFAULT_BRANCH")
+abort "Dispatch from the default branch #{base}" unless ENV.fetch("GITHUB_REF") == "refs/heads/#{base}"
+abort "The release checkout must be clean" unless run("git", "status", "--porcelain").empty?
+
+pulls = JSON.parse(run("gh", "api", "repos/#{repository}/pulls", "--paginate", "--slurp", "--method", "GET",
+  "-f", "state=open", "-f", "base=#{base}", "-f", "per_page=100")).flatten
+existing = pulls.find do |pull|
+  pull.fetch("head").fetch("ref").start_with?("release/v") || pull.fetch("title").match?(/\ARelease v\d+\.\d+\.\d+\z/i)
 end
+abort "A release pull request is already open: #{existing.fetch("html_url")}" if existing
+
+previous_tag = "v#{JSON.parse(File.read("config.json")).fetch("version")}"
+source = run("git", "rev-parse", "HEAD").strip
+run("git", "merge-base", "--is-ancestor", previous_tag, source)
+commits = run("git", "log", "--reverse", "--topo-order", "--no-merges", "--abbrev=7", "--format=- %s (%h)", "#{previous_tag}..#{source}")
+abort "No non-merge commits since #{previous_tag}" if commits.strip.empty?
+
+run("bash", "script/release", stdin_data: "#{ENV.fetch("RELEASE_BUMP")}\n")
+version = JSON.parse(File.read("config.json")).fetch("version")
+abort "Release tag v#{version} already exists" unless run("git", "tag", "--list", "v#{version}").empty?
+changelog = File.read("CHANGELOG.md")
+unless changelog.sub!("### Added\n\n### Changed\n\n### Fixed\n") { "### Changed\n#{commits}" }
+  abort "script/release did not create its expected changelog template"
+end
+File.write("CHANGELOG.md", changelog)
+
+branch = "release/v#{version}-#{ENV.fetch("GITHUB_RUN_ID")}-#{ENV.fetch("GITHUB_RUN_ATTEMPT")}"
+run("git", "checkout", "-b", branch)
+run("git", "config", "user.name", "github-actions[bot]")
+run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
+run("git", "add", "--", "config.json", "CHANGELOG.md")
+run("git", "commit", "-m", "Release v#{version}")
+current = run("git", "ls-remote", "--exit-code", "origin", "refs/heads/#{base}").split.first
+abort "The default branch moved; dispatch again" unless current == source
+run("git", "push", "origin", "HEAD:refs/heads/#{branch}")
+
+body = "Draft changelog from commit messages since #{previous_tag}. Review and edit it, and approve the pull request workflows before merging."
+url = JSON.parse(run("gh", "api", "repos/#{repository}/pulls", "--method", "POST",
+  "-f", "base=#{base}", "-f", "head=#{branch}", "-f", "title=Release v#{version}", "-f", "body=#{body}")).fetch("html_url")
+puts "Created #{url}"
+File.write(ENV.fetch("GITHUB_STEP_SUMMARY"), "Prepared [Release v#{version}](#{url}). Review the draft changelog before merging.\n")

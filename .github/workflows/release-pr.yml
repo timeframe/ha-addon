@@ -6,30 +6,22 @@ name: Prepare release pull request
       bump:
         description: Release version bump
         type: choice
-        options:
-          - patch
-          - minor
-          - major
+        options: [patch, minor, major]
         default: patch
         required: true
 
-permissions: {}
+permissions:
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: release-pr-${{ github.repository }}
   cancel-in-progress: false
 
-env:
-  RELEASE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-  RELEASE_BUMP: ${{ inputs.bump }}
-
 jobs:
   prepare:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
@@ -41,4 +33,6 @@ jobs:
       - name: Open release pull request
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RELEASE_BUMP: ${{ inputs.bump }}
         run: ruby script/release-pr

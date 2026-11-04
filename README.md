@@ -523,31 +523,13 @@ Create `config/timeframe.yml` from `config/timeframe.yml.example` with your sett
 
 ## Releases
 
-Release preparation runs entirely on GitHub Actions; no local development environment is required.
+Enable **Settings > Actions > General > Workflow permissions > Allow GitHub Actions to create and approve pull requests** once. No additional secrets or local development environment are needed.
 
-### One-time setup
+Run **Actions > Prepare release pull request** on the default branch, choosing `patch` (default), `minor`, or `major`. It reuses `script/release` to bump `config.json` and drafts `CHANGELOG.md` from non-merge commit subjects since the current version's `vVERSION` tag. An existing release pull request or a missing/invalid baseline stops preparation.
 
-In this repository's **Settings > Actions > General > Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The workflow uses the built-in Actions token, with no additional secrets or external generation service. It never approves or merges pull requests. The default token permissions can remain read-only because the job requests the permissions it needs.
+Review and edit the draft notes before merging; approve the pull request workflows if GitHub requests it. The workflow neither merges nor publishes tags/images. **Merging the version bump makes the update discoverable by Home Assistant.** Tag that merged commit as `vVERSION` before preparing the next release.
 
-### Prepare a release
-
-1. Open **Actions > Prepare release pull request > Run workflow** on the default branch.
-2. Choose `patch` (the default), `minor`, or `major`.
-3. Review and edit the draft changelog in the resulting `Release vVERSION` pull request. It changes only `config.json` and `CHANGELOG.md`. Approve its workflows if GitHub displays **Approve workflows to run**, then review the checks before merging.
-
-The changelog draft lists non-merge commit subjects, oldest first, from the current manifest version's `vVERSION` tag through the captured default-branch commit. Each bullet includes its commit's short hash under `### Changed`. It uses no source diffs or AI calls, and does not categorize or filter development-only changes; edit the draft into user-facing release notes before merging.
-
-The workflow fails if a release pull request is already open; it does not overwrite that pull request's notes. Missing credentials, missing or unreachable baseline tags, an existing target tag, or a range without non-merge commits also fail explicitly.
-
-After a failure, dispatch again or rerun the job. Each attempt drafts from the current default branch, uses a new branch, and never force-pushes. If GitHub rejects pull request creation after the branch was pushed, the log identifies the branch for manual cleanup. If the default branch moved during preparation, dispatch again so the draft includes its current commits.
-
-### Merge and tagging
-
-Creating the pull request does not publish an update. **Merging its version bump into the default branch makes the new version discoverable by Home Assistant.** Home Assistant installations build this repository's Dockerfile locally; this workflow does not build or publish images.
-
-Tag the merged release commit as `vVERSION` through the usual manual process before preparing the following release. A GitHub Release is not required, and this workflow creates neither tags nor GitHub Releases.
-
-The interactive `mise exec -- script/release` and manual `script/publish` flow remains available. To prepare local files from existing notes, use `mise exec -- script/release patch --notes /path/to/notes.md`. Do not run `script/publish` on the clean tree after merging a release pull request: that helper expects to create a commit from pending release changes, and is not invoked by this workflow.
+Failed runs can be retried; each attempt uses a new branch without force-pushing. A failed pull request creation may leave a branch to clean up manually. The interactive `mise exec -- script/release` and `script/publish` flow is unchanged; do not run `script/publish` on a clean merged tree, since it expects pending release changes to commit.
 
 ## License
 
