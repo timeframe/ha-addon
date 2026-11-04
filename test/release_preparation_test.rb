@@ -87,7 +87,7 @@ class ReleasePreparationTest < Minitest::Test
     assert_equal "2.16.0", JSON.parse(File.read(File.join(@root, "config.json")))["version"]
   end
 
-  def test_noninteractive_script_uses_generated_notes
+  def test_noninteractive_script_uses_existing_notes
     notes_path = File.join(@root, "notes.md")
     File.write(notes_path, NOTES)
     stdout, stderr, status = Open3.capture3("ruby", RELEASE_SCRIPT, "patch", "--notes", notes_path, chdir: @root)

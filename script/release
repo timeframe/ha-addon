@@ -9,7 +9,7 @@ begin
   notes_path = nil
   OptionParser.new do |options|
     options.banner = "Usage: script/release [major|minor|patch] [--notes FILE]"
-    options.on("--notes FILE", "Use already-generated changelog sections") { |path| notes_path = path }
+    options.on("--notes FILE", "Use existing changelog sections") { |path| notes_path = path }
     options.on("-h", "--help") do
       puts options
       exit

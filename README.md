@@ -527,22 +527,19 @@ Release preparation runs entirely on GitHub Actions; no local development enviro
 
 ### One-time setup
 
-- In timeframe's Copilot policy settings, enable **Allow use of Copilot CLI billed to the organization**. Changelog generation uses the built-in Actions token and bills Copilot usage to the organization; no personal token or API-key secret is needed.
-- In this repository's **Settings > Actions > General > Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The workflow never approves or merges pull requests. The default token permissions can remain read-only because the workflow requests the permissions each job needs.
-
-See GitHub's [Copilot CLI authentication and billing documentation](https://docs.github.com/en/copilot/concepts/agent-capabilities/agent-powered-workflows-and-operations/copilot-cli-in-github-actions) for the organization policy and usage requirements.
+In this repository's **Settings > Actions > General > Workflow permissions**, enable **Allow GitHub Actions to create and approve pull requests**. The workflow uses the built-in Actions token, with no additional secrets or external generation service. It never approves or merges pull requests. The default token permissions can remain read-only because the job requests the permissions it needs.
 
 ### Prepare a release
 
 1. Open **Actions > Prepare release pull request > Run workflow** on the default branch.
-2. Choose `patch` (the default), `minor`, or `major`. The workflow computes the version; the agent only writes changelog text.
-3. Review the resulting `Release vVERSION` pull request. It changes only `config.json` and `CHANGELOG.md`. Approve its workflows if GitHub displays **Approve workflows to run**, then review the checks before merging.
+2. Choose `patch` (the default), `minor`, or `major`.
+3. Review and edit the draft changelog in the resulting `Release vVERSION` pull request. It changes only `config.json` and `CHANGELOG.md`. Approve its workflows if GitHub displays **Approve workflows to run**, then review the checks before merging.
 
-Copilot generates fresh notes from the current manifest version's `vVERSION` tag through the captured default-branch commit. Generation has no repository-write permissions or agent tools; a separate job validates the notes, applies the version bump, and opens the pull request. Generated assets and binary contents are not included in the textual diff.
+The changelog draft lists non-merge commit subjects, oldest first, from the current manifest version's `vVERSION` tag through the captured default-branch commit. Each bullet includes its commit's short hash under `### Changed`. It uses no source diffs or AI calls, and does not categorize or filter development-only changes; edit the draft into user-facing release notes before merging.
 
-The workflow fails if a release pull request is already open; it does not regenerate or overwrite that pull request's notes. Missing credentials/policy access, missing or unreachable baseline tags, an existing target tag, an empty change range, oversized context, or invalid agent output also fail explicitly. There is no placeholder-changelog fallback.
+The workflow fails if a release pull request is already open; it does not overwrite that pull request's notes. Missing credentials, missing or unreachable baseline tags, an existing target tag, or a range without non-merge commits also fail explicitly.
 
-To generate fresh notes after a failure, dispatch again or rerun all jobs. Rerunning only the failed creation job reuses the successful generation artifact, retained for one day. Each creation attempt uses a new branch and never force-pushes. If GitHub rejects pull request creation after the branch was pushed, the log identifies the branch for manual cleanup. If the default branch moved during generation, dispatch again so the notes include its current changes.
+After a failure, dispatch again or rerun the job. Each attempt drafts from the current default branch, uses a new branch, and never force-pushes. If GitHub rejects pull request creation after the branch was pushed, the log identifies the branch for manual cleanup. If the default branch moved during preparation, dispatch again so the draft includes its current commits.
 
 ### Merge and tagging
 
