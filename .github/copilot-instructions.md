@@ -14,7 +14,7 @@ Keep `ha-addon/README.md` in sync with the code whenever behavior changes. Check
 - **Add-on config options:** the `schema` block in `ha-addon/config.json` (must match the units accepted by `HomeAssistantApi`).
 - **Standalone env vars:** `docker-compose.yml` and `TimeframeConfig` defaults.
 - **Sensor entities:** the `sensor.timeframe_*` methods in `ha-addon/app/apis/home_assistant_api.rb`.
-- **Event description tokens:** the `TIMEFRAME_*` patterns and token handling in `ha-addon/engine/app/models/device_event.rb`.
+- **Event description tokens:** the patterns and token handling in `ha-addon/engine/app/models/event_description.rb`, consumed by `DeviceEvent`.
 
 When any of these change, update the corresponding README table/section in the same change.
 
