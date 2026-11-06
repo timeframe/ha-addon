@@ -963,6 +963,25 @@ class HomeAssistantApiTest < Minitest::Test
     end
   end
 
+  def test_calendar_events_read_html_and_prefer_prepended_local_overrides
+    account = test_user.accounts.first
+    calendar = account.calendars.create!(external_id: "calendar.html", name: "HTML", source_type: "home_assistant")
+    calendar.event_customizations.create!(customization_key: "custom", title_override: "Local title", icon: "star")
+    api = HomeAssistantApi.new(TimeframeConfig.new, store: ActiveSupport::Cache::MemoryStore.new, account: account)
+    api.seed_config(DEFAULT_TEST_CONFIG)
+    source = "<div>timeframe-title:Run w/ Kevin</div><div>timeframe-icon:run</div><p>Keep notes</p>"
+    raw = {"starts_at" => "2026-11-06T08:25:00-07:00", "ends_at" => "2026-11-06T08:55:00-07:00",
+           "summary" => "Run", "description" => source, "entity_id" => "calendar.html"}
+    api.seed_calendars([raw.merge("id" => "custom"), raw.merge("id" => "plain")])
+
+    custom, plain = api.calendar_events
+    assert_equal "Local title", custom.summary
+    assert_equal "star", custom.icon
+    assert_equal "Run w/ Kevin", plain.summary
+    assert_equal "run", plain.icon
+    assert_equal source, raw["description"]
+  end
+
   def test_fetch_calendar_icons
     VCR.use_cassette(:home_assistant_calendar_icons) do
       api = HomeAssistantApi.new
