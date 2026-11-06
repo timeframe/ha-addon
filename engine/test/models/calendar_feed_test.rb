@@ -3,6 +3,18 @@
 require "test_helper"
 
 class CalendarFeedTest < Minitest::Test
+  def test_exact_lookalikes_with_distinct_uids_and_html_title_tokens_collapse
+    attributes = {starts_at: "2026-11-06T08:25:00-07:00", ends_at: "2026-11-06T08:55:00-07:00",
+                  timezone: "America/Denver", summary: "Run", icon: "calendar"}
+    original = DeviceEvent.new(**attributes, id: "original", ical_uid: "original-uid",
+      description: "timeframe-title:Run w/ Kevin")
+    mirror = DeviceEvent.new(**attributes, id: "mirror", ical_uid: "mirror-uid",
+      description: "<div>Invitation</div><div>timeframe-title:Run w/ Kevin</div>\r\n")
+    result = CalendarFeed.new.events_for(original.starts_at, original.ends_at, [original, mirror])
+    assert_equal [original], result[:periodic]
+    assert_equal "Run w/ Kevin", mirror.summary
+  end
+
   include ActiveSupport::Testing::TimeHelpers
 
   # DeviceEvents coming from the DB look different than those

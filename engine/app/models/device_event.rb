@@ -1,7 +1,5 @@
 class DeviceEvent
   DAY_IN_SECONDS = 86_400
-  TIMEFRAME_ICON_PATTERN = /timeframe-icon:(?:mdi-)?([a-z0-9][a-z0-9-]*)/i
-  TIMEFRAME_COUNTDOWN_PATTERN = /timeframe-countdown:(\d{1,3})/i
 
   attr_reader :id, :starts_at, :ends_at, :multi_day, :location, :icon_rotation, :attachment_image, :precip, :wind_gust, :entity_id, :ical_uid
   attr_accessor :icon
@@ -30,6 +28,7 @@ class DeviceEvent
       id, icon, icon_rotation, summary.gsub(/[^a-zA-Z0-9.\-"\  _°\/\\&:+,?()<>'@#%\u2019]/, ""), description, location, daily, timezone, attachment_image, wind_gust, entity_id
     @ical_uid = ical_uid
     @yearly_recurring = yearly_recurring
+    @event_description = EventDescription.new(description)
 
     @precip = if precip
       precip
@@ -37,18 +36,17 @@ class DeviceEvent
       [{icon: precip_icon, label: precip_label}]
     end
 
-    @timeframe_icon = @description&.match(TIMEFRAME_ICON_PATTERN)&.captures&.first
+    @timeframe_icon = @event_description.icon
     @icon = @timeframe_icon if @timeframe_icon.present?
 
     # A "timeframe-countdown:N" token asks for an all-day "(in Xd)" reminder on
     # each of the N days before the event (rendered via #countdown_reminder).
-    countdown = @description&.match(TIMEFRAME_COUNTDOWN_PATTERN)&.captures&.first&.to_i
-    @countdown_days = countdown&.positive? ? countdown : nil
+    @countdown_days = @event_description.countdown_days
 
     # Keep the underlying (un-overridden) title so auto icon matching can fall
     # back to it when the overwritten title doesn't match an icon.
     @base_summary = @summary
-    title_override = @description&.match(/timeframe-title:(.+?)(?:\n|$)/)&.captures&.first&.strip
+    title_override = @event_description.title_override
     @summary = title_override if title_override.present?
 
     @starts_at = case starts_at
@@ -83,12 +81,11 @@ class DeviceEvent
   end
 
   def omit?
-    @summary.blank? || @description&.include?("timeframe-omit") || false
+    @summary.blank? || @event_description.omit?
   end
 
   def banner?
-    return false unless @description.present?
-    @description.include?("timeframe-banner") || @description.include?("#banner")
+    @event_description.banner?
   end
 
   def banner_title
@@ -97,20 +94,12 @@ class DeviceEvent
 
   def banner_description
     return nil unless @description.present?
-    text = @description.dup
-
-    # Strip timeframe metadata tags
-    text.gsub!(/timeframe-banner\s*/, "")
-    text.gsub!(/#banner\s*/, "")
-    text.gsub!(/timeframe-omit\s*/, "")
-    text.gsub!(/timeframe-title:[^\n]+\s*/, "")
-    text.gsub!(/timeframe-icon:(?:mdi-)?[a-z0-9][a-z0-9-]*\s*/i, "")
-    text.gsub!(/timeframe-only:[^\n]+\s*/, "")
+    text = @event_description.without_tokens
 
     # Google Calendar sends HTML; Outlook sends HTML too.
     # If it looks like HTML, sanitize it to safe tags.
     # Otherwise, treat as plain text and convert newlines to <br>.
-    if text.match?(/<[a-z][\s\S]*>/i)
+    if @event_description.html?
       sanitize_html(text)
     else
       ERB::Util.html_escape(text.strip).gsub("\n", "<br>")
@@ -118,11 +107,9 @@ class DeviceEvent
   end
 
   def hidden_for?(device_name, device_id: nil)
-    return false unless @description.present?
     return false if device_name.blank? && device_id.blank?
-    match = @description.match(/timeframe-only:(.+?)(?:\n|$)/)
-    return false unless match
-    allowed = match[1].split(",").map(&:strip).map(&:downcase)
+    allowed = @event_description.only_tokens.map(&:downcase)
+    return false if allowed.empty?
     identifiers = [device_name&.downcase, device_id&.to_s].compact
     identifiers.none? { |identifier| allowed.include?(identifier) }
   end

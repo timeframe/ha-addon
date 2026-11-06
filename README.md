@@ -474,6 +474,8 @@ solar-power,UV >4 but low solar output!
 
 You can customize how an individual calendar event renders by adding one or more tokens to its **description**. Tokens are usually placed on their own line and are stripped from any text shown on the display. Icon names come from [Material Design Icons](https://pictogrammers.com/library/mdi/) (without the `mdi-` prefix).
 
+HTML descriptions are supported: line breaks and separate paragraphs or blocks delimit token values, inline formatting is ignored, and HTML entities are decoded when reading tokens. Tokens in HTML attributes, scripts, or styles are ignored. The first matching value wins, including locally customized values prepended to the description. Removing tokens preserves surrounding notes and rich formatting.
+
 | Token | Description |
 |---|---|
 | `timeframe-omit` | Hides this event from the display. |
@@ -481,7 +483,7 @@ You can customize how an individual calendar event renders by adding one or more
 | `timeframe-title:TEXT` | Overrides the displayed title without changing the real event title. |
 | `timeframe-only:TOKENS` | Shows the event only on the listed devices. `TOKENS` is a comma-separated list of device names or ids, e.g. `timeframe-only:Kitchen, 12`. |
 | `timeframe-banner` (or `#banner`) | Shows the event as a full-width banner while it is active (see below). |
-| `timeframe-countdown:N` | Adds an all-day "(in Xd)" reminder on each of the `N` days leading up to the event (never on/after the event day). `N` is a positive number (up to 999). Honored by the hosted Timeframe app. |
+| `timeframe-countdown:N` | Adds an all-day "(in Xd)" reminder on each of the `N` days leading up to the event (never on/after the event day). `N` is a positive number (up to 999). |
 
 A recurring event whose title ends with a four-digit year in parentheses, e.g. `Ada (1990)`, renders that year as an elapsed count (`Ada (35)`) — this is how birthdays and anniversaries show an age.
 
