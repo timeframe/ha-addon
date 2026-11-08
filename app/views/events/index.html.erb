@@ -1,11 +1,11 @@
 <% content_for :title, "Events" %>
 
-<div class="mt-3 w-full" data-controller="event-list">
+<div class="mt-3 w-full md:mt-0 md:max-w-4xl" data-controller="event-list">
   <h2 class="mb-3 text-xl font-semibold">Events</h2>
 
   <% if @calendars.any? %>
     <div class="mb-2">
-      <select class="tf-select w-full" data-event-calendar-select aria-label="Filter events by calendar">
+      <select class="tf-select w-full md:w-72" data-event-calendar-select aria-label="Filter events by calendar">
         <option value="all" selected>All calendars</option>
         <% @calendars.each do |calendar| %>
           <option value="cal:<%= calendar.id %>"><%= calendar.name %></option>
@@ -32,7 +32,7 @@
   <% else %>
     <% hidden_count = events_by_day.values.flatten.map { |row| row[:event] }.uniq.count(&:omit?) %>
     <div class="mb-2 flex flex-wrap items-center gap-2">
-      <input type="search" class="tf-input tf-input-sm w-full" placeholder="Filter events..." aria-label="Filter events" data-bulk-filter autocomplete="off">
+      <input type="search" class="tf-input tf-input-sm w-full md:w-auto md:min-w-64 md:flex-1" placeholder="Filter events..." aria-label="Filter events" data-bulk-filter autocomplete="off">
       <button type="button" class="tf-btn tf-btn-sm tf-btn-outline whitespace-nowrap" data-bulk-select-all>
         <span class="mdi mdi-select-all"></span> <span data-select-all-label>Select all</span>
       </button>

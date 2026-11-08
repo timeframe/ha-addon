@@ -15,10 +15,10 @@
     <link rel="stylesheet" href="<%= asset_path("/css/mdi/materialdesignicons.css") %>">
     <%= javascript_importmap_tags %>
   </head>
-  <body class="bg-white font-body text-ink antialiased pb-24">
-    <%= render "layouts/bottom_nav" %>
+  <body class="bg-white font-body text-ink antialiased pb-24 md:pb-10">
+    <%= render "layouts/nav" %>
 
-    <div class="mx-auto w-full max-w-[375px] px-3 pt-3">
+    <div class="mx-auto w-full max-w-[375px] px-3 pt-3 md:max-w-6xl md:px-6 md:pt-6">
       <% flash.each do |key, value| %>
         <div class="relative mb-3 flex items-center gap-3 rounded-md border py-3 pl-4 pr-10 <%= key == 'notice' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800' %>" role="alert" data-controller="alert">
           <span class="mr-auto"><%= value %></span>

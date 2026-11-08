@@ -1,4 +1,4 @@
-<div class="mb-3 flex flex-wrap gap-3">
+<div class="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
   <% @devices.each do |device| %>
     <%= render "dashboard/device_card", device: device, account: @account, location: @location %>
   <% end %>

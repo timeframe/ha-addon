@@ -1,0 +1,47 @@
+<%# Primary navigation for the add-on. Four tabs, shown as a mobile-app style
+    floating bottom bar on small screens and as a top bar from md up. There is
+    no Calendars tab and no add-event menu (Home Assistant calendars import
+    automatically); devices are added from the Devices screen. %>
+<%
+  has_device = Device.exists?
+  nav_items = [
+    {label: "Events", path: events_path, icon: "mdi-calendar-check", active: current_page?(events_path)},
+    {
+      label: has_device ? "Devices" : "Device",
+      path: has_device ? root_path : onboarding_path,
+      icon: has_device ? "mdi-tablet" : "mdi-plus",
+      active: current_page?(root_path) || controller_name == "devices" || controller_name == "onboarding"
+    },
+    {label: "Settings", path: settings_path, icon: "mdi-cog", active: current_page?(settings_path)},
+    {label: "Status", path: status_path, icon: "mdi-heart-pulse", active: current_page?(status_path)}
+  ]
+%>
+<header class="sticky top-0 z-40 hidden border-b border-ink/10 bg-white/95 backdrop-blur md:block">
+  <nav class="mx-auto flex w-full max-w-6xl items-center gap-6 px-6 py-2" aria-label="Primary">
+    <%= link_to root_path, class: "flex items-center gap-2 text-ink no-underline" do %>
+      <img src="<%= asset_path("/sun-angle.png") %>" alt="" class="h-7 w-7">
+      <span class="font-display text-lg font-bold">Timeframe</span>
+    <% end %>
+    <div class="flex items-center gap-1">
+      <% nav_items.each do |item| %>
+        <%= link_to item[:path], class: "flex items-center gap-2 rounded-full px-4 py-2 text-sm no-underline transition-colors #{item[:active] ? "bg-ink font-semibold text-white" : "text-gray-600 hover:bg-ink/5 hover:text-ink"}", aria: {current: item[:active] ? "page" : nil} do %>
+          <span class="mdi <%= item[:icon] %> text-lg leading-none" aria-hidden="true"></span>
+          <span><%= item[:label] %></span>
+        <% end %>
+      <% end %>
+    </div>
+  </nav>
+</header>
+
+<nav class="fixed bottom-[calc(env(safe-area-inset-bottom)+5px)] left-1/2 z-40 w-[calc(100%-10px)] max-w-[375px] -translate-x-1/2 rounded-2xl border border-black/10 bg-white shadow-[0_4px_24px_rgba(0,0,0,0.15)] md:hidden" aria-label="Primary">
+  <div class="mx-auto grid w-full grid-cols-4 items-end px-1">
+    <% nav_items.each do |item| %>
+      <%= link_to item[:path], class: "flex flex-col items-center gap-0.5 px-1 py-2 no-underline", aria: {current: item[:active] ? "page" : nil} do %>
+        <span class="flex h-8 w-14 items-center justify-center rounded-full <%= item[:active] ? "bg-ink text-white" : "text-gray-500" %>">
+          <span class="mdi <%= item[:icon] %> text-2xl leading-none" aria-hidden="true"></span>
+        </span>
+        <span class="text-xs <%= item[:active] ? "font-semibold text-ink" : "text-gray-500" %>"><%= item[:label] %></span>
+      <% end %>
+    <% end %>
+  </div>
+</nav>
