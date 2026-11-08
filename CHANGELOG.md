@@ -1,3 +1,14 @@
+## [2.17.2] - 2026-11-08
+
+### Fixed
+- The Year view now flips on real touch bar taps on TRMNL firmware 1.8.18 and later: a right tap or the menu's Next screen flips between the main layout and the Year view, and a left tap goes back. Scheduled refreshes, reboots and setup always show the main layout, so the Year view no longer appears on its own after a restart
+- Screen images use the filename format TRMNL firmware expects, so the device keeps both the main and Year screens and can step back without a download
+- If the Year view can't be captured, the device shows the main layout instead of an error
+- The TRMNL pairing screen no longer points to timeframe.app; it says to enter the code in your Timeframe dashboard
+
+### Changed
+- Device check-ins log the firmware's wake reason and version, to help diagnose touch bar issues
+
 ## [2.17.1] - 2026-11-08
 
 ### Fixed

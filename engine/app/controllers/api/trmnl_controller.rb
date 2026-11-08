@@ -55,14 +55,16 @@ module Api
         status: 200,
         api_key: pending.api_key,
         friendly_id: pending.pairing_code,
-        message: "Enter this code at timeframe.app"
+        message: "Enter this code in your Timeframe dashboard"
       }
     end
 
     # GET /api/display
     def display
       mac_address = request.headers["ID"]
-      Rails.logger.info("[API Display] mac=#{mac_address} device_id=#{@device&.id}")
+      update_source = request.headers["Update-Source"]
+      special_function = request.headers["special_function"]
+      Rails.logger.info("[API Display] mac=#{mac_address} device_id=#{@device&.id} update_source=#{update_source.inspect} special_function=#{special_function.inspect} fw=#{request.headers["FW-Version"].inspect}")
 
       unless @device
         # Adopt any unrecognized MAC into a pending registration so a device
@@ -100,12 +102,11 @@ module Api
       previous_connection_at = @device.last_connection_at
       telemetry = update_device_from_headers(@device)
 
-      # A button press (an early poll) flips between the main page and the
-      # Year page on devices that have it turned on.
-      page = @device.select_page_for_poll!(previous_connection_at)
-      if page == Device::YEAR_PAGE
-        @device.refresh_year_page_screenshot!(request.base_url)
-      elsif @device.cached_image.blank? || params[:force].present?
+      # A button press or touch flips between the main page and the Year page
+      # on devices that have it turned on (see Device#select_page_for_poll!).
+      page = @device.select_page_for_poll!(previous_connection_at, update_source: update_source, special_function: special_function)
+      page = show_year_page_or_fall_back if page == Device::YEAR_PAGE
+      if page != Device::YEAR_PAGE && (@device.cached_image.blank? || params[:force].present?)
         @device.refresh_screenshot!(request.base_url)
       end
       record_device_poll(@device, telemetry, previous_connection_at:)
@@ -117,7 +118,7 @@ module Api
 
       render json: {
         status: 0,
-        filename: (page == Device::YEAR_PAGE) ? "display-year-#{@device.page_image_at(page).to_i}.png" : "display-#{@device.cached_image_at}.png",
+        filename: @device.page_filename(page),
         image_url: @device.signed_screenshot_url(host: request.base_url, page: page),
         image_url_timeout: 0,
         refresh_rate: @device.refresh_rate,
@@ -166,6 +167,20 @@ module Api
       Rails.logger.error("[API Log] Failed to persist device logs: #{e.message}")
     end
     # :nocov:
+
+    # Captures the Year page for this poll. If that fails, the poll shows the
+    # main page instead of erroring, so a press never leaves the device on an
+    # error screen.
+    def show_year_page_or_fall_back
+      @device.refresh_year_page_screenshot!(request.base_url)
+      return Device::YEAR_PAGE if @device.page_image(Device::YEAR_PAGE).present?
+
+      Rails.logger.error("[API Display] Year page has no image for device #{@device.id}; showing the main page")
+      @device.remember_page!(0)
+    rescue => e
+      Rails.logger.error("[API Display] Year page capture failed for device #{@device.id}: #{e.class}: #{e.message}")
+      @device.remember_page!(0)
+    end
 
     def update_device_from_headers(device)
       attrs = {}

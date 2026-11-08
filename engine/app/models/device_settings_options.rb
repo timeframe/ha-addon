@@ -77,10 +77,12 @@ class DeviceSettingsOptions
     "After the given time, hides the current day if there are no remaining events, making more room to show future days."
 
   YEAR_PAGE_DESCRIPTION =
-    "Press the button on the device to flip to a year planner showing the " \
-    "next 12 months of multi-day events, like trips and holidays. Add " \
-    "\"timeframe-year\" to a single-day event's description to include it " \
-    "too. The display flips back at its next scheduled refresh."
+    "Tap the right side of the touch bar (or choose Next screen in its menu) " \
+    "to flip to a year planner showing the next 12 months of multi-day " \
+    "events, like trips and holidays. Tap left to go back; the display also " \
+    "returns at its next scheduled refresh. Add \"timeframe-year\" to a " \
+    "single-day event's description to include it too. Needs TRMNL firmware " \
+    "1.8.18 or later."
 
   DAILY_EMAIL_DEFAULT_TIME = "19:00"
 

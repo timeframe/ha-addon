@@ -200,7 +200,7 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
         assert_response :success
         json = JSON.parse(response.body)
         assert_equal 0, json["status"]
-        assert_match(/\Adisplay-.*\.png\z/, json["filename"])
+        assert_match(/\Aweek-[0-9a-f]{6}-\d{10}\z/, json["filename"])
         assert json["image_url"].include?("/signed_screenshot/")
         assert_equal 0, json["image_url_timeout"]
         assert_equal 900, json["refresh_rate"]
@@ -255,9 +255,63 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     json = JSON.parse(response.body)
-    assert_match(/\Adisplay-year-\d+\.png\z/, json["filename"])
+    assert_match(/\Ayear-[0-9a-f]{6}-\d{10}\z/, json["filename"])
     assert json["image_url"].end_with?("?page=1")
     assert_equal "yearimage", store.read(device.page_cache_key("year_image"))[:image]
+  end
+
+  test "display flips to the year page on a touch wake and back on a left tap" do
+    device = create_year_page_device!
+    store = ActiveSupport::Cache::MemoryStore.new
+    headers = {"ID" => device.mac_address, "ACCESS_TOKEN" => device.api_key, "FW-Version" => "1.8.18"}
+
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 12, 0, 0) do
+      Rails.stub(:cache, store) do
+        ScreenshotService.stub :capture, "yearimage" do
+          get "/api/display", headers: headers.merge("Update-Source" => "EXT0")
+          assert_match(/\Ayear-/, JSON.parse(response.body)["filename"])
+
+          get "/api/display", headers: headers.merge("Update-Source" => "EXT0", "special_function" => "rewind")
+          assert_match(/\Aweek-/, JSON.parse(response.body)["filename"])
+
+          get "/api/display", headers: headers.merge("Update-Source" => "EXT0")
+          get "/api/display", headers: headers.merge("Update-Source" => "timer")
+          assert_match(/\Aweek-/, JSON.parse(response.body)["filename"])
+        end
+      end
+    end
+  end
+
+  test "display shows the main page when the year page capture fails" do
+    device = create_year_page_device!
+    store = ActiveSupport::Cache::MemoryStore.new
+    failing_capture = ->(*, **) { raise "net::ERR_CONNECTION_REFUSED" }
+
+    Rails.stub(:cache, store) do
+      ScreenshotService.stub :capture, failing_capture do
+        get "/api/display", headers: {"ID" => device.mac_address, "ACCESS_TOKEN" => device.api_key, "Update-Source" => "EXT0"}
+      end
+    end
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_match(/\Aweek-/, json["filename"])
+    refute_includes json["image_url"], "page="
+    assert_equal 0, store.read(device.page_cache_key("current"))
+  end
+
+  test "display shows the main page when the year page capture leaves no image" do
+    device = create_year_page_device!
+    store = ActiveSupport::Cache::MemoryStore.new
+
+    Rails.stub(:cache, store) do
+      ScreenshotService.stub :capture, nil do
+        get "/api/display", headers: {"ID" => device.mac_address, "ACCESS_TOKEN" => device.api_key, "Update-Source" => "EXT0"}
+      end
+    end
+
+    assert_response :success
+    assert_match(/\Aweek-/, JSON.parse(response.body)["filename"])
   end
 
   test "display returns to the main page on a scheduled poll" do
@@ -274,7 +328,7 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     json = JSON.parse(response.body)
-    assert_equal "display-#{device.reload.cached_image_at}.png", json["filename"]
+    assert_equal device.reload.page_filename(0), json["filename"]
     refute_includes json["image_url"], "page="
     assert_equal 0, store.read(device.page_cache_key("current"))
   end

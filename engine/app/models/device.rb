@@ -336,10 +336,17 @@ class Device < ActiveRecord::Base
   # --- Year page --------------------------------------------------------------
   #
   # TRMNL X and reTerminal E1003 devices can carry a second page, the Year view,
-  # that the device's button flips to. The server can't see the button itself,
-  # but a press wakes the device and makes it poll /api/display early, so a poll
-  # arriving well before the scheduled refresh is treated as a press and flips
-  # the page. A regular timed poll always returns to the main page.
+  # that the device's button or touch bar flips to.
+  #
+  # Firmware 1.8.18+ says why it is asking: every /api/display request carries
+  # an Update-Source header naming its wake reason ("timer" for a scheduled
+  # refresh, "EXT0"/"button"/... for a press or touch), and a left tap adds
+  # special_function: rewind. A press flips between the main page and the Year
+  # page, a left tap goes back to the main page, and anything else (a scheduled
+  # refresh, a reboot, setup) shows the main page.
+  #
+  # Older firmware sends no Update-Source, so for those devices a poll arriving
+  # well before its scheduled refresh is treated as a press instead.
   #
   # The current page and the Year page's screenshot live in the Rails cache
   # rather than new columns: losing them only means showing the main page and
@@ -348,11 +355,15 @@ class Device < ActiveRecord::Base
   YEAR_TEMPLATE = "year"
   YEAR_PAGE = 1
   YEAR_PAGE_MODELS = %w[trmnl_x reterminal_e1003].freeze
-  # A poll arriving within this fraction of the refresh interval the device was
-  # last given is a button press.
+  # Update-Source wake reasons that mean a person pressed the button or touched
+  # the touch bar (ESP32 wake sources: EXT0 on the X's ESP32-S3, GPIO "button"
+  # on the C3/C5 boards).
+  USER_WAKE_SOURCES = %w[ext0 ext1 button touchpad gpio].freeze
+  # Without Update-Source: a poll arriving within this fraction of the refresh
+  # interval the device was last given is a button press.
   BUTTON_PRESS_WINDOW = 0.5
-  # Polls this close together are one wake (a retry, or the image fetch racing a
-  # re-poll), so they keep the current page rather than flipping it back.
+  # Without Update-Source: polls this close together are one wake (a retry), so
+  # they keep the current page rather than flipping it back.
   BUTTON_PRESS_DEBOUNCE_SECONDS = 15
 
   def year_page_supported?
@@ -372,22 +383,48 @@ class Device < ActiveRecord::Base
   end
 
   # Picks the page this /api/display poll should show and remembers it.
-  def select_page_for_poll!(previous_connection_at, now: Time.current)
+  # update_source and special_function are the firmware's request headers.
+  def select_page_for_poll!(previous_connection_at, now: Time.current, update_source: nil, special_function: nil)
     page =
-      if !year_page_enabled? || previous_connection_at.nil?
+      if !year_page_enabled?
         0
+      elsif special_function.to_s.casecmp?("rewind")
+        0
+      elsif !update_source.nil?
+        USER_WAKE_SOURCES.include?(update_source.to_s.downcase) ? YEAR_PAGE - current_page : 0
       else
-        elapsed = now - previous_connection_at
-        if elapsed < BUTTON_PRESS_DEBOUNCE_SECONDS
-          current_page
-        elsif elapsed < refresh_rate(at: previous_connection_at) * BUTTON_PRESS_WINDOW
-          YEAR_PAGE - current_page
-        else
-          0
-        end
+        legacy_page_for_poll(previous_connection_at, now)
       end
+    remember_page!(page)
+  end
+
+  def remember_page!(page)
     page_store.write(page_cache_key("current"), page)
     page
+  end
+
+  # The image filename the device saves this page's screenshot under. TRMNL
+  # firmware expects <screen>-<id>-<10-digit unix time>: it keeps the newest
+  # image of each screen and deletes the rest, along with any name that doesn't
+  # end in a timestamp, so naming the two pages differently lets the device keep
+  # both and step back to the other one without a download.
+  def page_filename(page)
+    screen = (page.to_i == YEAR_PAGE) ? "year" : "week"
+    at = page_image_at(page) || Time.current
+    "#{screen}-#{Digest::SHA256.hexdigest("device-#{id}")[0, 6]}-#{at.to_i}"
+  end
+
+  def legacy_page_for_poll(previous_connection_at, now)
+    return 0 if previous_connection_at.nil?
+
+    elapsed = now - previous_connection_at
+    if elapsed < BUTTON_PRESS_DEBOUNCE_SECONDS
+      current_page
+    elsif elapsed < refresh_rate(at: previous_connection_at) * BUTTON_PRESS_WINDOW
+      YEAR_PAGE - current_page
+    else
+      0
+    end
   end
 
   def page_image(page)

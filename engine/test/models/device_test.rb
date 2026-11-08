@@ -511,6 +511,45 @@ class DeviceTest < Minitest::Test
     end
   end
 
+  def test_select_page_uses_the_firmware_wake_reason
+    device = year_page_device
+    with_page_store(device) do
+      # A press or touch flips, whatever the timing.
+      assert_equal 1, device.select_page_for_poll!(nil, update_source: "EXT0")
+      assert_equal 0, device.select_page_for_poll!(nil, update_source: "button")
+      assert_equal 1, device.select_page_for_poll!(nil, update_source: "ext0")
+      # A left tap goes back to the main page.
+      assert_equal 0, device.select_page_for_poll!(nil, update_source: "EXT0", special_function: "rewind")
+      device.select_page_for_poll!(nil, update_source: "EXT0")
+      # A scheduled refresh, a reboot or setup shows the main page, even if
+      # it arrives early.
+      assert_equal 0, device.select_page_for_poll!(1.minute.ago, update_source: "timer")
+      device.select_page_for_poll!(nil, update_source: "EXT0")
+      assert_equal 0, device.select_page_for_poll!(1.minute.ago, update_source: "unknown")
+      device.select_page_for_poll!(nil, update_source: "EXT0")
+      assert_equal 0, device.select_page_for_poll!(1.minute.ago, update_source: "")
+    end
+  end
+
+  def test_page_filename_follows_the_firmware_format
+    device = year_page_device
+    device.cached_image_at = Time.utc(2026, 11, 8, 7, 0, 0)
+    with_page_store(device) do
+      device.page_store.write(device.page_cache_key("year_image"), {image: "y", at: Time.utc(2026, 11, 8, 7, 5, 0), crc: 1})
+      assert_match(/\Aweek-[0-9a-f]{6}-1794121200\z/, device.page_filename(0))
+      assert_match(/\Ayear-[0-9a-f]{6}-1794121500\z/, device.page_filename(1))
+      assert_equal device.page_filename(0)[5, 6], device.page_filename(1)[5, 6]
+      assert_operator device.page_filename(1).length, :<=, 31
+    end
+  end
+
+  def test_page_filename_uses_now_before_the_first_capture
+    device = year_page_device
+    with_page_store(device) do
+      assert_match(/\Ayear-[0-9a-f]{6}-\d{10}\z/, device.page_filename(1))
+    end
+  end
+
   def test_select_page_stays_on_main_page_when_disabled
     device = year_page_device(enabled: false)
     with_page_store(device) do
