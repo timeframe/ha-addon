@@ -1,3 +1,10 @@
+## [2.17.3] - 2026-11-08
+
+### Fixed
+- Year view: today's date is highlighted again in the row of dates at the top
+- Year view: only single-day events show a date badge; when a longer event spills a day or two into the next month, that month shows a short continuation bar with the event's name beside it
+- Year view: events that continue into the next month keep the same order there, instead of swapping places
+
 ## [2.17.2] - 2026-11-08
 
 ### Fixed

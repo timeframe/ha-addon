@@ -10,9 +10,9 @@
   /* One shared row of dates: columns are day-of-month, so they line up for every month. */
   #year-view .yv-dayhead { display: grid; grid-template-columns: 92px 1fr; height: 30px; border-bottom: 2px solid #000; }
   #year-view .yv-nums { display: grid; grid-template-columns: repeat(31, 1fr); }
-  #year-view .yv-nums div { position: relative; text-align: center; font-size: 19px; font-weight: 700; line-height: 28px; }
-  /* Today's date is inverted by a white "difference" layer. */
-  #year-view .yv-loupe { position: absolute; inset: 0; background: #fff; mix-blend-mode: difference; border-radius: 6px 6px 0 0; }
+  #year-view .yv-nums > div { position: relative; text-align: center; font-size: 19px; font-weight: 700; line-height: 28px; }
+  /* Today's date is drawn inverted, as a tab sitting on top of today's column. */
+  #year-view .yv-nums > div.yv-today-num { background: #000; color: #fff; border-radius: 6px 6px 0 0; }
 
   #year-view .yv-grid { flex: 1; display: grid; grid-template-rows: repeat(12, 1fr); min-height: 0; }
   #year-view .yv-month { display: grid; grid-template-columns: 92px 1fr; border-bottom: 2px solid #bbb; min-height: 0; }
@@ -78,9 +78,13 @@
     var events = JSON.parse(root.dataset.events).map(function (e) {
       return { title: e.title, s: parse(e.start), t: parse(e.end) };
     });
+    // Lane each event got in the month just drawn, so a bar carried into the
+    // next month keeps its place relative to the other carried-over bars.
+    var lastLane = new Map();
 
     function render() {
       root.replaceChildren();
+      lastLane.clear();
       var first = new Date(today.getFullYear(), today.getMonth(), 1);
       var last = new Date(first.getFullYear(), first.getMonth() + 11, 1);
 
@@ -92,9 +96,7 @@
       var dayhead = el("div", "yv-dayhead"), nums = el("div", "yv-nums");
       dayhead.append(el("div"));
       for (var d = 1; d <= 31; d++) {
-        var num = el("div", null, d);
-        if (d === today.getDate()) num.append(el("div", "yv-loupe"));
-        nums.append(num);
+        nums.append(el("div", d === today.getDate() ? "yv-today-num" : null, d));
       }
       dayhead.append(nums);
       root.append(dayhead);
@@ -150,18 +152,27 @@
       var segs = events
         .filter(function (x) { return x.t >= mStart && x.s <= mEnd; })
         .map(function (x) {
-          return { title: x.title, a: x.s < mStart ? 1 : x.s.getDate(), b: x.t > mEnd ? n : x.t.getDate(),
-                   contL: x.s < mStart, contR: x.t > mEnd };
+          var g = { ev: x, title: x.title, a: x.s < mStart ? 1 : x.s.getDate(), b: x.t > mEnd ? n : x.t.getDate(),
+                    contL: x.s < mStart, contR: x.t > mEnd, single: +x.s === +x.t };
+          g.text = (g.contL ? "‹ " : "") + g.title + (g.contR ? " ›" : "");
+          // A bar too short to show even the start of its name (often the first or
+          // last day of a span crossing months) gets its name beside it instead.
+          g.narrow = !g.single && measure(g.text.slice(0, 4) + "…", MIN_FONT) > (g.b - g.a + 1) * colPx - 22;
+          return g;
         })
-        .sort(function (p, q) { return p.a - q.a || (q.b - q.a) - (p.b - p.a); });
+        .sort(function (p, q) {
+          return p.a - q.a || carried(p) - carried(q) || p.ev.s - q.ev.s || (q.b - q.a) - (p.b - p.a);
+        });
+      function carried(g) { return g.contL && lastLane.has(g.ev) ? lastLane.get(g.ev) : MAX_LANES; }
 
-      // Pack into lanes; single-day events reserve room for the name beside them.
+      // Pack into lanes; single-day events and narrow bars reserve room for the name beside them.
       var lanes = [], hidden = 0;
       segs.forEach(function (g) {
         var from = g.a, to = g.b;
-        if (g.a === g.b) {
+        if (g.single || g.narrow) {
           var need = Math.ceil((measure(g.title, MIN_FONT) + 14) / colPx);
-          if (g.b + need <= n) to = g.b + need; else from = Math.max(1, g.a - need);
+          if (g.b + need <= n) { to = g.b + need; g.side = "right"; } else { from = Math.max(1, g.a - need); g.side = "left"; }
+          g.room = (g.side === "right" ? to - g.b : g.a - from) * colPx;
         }
         var li = lanes.findIndex(function (l) { return free(l, from, to); });
         if (li === -1) {
@@ -171,6 +182,8 @@
         lanes[li].push([from, to]);
         g.lane = li;
       });
+      lastLane.clear();
+      segs.forEach(function (g) { if (g.lane !== undefined) lastLane.set(g.ev, g.lane); });
 
       var laneH = Math.min(MAX_LANE, Math.floor((H - GAP * (lanes.length - 1)) / Math.max(1, lanes.length)));
       var base = Math.max(MIN_FONT, Math.min(MAX_FONT, Math.round(laneH * 0.66)));
@@ -180,14 +193,16 @@
       segs.forEach(function (g) {
         if (g.lane === undefined) return;
         var top = offset + g.lane * (laneH + GAP);
-        var single = g.a === g.b;
+        var single = g.single;
         var barCols = g.b - g.a + 1;
         var inner = barCols * colPx - 6 - 16;
-        var text = (g.contL ? "‹ " : "") + g.title + (g.contR ? " ›" : "");
+        var text = g.text;
 
         // Name placement: inside at full size, inside shrunk, beside the bar, or truncated.
-        var mode = "ellipsis", font = base, side = null;
-        if (!single && measure(text, base) <= inner) {
+        var mode = "ellipsis", font = base, side = g.side || null, room = g.room;
+        if (g.narrow) {
+          mode = "beside"; font = Math.min(base, 24);
+        } else if (!single && measure(text, base) <= inner) {
           mode = "inside";
         } else if (!single && measure(text, MIN_FONT) <= inner) {
           mode = "inside";
@@ -198,7 +213,7 @@
           var lane = lanes[g.lane];
           if (g.b + lw <= n && free(lane, g.b + 1, g.b + lw)) { side = "right"; lane.push([g.b + 1, g.b + lw]); }
           else if (g.a - lw >= 1 && free(lane, g.a - lw, g.a - 1)) { side = "left"; lane.push([g.a - lw, g.a - 1]); }
-          if (side) { mode = "beside"; font = lf; }
+          if (side) { mode = "beside"; font = lf; room = lw * colPx; }
         }
 
         var bar = el("div", "yv-bar" + (single ? " yv-single" : "") + (g.contL ? " yv-cont-l" : "") + (g.contR ? " yv-cont-r" : ""));
@@ -213,13 +228,13 @@
 
         if (single || mode === "beside") {
           var labelFont = single ? Math.min(base, 24) : font;
+          while (labelFont > MIN_FONT && measure(g.title, labelFont) + 12 > room) labelFont--;
           var lb = el("div", "yv-label", g.title);
           lb.style.top = top + "px";
           lb.style.height = laneH + "px";
           lb.style.lineHeight = laneH + "px";
           lb.style.fontSize = labelFont + "px";
-          var right = single ? (g.b + Math.ceil((measure(g.title, labelFont) + 12) / colPx) <= n) : side === "right";
-          if (right) lb.style.left = (g.b * colPx) + "px";
+          if (side === "right") lb.style.left = (g.b * colPx) + "px";
           else lb.style.right = (W - (g.a - 1) * colPx) + "px";
           bars.append(lb);
         }
