@@ -1,3 +1,8 @@
+## [2.17.1] - 2026-11-08
+
+### Fixed
+- Regenerating a device screenshot now works when Timeframe is opened directly (by IP address or hostname) rather than through the Home Assistant sidebar: screenshots are always taken from the add-on's own address
+
 ## [2.17.0] - 2026-11-08
 
 ### Added

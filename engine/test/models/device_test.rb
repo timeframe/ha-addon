@@ -250,6 +250,18 @@ class DeviceTest < Minitest::Test
     assert_nil device.last_connection_at
   end
 
+  def test_screenshot_base_url_prefers_the_configured_host
+    device = Device.new(name: "test_host", model: "trmnl_x")
+    original = Device.screenshot_host
+    Device.screenshot_host = nil
+    assert_equal "http://request.test", device.screenshot_base_url("http://request.test")
+    assert_equal ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }, device.screenshot_base_url
+    Device.screenshot_host = "http://127.0.0.1:8098"
+    assert_equal "http://127.0.0.1:8098", device.screenshot_base_url("http://request.test")
+  ensure
+    Device.screenshot_host = original
+  end
+
   def test_forced_refresh_screenshot_recaptures_unchanged_content
     device = Device.create!(location: test_location, name: "test_hash_force_#{SecureRandom.hex(3)}", model: "trmnl_og", mac_address: "CC:#{SecureRandom.hex(5).scan(/../).join(":").upcase}", api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, display_key: SecureRandom.alphanumeric(24))
     captures = 0

@@ -466,6 +466,24 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_includes captured_url, "/d/#{thirteen.id}?"
   end
 
+  test "forced screenshot opened directly captures the app's own address, not the one in the browser" do
+    thirteen = Device.find_or_create_by!(name: "test-thirteen", model: "visionect_13") { |d| d.location = @location }
+    thirteen.update!(confirmed_at: Time.current, confirmation_code: nil, cached_image: Base64.strict_encode64("old"), cached_image_at: Time.current)
+    captured_url = nil
+    capture = ->(url, **) {
+      captured_url = url
+      Base64.strict_encode64("new png data")
+    }
+
+    ScreenshotService.stub :capture, capture do
+      get "/accounts/#{@account.id}/locations/#{@location.id}/devices/#{thirteen.id}/screenshot?force=true",
+        headers: {"Host" => "127.0.0.1:3010"}
+    end
+
+    assert_response :success
+    assert captured_url.start_with?("#{Device.screenshot_host}/d/#{thirteen.id}?"), captured_url
+  end
+
   test "screenshot returns 404 for unknown device" do
     get "/accounts/#{@account.id}/locations/#{@location.id}/devices/nonexistent/screenshot"
     assert_response :not_found

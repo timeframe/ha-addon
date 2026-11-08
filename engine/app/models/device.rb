@@ -689,6 +689,19 @@ class Device < ActiveRecord::Base
     update!(display_key: SecureRandom.alphanumeric(24))
   end
 
+  # Where the headless browser loads display pages from. A host app that runs
+  # the browser on the same machine as the app (the Home Assistant add-on) sets
+  # Device.screenshot_host to the app's own address, so a capture never depends
+  # on the address the request came in on: the browser can't always reach that
+  # one (a different port mapping, a proxy, or Home Assistant's ingress path).
+  class_attribute :screenshot_host, default: nil
+
+  def screenshot_base_url(requested_base_url = nil)
+    self.class.screenshot_host.presence ||
+      requested_base_url.presence ||
+      ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
+  end
+
   def token_device_url(host:, generation: false, page: 0)
     url = "#{host}/d/#{id}?key=#{display_key}"
     url = "#{url}&page=#{page.to_i}" if page.to_i.positive?
@@ -704,7 +717,7 @@ class Device < ActiveRecord::Base
   def refresh_screenshot!(base_url = nil, force: false)
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     stage = "render"
-    base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
+    base_url = screenshot_base_url(base_url)
     url = token_device_url(host: base_url, generation: true)
 
     # Skip regenerating the screenshot when the rendered page (plus the deploy
@@ -740,7 +753,7 @@ class Device < ActiveRecord::Base
   # Captures the Year page, skipping the capture when its rendered HTML hasn't
   # changed since the last one (same short-circuit as refresh_screenshot!).
   def refresh_year_page_screenshot!(base_url = nil, force: false)
-    base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
+    base_url = screenshot_base_url(base_url)
     crc = display_content_crc(template: YEAR_TEMPLATE)
     cached = year_page_cache
     return if !force && crc && cached[:crc] == crc && cached[:image].present?
@@ -804,7 +817,7 @@ class Device < ActiveRecord::Base
   # Captures the display as it will look at a future moment (used by the daily
   # screenshot reminder email) without touching the persisted cached_image.
   def screenshot_at(current_time, base_url = nil)
-    base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
+    base_url = screenshot_base_url(base_url)
     # The daily preview email mentions a low battery in its copy, so the preview
     # image itself skips the full-screen charge reminder.
     url = "#{token_device_url(host: base_url)}&at=#{CGI.escape(current_time.iso8601)}&charge_reminder=false"
