@@ -851,25 +851,74 @@ class HomeAssistantApiTest < Minitest::Test
     assert_equal "calendar.family", api.calendar_events.first.entity_id
   end
 
-  def test_calendar_events_ignore_unknown_event_fields
-    api = new_test_api
-    calendar = {"entity_id" => "calendar.family"}
+  def test_fetch_calendars_selects_only_supported_event_fields
+    store = ActiveSupport::Cache::MemoryStore.new
+    api = HomeAssistantApi.new(TimeframeConfig.new, store: store)
+    api.seed_config(DEFAULT_TEST_CONFIG)
     event = {
-      "summary" => "Dentist",
-      "status" => "confirmed",
+      "uid" => "evt-1",
       "start" => {"dateTime" => "2024-09-05T10:00:00-06:00"},
-      "end" => {"dateTime" => "2024-09-05T11:00:00-06:00"}
+      "end" => {"dateTime" => "2024-09-05T11:00:00-06:00"},
+      "summary" => "Dentist",
+      "description" => "Bring insurance card",
+      "location" => "Dental office",
+      "status" => "confirmed",
+      "some_future_field" => "ignored",
+      "recurrence_id" => "20240905T100000",
+      "rrule" => "FREQ=WEEKLY"
     }
 
-    api.stub :fetch_calendar_list, [calendar] do
-      api.stub :fetch_calendar_icons, {} do
+    api.stub :fetch_calendar_list, [{"entity_id" => "calendar.family"}] do
+      api.stub :fetch_calendar_icons, {"calendar.family" => "tooth"} do
         HTTParty.stub :get, [event] do
           api.fetch_calendars
         end
       end
     end
 
-    assert_equal "Dentist", api.calendar_events.first.summary
+    assert_equal [{
+      id: "evt-1",
+      starts_at: "2024-09-05T10:00:00-06:00",
+      ends_at: "2024-09-05T11:00:00-06:00",
+      summary: "Dentist",
+      description: "Bring insurance card",
+      location: "Dental office",
+      icon: "tooth",
+      entity_id: "calendar.family"
+    }], JSON.parse(store.read("#{DEPLOY_TIME}#{HomeAssistantApi::CALENDAR_DOMAIN}"), symbolize_names: true)[:response]
+
+    fetched = api.calendar_events.first
+    assert_equal "evt-1", fetched.id
+    assert_equal "Dentist", fetched.summary
+    assert_equal "Dental office", fetched.location
+    assert_equal "tooth", fetched.icon
+    assert_equal "calendar.family", fetched.entity_id
+    assert_equal Time.iso8601("2024-09-05T10:00:00-06:00"), fetched.starts_at
+    assert_equal Time.iso8601("2024-09-05T11:00:00-06:00"), fetched.ends_at
+  end
+
+  def test_calendar_events_ignore_unsupported_fields_in_cached_events
+    api = new_test_api
+    api.seed_calendars([{
+      "id" => "evt-1",
+      "starts_at" => "2024-09-05",
+      "ends_at" => "2024-09-06",
+      "summary" => "Dentist",
+      "description" => "timeframe-title:Checkup",
+      "location" => "Dental office",
+      "icon" => "tooth",
+      "entity_id" => "calendar.family",
+      "status" => "tentative",
+      "some_future_field" => "ignored"
+    }])
+
+    fetched = api.calendar_events.first
+    assert_equal "evt-1", fetched.id
+    assert_equal "Checkup", fetched.summary
+    assert_equal "Dental office", fetched.location
+    assert_equal "tooth", fetched.icon
+    assert_equal "calendar.family", fetched.entity_id
+    assert fetched.daily?
   end
 
   def test_calendar_events_apply_local_customizations

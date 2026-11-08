@@ -1,0 +1,54 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "open3"
+
+def run(*command, **options)
+  stdout, stderr, status = Open3.capture3(*command, **options)
+  abort "#{command.join(" ")} failed:\n#{stderr}#{stdout}" unless status.success?
+  stdout
+end
+
+repository = ENV.fetch("GITHUB_REPOSITORY")
+base = ENV.fetch("RELEASE_DEFAULT_BRANCH")
+abort "Dispatch from the default branch #{base}" unless ENV.fetch("GITHUB_REF") == "refs/heads/#{base}"
+abort "The release checkout must be clean" unless run("git", "status", "--porcelain").empty?
+
+pulls = JSON.parse(run("gh", "api", "repos/#{repository}/pulls", "--paginate", "--slurp", "--method", "GET",
+  "-f", "state=open", "-f", "base=#{base}", "-f", "per_page=100")).flatten
+existing = pulls.find do |pull|
+  pull.fetch("head").fetch("ref").start_with?("release/v") || pull.fetch("title").match?(/\ARelease v\d+\.\d+\.\d+\z/i)
+end
+abort "A release pull request is already open: #{existing.fetch("html_url")}" if existing
+
+previous_tag = "v#{JSON.parse(File.read("config.json")).fetch("version")}"
+source = run("git", "rev-parse", "HEAD").strip
+run("git", "merge-base", "--is-ancestor", previous_tag, source)
+commits = run("git", "log", "--reverse", "--topo-order", "--no-merges", "--abbrev=7", "--format=- %s (%h)", "#{previous_tag}..#{source}")
+abort "No non-merge commits since #{previous_tag}" if commits.strip.empty?
+
+run("bash", "script/release", stdin_data: "#{ENV.fetch("RELEASE_BUMP")}\n")
+version = JSON.parse(File.read("config.json")).fetch("version")
+abort "Release tag v#{version} already exists" unless run("git", "tag", "--list", "v#{version}").empty?
+changelog = File.read("CHANGELOG.md")
+unless changelog.sub!("### Added\n\n### Changed\n\n### Fixed\n") { "### Changed\n#{commits}" }
+  abort "script/release did not create its expected changelog template"
+end
+File.write("CHANGELOG.md", changelog)
+
+branch = "release/v#{version}-#{ENV.fetch("GITHUB_RUN_ID")}-#{ENV.fetch("GITHUB_RUN_ATTEMPT")}"
+run("git", "checkout", "-b", branch)
+run("git", "config", "user.name", "github-actions[bot]")
+run("git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com")
+run("git", "add", "--", "config.json", "CHANGELOG.md")
+run("git", "commit", "-m", "Release v#{version}")
+current = run("git", "ls-remote", "--exit-code", "origin", "refs/heads/#{base}").split.first
+abort "The default branch moved; dispatch again" unless current == source
+run("git", "push", "origin", "HEAD:refs/heads/#{branch}")
+
+body = "Draft changelog from commit messages since #{previous_tag}. Review and edit it, and approve the pull request workflows before merging."
+url = JSON.parse(run("gh", "api", "repos/#{repository}/pulls", "--method", "POST",
+  "-f", "base=#{base}", "-f", "head=#{branch}", "-f", "title=Release v#{version}", "-f", "body=#{body}")).fetch("html_url")
+puts "Created #{url}"
+File.write(ENV.fetch("GITHUB_STEP_SUMMARY"), "Prepared [Release v#{version}](#{url}). Review the draft changelog before merging.\n")

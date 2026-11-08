@@ -69,6 +69,10 @@ Keep the `/data` volume across restarts — it holds the bundled Postgres databa
 
 > When installed as a Home Assistant add-on, Timeframe instead authenticates automatically via the Supervisor and reads unit options from the add-on configuration UI, so no environment variables are required in that mode.
 
+## Calendars
+
+Timeframe imports each Home Assistant calendar event's title, start and end times, description, location, and UID, together with its calendar's icon and entity ID. Additional Home Assistant fields, such as event status, are ignored.
+
 ## Configuration
 
 The following entities can be created in Home Assistant to customize behavior. Icon names are from [Material Design Icons](https://pictogrammers.com/library/mdi/) (without the `mdi-` prefix).
@@ -516,6 +520,16 @@ Create `config/timeframe.yml` from `config/timeframe.yml.example` with your sett
 ### Testing
 
 `bin/rails test`
+
+## Releases
+
+Enable **Settings > Actions > General > Workflow permissions > Allow GitHub Actions to create and approve pull requests** once. No additional secrets or local development environment are needed.
+
+Run **Actions > Prepare release pull request** on the default branch, choosing `patch` (default), `minor`, or `major`. It reuses `script/release` to bump `config.json` and drafts `CHANGELOG.md` from non-merge commit subjects since the current version's `vVERSION` tag. An existing release pull request or a missing/invalid baseline stops preparation.
+
+Review and edit the draft notes before merging; approve the pull request workflows if GitHub requests it. The workflow neither merges nor publishes tags/images. **Merging the version bump makes the update discoverable by Home Assistant.** Tag that merged commit as `vVERSION` before preparing the next release.
+
+Failed runs can be retried; each attempt uses a new branch without force-pushing. A failed pull request creation may leave a branch to clean up manually. The interactive `mise exec -- script/release` and `script/publish` flow is unchanged; do not run `script/publish` on a clean merged tree, since it expects pending release changes to commit.
 
 ## License
 

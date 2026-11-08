@@ -247,18 +247,18 @@ class HomeAssistantApi
       res = HTTParty.get("#{calendars_url}/#{entity_id}?start=#{start_time}&end=#{end_time}", headers: headers)
 
       res.map! do |event|
-        event["starts_at"] = event["start"]["date"] || event["start"]["dateTime"]
-        event["ends_at"] = event["end"]["date"] || event["end"]["dateTime"]
-        event["icon"] = icons[entity_id] || "calendar"
-        event["entity_id"] = entity_id
+        starts_at = event["start"]["date"] || event["start"]["dateTime"]
         uid = event["uid"]
-        event["id"] = uid.present? ? uid : "#{entity_id}_#{event["starts_at"]}_#{Digest::MD5.hexdigest(event["summary"].to_s)[0, 8]}"
-        event.delete("uid")
-        event.delete("start")
-        event.delete("end")
-        event.delete("recurrence_id")
-        event.delete("rrule")
-        event
+        {
+          "id" => uid.present? ? uid : "#{entity_id}_#{starts_at}_#{Digest::MD5.hexdigest(event["summary"].to_s)[0, 8]}",
+          "starts_at" => starts_at,
+          "ends_at" => event["end"]["date"] || event["end"]["dateTime"],
+          "summary" => event["summary"],
+          "description" => event["description"],
+          "location" => event["location"],
+          "icon" => icons[entity_id] || "calendar",
+          "entity_id" => entity_id
+        }
       end
 
       out.concat(res)
@@ -277,14 +277,9 @@ class HomeAssistantApi
     domain_last_fetched_at(CALENDAR_DOMAIN)
   end
 
-  # Keyword arguments DeviceEvent#initialize accepts. Home Assistant may add new
-  # fields to calendar events (e.g. `status`), so anything else is dropped
-  # rather than raising ArgumentError and breaking every page that lists events.
-  DEVICE_EVENT_KEYWORDS = DeviceEvent.instance_method(:initialize).parameters.map(&:last).freeze
-
   def calendar_events
     @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map do |raw|
-      event = raw.symbolize_keys.slice(*DEVICE_EVENT_KEYWORDS)
+      event = raw.symbolize_keys.slice(:id, :starts_at, :ends_at, :summary, :description, :location, :icon, :entity_id)
       event[:description] = customized_description(event)
       DeviceEvent.new(**event, timezone: time_zone)
     end
