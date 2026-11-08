@@ -11,6 +11,9 @@ Rails.application.configure do
 
   config.hosts << "www.example.com"
   config.hosts << "127.0.0.1"
+  # Ingress tests send requests the way Home Assistant's proxy does, with its
+  # Host header.
+  config.hosts << "homeassistant.local"
 
   # Do not eager load code on boot. This avoids loading your whole application
   # just for the purpose of running a single test. If you are using a tool that
