@@ -28,4 +28,33 @@ class HomeAssistantIngress
     env["SCRIPT_NAME"] = ingress_path if VALID_PATH.match?(ingress_path)
     @app.call(env)
   end
+
+  # importmap-rails memoizes the rendered importmap JSON and modulepreload
+  # paths on the (process-wide) map, keyed only by a fixed cache key. Those
+  # paths include relative_url_root, so whichever request rendered first -
+  # ingress or direct - would fix the prefix for every later request: the HA
+  # sidebar could get bare /assets/... module URLs (which hit Home
+  # Assistant's own server and 404), or direct visitors could get ingress
+  # ones. Vary the cache key by the prefix so each gets its own entry.
+  module ImportmapTags
+    def javascript_importmap_tags(entry_point = "application", importmap: Rails.application.importmap)
+      safe_join [
+        javascript_inline_importmap_tag(importmap.to_json(resolver: self, cache_key: ingress_importmap_cache_key(:json))),
+        javascript_importmap_module_preload_tags(importmap, entry_point:),
+        javascript_import_module_tag(entry_point)
+      ], "\n"
+    end
+
+    def javascript_importmap_module_preload_tags(importmap = Rails.application.importmap, entry_point: "application")
+      packages = importmap.preloaded_module_packages(resolver: self, entry_point:, cache_key: ingress_importmap_cache_key(entry_point))
+
+      _generate_preload_tags(packages) { |path, package| [path, {integrity: package.integrity}] }
+    end
+
+    private
+
+    def ingress_importmap_cache_key(base)
+      "#{base}@#{config.relative_url_root}"
+    end
+  end
 end

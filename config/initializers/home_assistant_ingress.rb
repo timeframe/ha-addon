@@ -13,4 +13,8 @@ ActiveSupport.on_load(:action_controller_base) do
   prepend_before_action do
     config.relative_url_root = request.script_name.presence
   end
+
+  # Prepended onto importmap-rails' own helper (rather than added with
+  # `helper`) so the overrides win whichever on_load hook runs first.
+  Importmap::ImportmapTagsHelper.prepend(HomeAssistantIngress::ImportmapTags)
 end

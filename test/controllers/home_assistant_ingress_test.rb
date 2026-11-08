@@ -26,5 +26,18 @@ class HomeAssistantIngressIntegrationTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "hassio_ingress"
     assert_includes response.body, %(href="/events")
     assert_match %r{href="/assets/application_tailwind-[^"]+\.css"}, response.body
+    assert_includes response.body, %("/assets/application-)
+  end
+
+  # importmap-rails caches the importmap JSON and modulepreload paths, so the
+  # prefix must not stick from whichever request happened to render first.
+  test "ingress requests carry the prefix in the importmap, even right after a direct request" do
+    get "/status"
+    get "/status", headers: {"X-Ingress-Path" => INGRESS}
+    assert_response :success
+
+    assert_includes response.body, %("application": "#{INGRESS}/assets/application-)
+    assert_match %r{<link rel="modulepreload" href="#{INGRESS}/assets/application-}, response.body
+    refute_match %r{"/assets/}, response.body
   end
 end

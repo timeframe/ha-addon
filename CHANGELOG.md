@@ -1,3 +1,8 @@
+## [2.19.1] - 2026-11-08
+
+### Fixed
+- Opening Timeframe from the Home Assistant sidebar no longer risks broken buttons and menus: the page's JavaScript could be requested from Home Assistant's own address instead of the add-on's if the add-on had first been opened directly by IP and port (or the reverse, breaking the direct page) since it last started
+
 ## [2.19.0] - 2026-11-08
 
 ### Added
