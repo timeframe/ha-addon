@@ -1,3 +1,8 @@
+## [2.19.0] - 2026-11-08
+
+### Added
+- Devices with the Year view turned on have a Year tab next to Screenshot in their settings, showing the Year page's image with its own Regenerate button, so you can capture a fresh one any time instead of waiting for the next refresh. The tab appears as soon as you turn the Year view on, without reloading the page
+
 ## [2.18.0] - 2026-11-08
 
 ### Changed

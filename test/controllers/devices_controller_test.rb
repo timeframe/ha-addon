@@ -484,6 +484,67 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert captured_url.start_with?("#{Device.screenshot_host}/d/#{thirteen.id}?"), captured_url
   end
 
+  test "forced Year screenshot recaptures the Year page and serves it" do
+    device = year_screenshot_device(enabled: true)
+    captured_url = nil
+    capture = ->(url, **) {
+      captured_url = url
+      Base64.strict_encode64("year png data")
+    }
+
+    Rails.stub(:cache, ActiveSupport::Cache::MemoryStore.new) do
+      ScreenshotService.stub :capture, capture do
+        get "/accounts/#{@account.id}/locations/#{@location.id}/devices/#{device.id}/screenshot?force=true&page=1"
+      end
+      assert_equal Base64.strict_encode64("year png data"), device.year_page_cache[:image]
+    end
+
+    assert_response :success
+    assert_equal "year png data", response.body
+    assert_includes captured_url, "page=1"
+    assert_equal Base64.strict_encode64("main"), device.reload.cached_image
+  end
+
+  test "Year screenshot falls back to the main page when the Year page is off" do
+    device = year_screenshot_device(enabled: false)
+
+    get "/accounts/#{@account.id}/locations/#{@location.id}/devices/#{device.id}/screenshot?page=1"
+
+    assert_response :success
+    assert_equal "main", response.body
+  end
+
+  test "settings shows the Year screenshot tab when the Year page is on and keeps it hidden when off" do
+    device = year_screenshot_device(enabled: true)
+    get settings_account_location_device_path(@account, @location, device)
+    assert_response :success
+    tab = Nokogiri::HTML(response.body).at_css("#screenshot-year-tab")
+    assert tab, "expected a Year screenshot tab"
+    refute tab.key?("hidden")
+    assert_includes response.body, %(data-page="1")
+
+    # Off: still rendered, but hidden, so switching it on can show it without a reload.
+    device.update!(configuration: {})
+    get settings_account_location_device_path(@account, @location, device)
+    assert_response :success
+    tab = Nokogiri::HTML(response.body).at_css("#screenshot-year-tab")
+    assert tab
+    assert tab.key?("hidden")
+  end
+
+  test "settings has no Year screenshot tab on devices without a Year page" do
+    device = Device.find_or_create_by!(name: "test-og", model: "trmnl_og") do |d|
+      d.location = @location
+      d.mac_address = "AA:BB:CC:00:11:33"
+    end
+    device.update!(confirmed_at: Time.current, confirmation_code: nil,
+      cached_image: Base64.strict_encode64("main"), cached_image_at: Time.current)
+
+    get settings_account_location_device_path(@account, @location, device)
+    assert_response :success
+    assert_nil Nokogiri::HTML(response.body).at_css("#screenshot-year-tab")
+  end
+
   test "screenshot returns 404 for unknown device" do
     get "/accounts/#{@account.id}/locations/#{@location.id}/devices/nonexistent/screenshot"
     assert_response :not_found
@@ -533,5 +594,18 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
 
     get "/accounts/#{@account.id}/locations/#{@location.id}/devices/#{thirteen.id}/preview_frame?at=2026-05-10T14:00:00"
     assert_response :success
+  end
+
+  private
+
+  def year_screenshot_device(enabled:)
+    device = Device.find_or_create_by!(name: "test-year-x", model: "trmnl_x") do |d|
+      d.location = @location
+      d.mac_address = "AA:BB:CC:00:11:22"
+    end
+    device.update!(confirmed_at: Time.current, confirmation_code: nil,
+      configuration: enabled ? {"year_page_on_button" => "true"} : {},
+      cached_image: Base64.strict_encode64("main"), cached_image_at: Time.current)
+    device
   end
 end

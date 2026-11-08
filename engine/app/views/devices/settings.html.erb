@@ -43,12 +43,19 @@
     <% unless hide_support_content %>
     <div class="lg:w-1/2 lg:flex-shrink-0">
     <% has_screenshot = @device.screenshotted? && @device.cached_image.present? %>
+    <%# The Year tab is rendered whenever the device can have a Year page, and
+        hidden while the "Year view on button press" switch is off, so flipping
+        the switch can show it without a page reload. %>
+    <% screenshot_pages = @device.year_page_supported? ? [0, Device::YEAR_PAGE] : [0] %>
     <div class="mb-3 rounded-lg border border-ink/10 bg-white lg:sticky lg:top-4" data-controller="tabs" data-tabs-active-class="tf-tab-active">
       <div class="border-b border-ink/10 px-3 pt-2">
         <div class="flex gap-1" role="tablist">
           <button type="button" class="tf-tab px-3 py-2 text-sm" data-tabs-target="tab" data-action="tabs#select" data-panel="preview" data-tabs-default role="tab" aria-selected="true">Preview</button>
           <% if has_screenshot %>
             <button type="button" class="tf-tab px-3 py-2 text-sm" data-tabs-target="tab" data-action="tabs#select" data-panel="screenshot" role="tab" aria-selected="false">Screenshot</button>
+            <% if screenshot_pages.include?(Device::YEAR_PAGE) %>
+              <button type="button" class="tf-tab px-3 py-2 text-sm" data-tabs-target="tab" data-action="tabs#select" data-panel="screenshot-year" role="tab" aria-selected="false" id="screenshot-year-tab" <%= "hidden" unless @device.year_page_enabled? %>>Year</button>
+            <% end %>
           <% end %>
         </div>
       </div>
@@ -79,34 +86,41 @@
           </div>
         </div>
         <% if has_screenshot %>
-          <div data-tabs-target="panel" data-panel="screenshot" role="tabpanel" hidden>
-            <div class="p-2">
-              <div class="flex items-center justify-center overflow-hidden rounded" style="position: relative; background: #f0f0f0; min-height: 100px;" id="screenshot-container">
-                <% if (@device.reterminal_e1003? || @device.trmnl_x?) && !@device.landscape_template? %>
-                  <%# Portrait panel (display_width x display_height) shown rotated -90deg.
-                      CSS rotation doesn't change the layout box, so wrap the image in an
-                      aspect-ratio box sized for the rotated (landscape) result and center
-                      the rotated image inside it so nothing gets clipped. %>
-                  <% rotated_pct = (@device.display_width.to_f / @device.display_height * 100).round(2) %>
-                  <div style="position: relative; width: 100%; padding-bottom: <%= rotated_pct %>%;">
-                    <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="position: absolute; top: 50%; left: 50%; width: <%= rotated_pct %>%; height: auto; transform: translate(-50%, -50%) rotate(-90deg);" id="screenshot-img">
-                  </div>
-                <% else %>
-                  <img src="<%= screenshot_account_location_device_path(@account, @location, @device) %>" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img">
-                <% end %>
-                <div id="screenshot-loading" style="display: none; position: absolute; inset: 0; background: #f0f0f0;" class="flex items-center justify-center text-sm text-gray-500">Regenerating screenshot&hellip;</div>
+          <%# One panel per page the device shows: the main page, and the Year page
+              when it's turned on. Each has its own Regenerate button. %>
+          <% screenshot_pages.each do |page| %>
+            <% suffix = (page == Device::YEAR_PAGE) ? "-year" : "" %>
+            <% page_src = screenshot_account_location_device_path(@account, @location, @device, page: (page if page == Device::YEAR_PAGE)) %>
+            <div data-tabs-target="panel" data-panel="screenshot<%= suffix %>" role="tabpanel" hidden>
+              <div class="p-2">
+                <div class="flex items-center justify-center overflow-hidden rounded" style="position: relative; background: #f0f0f0; min-height: 100px;" id="screenshot-container<%= suffix %>">
+                  <% page_template = @device.template_for_page(page) %>
+                  <% if (@device.reterminal_e1003? || @device.trmnl_x?) && !@device.landscape_template?(page_template) %>
+                    <%# Portrait panel (display_width x display_height) shown rotated -90deg.
+                        CSS rotation doesn't change the layout box, so wrap the image in an
+                        aspect-ratio box sized for the rotated (landscape) result and center
+                        the rotated image inside it so nothing gets clipped. %>
+                    <% rotated_pct = (@device.display_width(page_template).to_f / @device.display_height(page_template) * 100).round(2) %>
+                    <div style="position: relative; width: 100%; padding-bottom: <%= rotated_pct %>%;">
+                      <img src="<%= page_src %>" loading="lazy" alt="<%= @device.name %>" style="position: absolute; top: 50%; left: 50%; width: <%= rotated_pct %>%; height: auto; transform: translate(-50%, -50%) rotate(-90deg);" id="screenshot-img<%= suffix %>">
+                    </div>
+                  <% else %>
+                    <img src="<%= page_src %>" loading="lazy" alt="<%= @device.name %>" style="max-width: 100%; height: auto;" id="screenshot-img<%= suffix %>">
+                  <% end %>
+                  <div id="screenshot-loading<%= suffix %>" style="display: none; position: absolute; inset: 0; background: #f0f0f0;" class="flex items-center justify-center text-sm text-gray-500">Regenerating screenshot&hellip;</div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between border-t border-ink/10 px-3 py-2">
+                <span class="text-sm text-gray-400" id="screenshot-generated-at<%= suffix %>">
+                  <% generated_at = (page == Device::YEAR_PAGE) ? @device.page_image_at(page) : (@device.last_generated_at || @device.cached_image_at) %>
+                  <% if generated_at %>
+                    Generated <%= (generated_at > 1.minute.ago) ? "<1m" : time_ago_in_words(generated_at) %> ago
+                  <% end %>
+                </span>
+                <button type="button" class="tf-btn tf-btn-outline tf-btn-sm" data-regenerate-screenshot data-page="<%= page %>">Regenerate</button>
               </div>
             </div>
-            <div class="flex items-center justify-between border-t border-ink/10 px-3 py-2">
-              <span class="text-sm text-gray-400" id="screenshot-generated-at">
-                <% generated_at = @device.last_generated_at || @device.cached_image_at %>
-                <% if generated_at %>
-                  Generated <%= (generated_at > 1.minute.ago) ? "<1m" : time_ago_in_words(generated_at) %> ago
-                <% end %>
-              </span>
-              <button type="button" class="tf-btn tf-btn-outline tf-btn-sm" data-regenerate-screenshot>Regenerate</button>
-            </div>
-          </div>
+          <% end %>
         <% end %>
       </div>
       <script>
@@ -159,24 +173,35 @@
           (function() {
             function bindRegenerateButtons() {
               var buttons = document.querySelectorAll('[data-regenerate-screenshot]');
-              var img = document.getElementById('screenshot-img');
-              var loading = document.getElementById('screenshot-loading');
-              var generatedAt = document.getElementById('screenshot-generated-at');
+              var basePath = '<%= screenshot_account_location_device_path(@account, @location, @device) %>';
               buttons.forEach(function(btn) {
                 btn.addEventListener('click', function() {
-                  buttons.forEach(function(button) {
+                  // Each page (main, Year) has its own image; a button without a
+                  // page regenerates the main one.
+                  var page = btn.getAttribute('data-page') || '0';
+                  var suffix = page === '<%= Device::YEAR_PAGE %>' ? '-year' : '';
+                  var img = document.getElementById('screenshot-img' + suffix);
+                  var loading = document.getElementById('screenshot-loading' + suffix);
+                  var generatedAt = document.getElementById('screenshot-generated-at' + suffix);
+                  var pageButtons = Array.prototype.filter.call(buttons, function(button) {
+                    return (button.getAttribute('data-page') || '0') === page;
+                  });
+                  pageButtons.forEach(function(button) {
                     button.disabled = true;
                     button.textContent = 'Regenerating\u2026';
                   });
                   if (img) img.style.display = 'none';
-                  if (loading) loading.style.display = '';
+                  if (loading) {
+                    loading.textContent = 'Regenerating screenshot\u2026';
+                    loading.style.display = '';
+                  }
                   var newImg = new Image();
                   newImg.onload = function() {
                     if (!img) return window.location.reload();
                     img.src = newImg.src;
                     img.style.display = '';
                     loading.style.display = 'none';
-                    buttons.forEach(function(button) {
+                    pageButtons.forEach(function(button) {
                       button.disabled = false;
                       button.textContent = 'Regenerate';
                     });
@@ -184,12 +209,12 @@
                   };
                   newImg.onerror = function() {
                     if (loading) loading.textContent = 'Failed to regenerate screenshot.';
-                    buttons.forEach(function(button) {
+                    pageButtons.forEach(function(button) {
                       button.disabled = false;
                       button.textContent = 'Regenerate';
                     });
                   };
-                  newImg.src = '<%= screenshot_account_location_device_path(@account, @location, @device) %>' + '?force=true&_=' + Date.now();
+                  newImg.src = basePath + '?force=true' + (page !== '0' ? '&page=' + page : '') + '&_=' + Date.now();
                 });
               });
             }
@@ -284,6 +309,18 @@
           var iframe = document.getElementById('preview-iframe');
           if (iframe) { iframe.src = iframe.src; }
         }
+        // Show the Year screenshot tab as soon as the Year page is switched on,
+        // and hide it (falling back to the main screenshot) when it's switched off.
+        function syncYearTab() {
+          var tab = document.getElementById('screenshot-year-tab');
+          var cb = form.querySelector('[data-option-key="year_page_on_button"]');
+          if (!tab || !cb) { return; }
+          tab.hidden = !cb.checked;
+          if (!cb.checked && tab.getAttribute('aria-selected') === 'true') {
+            var main = document.querySelector('[data-tabs-target="tab"][data-panel="screenshot"]');
+            if (main) { main.click(); }
+          }
+        }
         // Auto-save on any change. Changing the layout re-renders the available
         // options, so it goes through the enclosing Turbo Frame (swaps this pane
         // in place). Every other change saves via fetch so the field keeps focus
@@ -301,6 +338,7 @@
               if (!r.ok) { throw new Error("save failed"); }
               flashSaved();
               reloadPreview();
+              if (e.target && e.target.getAttribute('data-option-key') === 'year_page_on_button') { syncYearTab(); }
               if (window.tfShowSettingsToast) { window.tfShowSettingsToast(); }
             })
             .catch(function() { setStatus('Save failed'); });
