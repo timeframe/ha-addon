@@ -11,6 +11,13 @@ class Device < ActiveRecord::Base
   NIGHT_REFRESH_RATE_SECONDS = 3540
   NIGHT_START_HOUR = 23
   MORNING_RESUME_HOUR = 5
+  # Wakes land this long after each :00/:15/:30/:45, so the screenshot taken
+  # just after the quarter hour is ready when the device asks for it.
+  WAKE_DELAY_SECONDS = 60
+  # A check-in close to a quarter hour skips to the one after, rather than
+  # sleeping for a minute or two (and an early wake stays clearly shorter than
+  # its interval for the button-press check in legacy_page_for_poll).
+  MIN_SLEEP_SECONDS = 300
   TWO_DAY_DEFAULT_ROLLOVER_TIME = "18:00"
 
   # Battery hysteresis: turn the on-screen recharge warning ON at/below
@@ -93,21 +100,29 @@ class Device < ActiveRecord::Base
     portrait? ? SUPPORTED_MODELS.dig(model, :width) : SUPPORTED_MODELS.dig(model, :height)
   end
 
-  # How long (seconds) the firmware should sleep before polling again. Normally
-  # 15 minutes, but overnight (23:00-05:00 in the device's local time) devices
-  # update roughly once per hour to conserve battery. During the final overnight
-  # hour the interval is capped so a device wakes back up around 05:00 rather
-  # than sleeping well past it, and floored at the normal rate so that after
-  # ~04:45 it simply resumes the regular 15-minute cadence.
+  # How long (seconds) the firmware should sleep before polling again. Wakes are
+  # lined up with the clock: a minute after :00, :15, :30 or :45 in the
+  # device's local time, so the display changes on the quarter hour. By day
+  # that is the next quarter hour (at least MIN_SLEEP_SECONDS away). Overnight
+  # (23:00-05:00) it is the furthest quarter hour within
+  # NIGHT_REFRESH_RATE_SECONDS, to spare battery, but never past 05:01 so the
+  # device is back on the daytime cadence in the morning.
   def refresh_rate(at: Time.current)
     tz = location&.time_zone.presence || "UTC"
     now = at.in_time_zone(tz)
-    return REFRESH_RATE_SECONDS unless now.hour >= NIGHT_START_HOUR || now.hour < MORNING_RESUME_HOUR
+    step = REFRESH_RATE_SECONDS.seconds
 
-    morning = now.change(hour: MORNING_RESUME_HOUR, min: 0, sec: 0)
-    morning += 1.day if now.hour >= MORNING_RESUME_HOUR
-    seconds_until_morning = (morning - now).to_i
-    seconds_until_morning.clamp(REFRESH_RATE_SECONDS, NIGHT_REFRESH_RATE_SECONDS)
+    wake = now.change(min: now.min - now.min % 15, sec: 0) + WAKE_DELAY_SECONDS
+    wake += step while wake < now + MIN_SLEEP_SECONDS
+
+    if now.hour >= NIGHT_START_HOUR || now.hour < MORNING_RESUME_HOUR
+      morning = now.change(hour: MORNING_RESUME_HOUR, min: 0, sec: 0) + WAKE_DELAY_SECONDS
+      morning += 1.day if now.hour >= MORNING_RESUME_HOUR
+      latest = [now + NIGHT_REFRESH_RATE_SECONDS, morning].min
+      wake += step while wake + step <= latest
+    end
+
+    (wake - now).ceil
   end
 
   def trmnl?

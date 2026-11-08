@@ -1,3 +1,9 @@
+## [2.18.0] - 2026-11-08
+
+### Changed
+- TRMNL and other polling displays now update on the quarter hour: they wake a minute after :00, :15, :30 and :45 instead of every 15 minutes from whenever they last checked in, and the screen image is captured just after the quarter hour so it's current when the device fetches it (at midnight, the new date shows at 00:01)
+- Overnight (23:00–05:00) displays wake about every 45 minutes on a quarter hour, then at 05:01 to resume the daytime schedule
+
 ## [2.17.3] - 2026-11-08
 
 ### Fixed

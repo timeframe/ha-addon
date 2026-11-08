@@ -114,7 +114,9 @@ module Api
       # outage re-notifies the owner.
       @device.update_columns(last_connection_at: Time.current, device_offline_notified_at: nil)
 
-      RefreshDeviceScreenshotJob.set(wait: (@device.refresh_rate - 60).seconds).perform_later(@device.id)
+      # Capture just after the quarter hour the device will wake on, so the
+      # image it fetches already shows that quarter hour's content.
+      RefreshDeviceScreenshotJob.set(wait: (@device.refresh_rate - Device::WAKE_DELAY_SECONDS + 5).seconds).perform_later(@device.id)
 
       render json: {
         status: 0,

@@ -44,52 +44,31 @@ class DeviceTest < Minitest::Test
     assert_equal 1600, device.display_height
   end
 
-  def test_refresh_rate_daytime_is_regular
-    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
-    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 12, 0, 0) do
-      assert_equal 900, device.refresh_rate
-    end
-  end
-
-  def test_refresh_rate_late_evening_is_hourly
-    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
-    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 23, 30, 0) do
-      assert_equal 3540, device.refresh_rate
-    end
-  end
-
-  def test_refresh_rate_small_hours_is_hourly
-    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
-    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 2, 0, 0) do
-      assert_equal 3540, device.refresh_rate
-    end
-  end
-
-  def test_refresh_rate_in_four_am_hour_is_capped_to_five_am
-    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
-    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 4, 30, 0) do
-      assert_equal 1800, device.refresh_rate
-    end
-  end
-
-  def test_refresh_rate_after_four_forty_five_resumes_regular
-    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
-    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 4, 50, 0) do
-      assert_equal 900, device.refresh_rate
-    end
-  end
-
-  def test_refresh_rate_at_five_am_is_regular
-    device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
-    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 5, 30, 0) do
-      assert_equal 900, device.refresh_rate
+  # Expected wakes are a minute past a quarter hour, Chicago time.
+  {
+    [12, 0, 0] => 960,    # 12:16, the next quarter hour at least 5 minutes away
+    [12, 7, 30] => 510,   # 12:16
+    [12, 12, 0] => 1140,  # 12:16 is too close, so 12:31
+    [22, 50, 0] => 660,   # 23:01
+    [23, 30, 0] => 2760,  # 00:16, the last quarter hour within 59 minutes
+    [2, 0, 0] => 2760,    # 02:46
+    [4, 30, 0] => 1860,   # 05:01, capped to the morning
+    [4, 50, 0] => 660,    # 05:01
+    [5, 30, 0] => 960     # 05:46
+  }.each do |(hour, min, sec), expected|
+    define_method("test_refresh_rate_at_#{format("%02d%02d%02d", hour, min, sec)}_wakes_on_the_quarter_hour") do
+      device = Device.new(location: test_location, name: "test_rr", model: "trmnl_og")
+      travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, hour, min, sec) do
+        assert_equal expected, device.refresh_rate
+        assert_kind_of Integer, device.refresh_rate
+      end
     end
   end
 
   def test_refresh_rate_without_location_uses_utc
     device = Device.new(name: "test_rr", model: "trmnl_og")
     travel_to Time.utc(2026, 7, 17, 2, 0, 0) do
-      assert_equal 3540, device.refresh_rate
+      assert_equal 2760, device.refresh_rate
     end
   end
 

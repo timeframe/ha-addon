@@ -203,7 +203,7 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
         assert_match(/\Aweek-[0-9a-f]{6}-\d{10}\z/, json["filename"])
         assert json["image_url"].include?("/signed_screenshot/")
         assert_equal 0, json["image_url_timeout"]
-        assert_equal 900, json["refresh_rate"]
+        assert_equal 960, json["refresh_rate"] # 12:16, a minute past the next quarter hour
         assert_equal "sleep", json["special_function"]
         assert_equal false, json["reset_firmware"]
         assert_equal false, json["update_firmware"]
