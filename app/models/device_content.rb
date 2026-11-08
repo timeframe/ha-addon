@@ -24,7 +24,8 @@ class DeviceContent
     event_filters: {},
     wind_gust_threshold_mph: 20.0,
     day_groups_limit: nil,
-    include_minutely: true
+    include_minutely: true,
+    year_events: false
   )
     home_assistant_api ||= HomeAssistantApi.new(wind_gust_threshold_mph: wind_gust_threshold_mph, account: device&.location&.account)
     current_time ||= Time.now.utc.in_time_zone(home_assistant_api.time_zone)
@@ -72,21 +73,7 @@ class DeviceContent
       raw_events << home_assistant_api.daily_events(current_time: current_time)
     end
 
-    cal_events = home_assistant_api.calendar_events
-    if device&.excluded_calendar_identifiers&.any?
-      cal_events = cal_events.reject { |e| device.calendar_excluded?(e.entity_id) }
-    end
-    if event_filters.present?
-      cal_events = cal_events.reject do |e|
-        filter = event_filters[e.entity_id.to_s]
-        next false if filter.blank?
-
-        keywords = filter.split(",").map(&:strip).reject(&:empty?)
-        next false if keywords.empty?
-
-        keywords.none? { |kw| e.summary.to_s.include?(kw) }
-      end
-    end
+    cal_events = filter_calendar_events(home_assistant_api.calendar_events, device: device, event_filters: event_filters)
     raw_events << cal_events
 
     # Countdown reminders: a "timeframe-countdown:N" token on a calendar event
@@ -256,10 +243,48 @@ class DeviceContent
       out[:banner] = {title: banner_event.banner_title, description: banner_event.banner_description}
     end
 
+    if year_events
+      year_calendar_events = filter_calendar_events(home_assistant_api.year_calendar_events, device: device, event_filters: event_filters)
+      out[:year_events] = year_view_events(year_calendar_events, calendar_feed: calendar_feed, device: device, current_time: current_time)
+    end
+
     out
   end
 
   private
+
+  # Drops events from calendars excluded on this device, and events that don't
+  # match the device's per-calendar keyword filter.
+  def filter_calendar_events(events, device:, event_filters:)
+    if device&.excluded_calendar_identifiers&.any?
+      events = events.reject { |e| device.calendar_excluded?(e.entity_id) }
+    end
+    return events if event_filters.blank?
+
+    events.reject do |e|
+      filter = event_filters[e.entity_id.to_s]
+      next false if filter.blank?
+
+      keywords = filter.split(",").map(&:strip).reject(&:empty?)
+      next false if keywords.empty?
+
+      keywords.none? { |kw| e.summary.to_s.include?(kw) }
+    end
+  end
+
+  # The events shown on the Year template: the multi-day and "timeframe-year"
+  # tagged events from the current month through the next 11, as plain
+  # {title:, start:, end:} hashes with inclusive ISO dates.
+  def year_view_events(events, calendar_feed:, device:, current_time:)
+    window_start = current_time.beginning_of_month
+    feed = calendar_feed.events_for(window_start.utc, (window_start + 12.months).utc, events, device_name: device&.name, device_id: device&.id)
+    (feed[:daily] + feed[:periodic])
+      .select(&:year_view?)
+      .reject(&:banner?)
+      .map(&:year_view_json)
+      .uniq
+      .sort_by { |e| [e[:start], e[:end], e[:title]] }
+  end
 
   def clothing_recommendation(weather_events, daily_high, threshold:, noon_threshold:, shirt_threshold:)
     morning = weather_events.find { |e| e.starts_at.hour == 8 }

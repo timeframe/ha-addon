@@ -5,7 +5,7 @@ class DemoDeviceContent
     include_weather_alerts: true, include_air_quality: true, include_temperature: true, temperature_hours: nil,
     use_day_names: false, include_daily_weather: true, weather_row: false, start_time_only: false,
     always_show_today: false, hide_today_after_minutes: 1200, start_offset: 0, clothing_forecast: false, auto_icons: false, event_filters: {},
-    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0, battery_level: nil, charging: false, day_groups_limit: nil, include_minutely: true)
+    fill_hourly_weather: false, wind_gust_threshold_mph: 20.0, battery_level: nil, charging: false, day_groups_limit: nil, include_minutely: true, year_events: false)
     current_time ||= Time.now.utc.in_time_zone(timezone)
 
     out = {}
@@ -104,11 +104,35 @@ class DemoDeviceContent
     end
 
     out[:start_time_only] = start_time_only
+    out[:year_events] = demo_year_events(current_time) if year_events
 
     out
   end
 
   private
+
+  # Sample trips and milestones spread across the next year for the Year
+  # template, relative to today so the demo always looks current.
+  DEMO_YEAR_EVENTS = [
+    ["Long weekend away", 9, 3],
+    ["Winter shutdown", 40, 10],
+    ["Visiting family", 47, 10],
+    ["Ski trip", 95, 4],
+    ["Spring break", 130, 9],
+    ["Birthday party", 170, 1],
+    ["Lake cabin", 230, 10],
+    ["Summer camp", 250, 5],
+    ["Wedding", 290, 3],
+    ["Anniversary trip", 330, 5]
+  ].freeze
+
+  def demo_year_events(current_time)
+    today = current_time.to_date
+    DEMO_YEAR_EVENTS.map do |title, offset, length|
+      starts_on = today + offset
+      {title: title, start: starts_on.iso8601, end: (starts_on + length - 1).iso8601}
+    end
+  end
 
   # Clothing recommendation from a day's hourly weather readings (uses the 8am
   # and noon temps, capped by the daily high when available). Returns nil when

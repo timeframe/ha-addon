@@ -7,6 +7,16 @@ class DeviceSettingsOptionsTest < ActiveSupport::TestCase
     DeviceSettingsOptions.call(Device.new(display_template: template)).map { |o| o[:key] }
   end
 
+  def test_ten_inch_devices_offer_the_year_page_switch
+    keys = DeviceSettingsOptions.call(Device.new(model: "trmnl_x", display_template: "reterminal")).map { |o| o[:key] }
+    assert_equal "year_page_on_button", keys.last
+    refute_includes keys_for("trmnl"), "year_page_on_button"
+  end
+
+  def test_year_template_has_no_weather_or_layout_options
+    assert_empty DeviceSettingsOptions.call(Device.new(model: "trmnl_x", display_template: "year"))
+  end
+
   def test_blank_template_returns_no_options
     assert_empty DeviceSettingsOptions.call(Device.new(display_template: "default"))
   end

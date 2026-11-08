@@ -809,6 +809,54 @@ class HomeAssistantApiTest < Minitest::Test
     end
   end
 
+  def test_fetch_year_calendars_covers_this_month_and_the_next_eleven
+    api = new_test_api
+    requested = nil
+    trip = {
+      "uid" => "trip-1",
+      "summary" => "Japan",
+      "start" => {"date" => "2026-11-12"},
+      "end" => {"date" => "2026-11-22"}
+    }
+    get = ->(url, **) {
+      requested = url
+      [trip]
+    }
+
+    api.stub :fetch_calendar_list, [{"entity_id" => "calendar.family"}] do
+      api.stub :fetch_calendar_icons, {} do
+        HTTParty.stub :get, get do
+          api.fetch_year_calendars(now: Time.utc(2026, 11, 7, 18, 0, 0))
+        end
+      end
+    end
+
+    # Midnight Nov 1 to midnight Nov 1 a year later, in Home Assistant's zone (Chicago).
+    assert_includes requested, "start=2026-11-01T05:00:00Z"
+    assert_includes requested, "end=2027-11-01T05:00:00Z"
+    assert_equal ["Japan"], api.year_calendar_events.map(&:summary)
+    assert_empty api.calendar_events
+    assert api.year_calendars_last_fetched_at.present?
+  end
+
+  def test_year_calendar_summary_counts_events_per_calendar
+    api = new_test_api
+    tz = "America/Chicago"
+    events = [
+      DeviceEvent.new(starts_at: "2027-06-01", ends_at: "2027-06-04", summary: "Trip", entity_id: "calendar.b", timezone: tz),
+      DeviceEvent.new(starts_at: "2026-12-01", ends_at: "2026-12-02", summary: "Dentist", entity_id: "calendar.b", timezone: tz),
+      DeviceEvent.new(starts_at: "2026-11-20", ends_at: "2026-11-21", summary: "Party", entity_id: "calendar.a", timezone: tz)
+    ]
+
+    api.stub :year_calendar_events, events do
+      summary = api.year_calendar_summary
+      assert_equal %w[calendar.a calendar.b], summary.map { |row| row[:entity_id] }
+      assert_equal 2, summary.last[:events]
+      assert_equal 1, summary.last[:year_view_events]
+      assert_equal Date.new(2027, 6, 1), summary.last[:last_starts_at].to_date
+    end
+  end
+
   def test_fetch_calendars_builds_stable_id_when_uid_is_missing
     api = new_test_api
     calendar = {"entity_id" => "calendar.family"}

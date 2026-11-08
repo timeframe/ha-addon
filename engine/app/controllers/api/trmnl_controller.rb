@@ -100,7 +100,14 @@ module Api
       previous_connection_at = @device.last_connection_at
       telemetry = update_device_from_headers(@device)
 
-      @device.refresh_screenshot!(request.base_url) if @device.cached_image.blank? || params[:force].present?
+      # A button press (an early poll) flips between the main page and the
+      # Year page on devices that have it turned on.
+      page = @device.select_page_for_poll!(previous_connection_at)
+      if page == Device::YEAR_PAGE
+        @device.refresh_year_page_screenshot!(request.base_url)
+      elsif @device.cached_image.blank? || params[:force].present?
+        @device.refresh_screenshot!(request.base_url)
+      end
       record_device_poll(@device, telemetry, previous_connection_at:)
       # Reconnecting clears any pending "offline for a day" alert so a future
       # outage re-notifies the owner.
@@ -110,8 +117,8 @@ module Api
 
       render json: {
         status: 0,
-        filename: "display-#{@device.cached_image_at}.png",
-        image_url: @device.signed_screenshot_url(host: request.base_url),
+        filename: (page == Device::YEAR_PAGE) ? "display-year-#{@device.page_image_at(page).to_i}.png" : "display-#{@device.cached_image_at}.png",
+        image_url: @device.signed_screenshot_url(host: request.base_url, page: page),
         image_url_timeout: 0,
         refresh_rate: @device.refresh_rate,
         reset_firmware: false,

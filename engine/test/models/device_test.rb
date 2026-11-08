@@ -432,14 +432,115 @@ class DeviceTest < Minitest::Test
     device = Device.new(name: "test", model: "reterminal_e1003")
     labels = device.template_options.map { |t| t[:label] }
     names = device.template_options.map { |t| t[:name] }
-    assert_equal ["Portrait", "Landscape", "2-Day Landscape"], labels
-    assert_equal ["reterminal", "reterminal_landscape", "two_day_landscape"], names
+    assert_equal ["Portrait", "Landscape", "2-Day Landscape", "Year"], labels
+    assert_equal ["reterminal", "reterminal_landscape", "two_day_landscape", "year"], names
   end
 
   def test_trmnl_x_landscape_template_options
     device = Device.new(name: "test", model: "trmnl_x")
     labels = device.template_options.map { |t| t[:label] }
-    assert_equal ["Portrait", "Landscape", "2-Day Landscape"], labels
+    assert_equal ["Portrait", "Landscape", "2-Day Landscape", "Year"], labels
+  end
+
+  # --- Year page ---
+
+  def year_page_device(model: "trmnl_x", template: "default", enabled: true)
+    Device.new(id: 4242, name: "test_year", model: model, display_template: template,
+      configuration: enabled ? {"year_page_on_button" => "true"} : {})
+  end
+
+  def with_page_store(device, &block)
+    device.stub(:page_store, ActiveSupport::Cache::MemoryStore.new, &block)
+  end
+
+  def test_year_page_supported_only_on_ten_inch_models_not_already_showing_year
+    assert year_page_device.year_page_supported?
+    assert year_page_device(model: "reterminal_e1003").year_page_supported?
+    refute year_page_device(model: "trmnl_og", template: "trmnl").year_page_supported?
+    refute year_page_device(template: "year").year_page_supported?
+  end
+
+  def test_year_page_enabled_requires_the_setting
+    assert year_page_device.year_page_enabled?
+    refute year_page_device(enabled: false).year_page_enabled?
+  end
+
+  def test_template_for_page
+    device = year_page_device
+    assert_equal "reterminal", device.template_for_page(0)
+    assert_equal "year", device.template_for_page("1")
+    assert_equal "reterminal", year_page_device(enabled: false).template_for_page(1)
+  end
+
+  def test_current_page_is_main_page_when_disabled
+    device = year_page_device(enabled: false)
+    with_page_store(device) do
+      device.page_store.write(device.page_cache_key("current"), 1)
+      assert_equal 0, device.current_page
+    end
+  end
+
+  def test_select_page_flips_on_an_early_poll_and_returns_on_a_timed_poll
+    device = year_page_device
+    now = Time.utc(2026, 7, 17, 18, 0, 0)
+    with_page_store(device) do
+      assert_equal 0, device.select_page_for_poll!(nil, now: now)
+      # A button press: polled 2 minutes after the last poll, well inside the
+      # 15-minute refresh it was given.
+      assert_equal 1, device.select_page_for_poll!(now - 2.minutes, now: now)
+      assert_equal 1, device.current_page
+      # A retry seconds later keeps the page rather than flipping it back.
+      assert_equal 1, device.select_page_for_poll!(now - 5.seconds, now: now)
+      # Pressing again flips back to the main page.
+      assert_equal 0, device.select_page_for_poll!(now - 1.minute, now: now)
+      device.select_page_for_poll!(now - 1.minute, now: now)
+      # The scheduled refresh returns to the main page.
+      assert_equal 0, device.select_page_for_poll!(now - 15.minutes, now: now)
+    end
+  end
+
+  def test_select_page_stays_on_main_page_when_disabled
+    device = year_page_device(enabled: false)
+    with_page_store(device) do
+      assert_equal 0, device.select_page_for_poll!(1.minute.ago)
+    end
+  end
+
+  def test_page_image_reads_the_year_page_from_the_cache
+    device = year_page_device
+    device.cached_image = "main"
+    device.cached_image_at = Time.utc(2026, 1, 1)
+    at = Time.utc(2026, 1, 2)
+    with_page_store(device) do
+      assert_equal({}, device.year_page_cache)
+      device.page_store.write(device.page_cache_key("year_image"), {image: "year", at: at, crc: 1})
+      assert_equal "main", device.page_image(0)
+      assert_equal Time.utc(2026, 1, 1), device.page_image_at(0)
+      assert_equal "year", device.page_image(1)
+      assert_equal at, device.page_image_at(1)
+    end
+  end
+
+  def test_page_store_is_the_rails_cache
+    assert_same Rails.cache, year_page_device.page_store
+  end
+
+  def test_urls_carry_the_page
+    device = year_page_device
+    device.display_key = "abc"
+    assert_equal "http://x/d/4242?key=abc", device.token_device_url(host: "http://x")
+    assert_equal "http://x/d/4242?key=abc&page=1&generation=true", device.token_device_url(host: "http://x", generation: true, page: 1)
+    device.stub(:to_sgid, "sgid") do
+      assert_equal "http://x/signed_screenshot/sgid", device.signed_screenshot_url(host: "http://x")
+      assert_equal "http://x/signed_screenshot/sgid?page=1", device.signed_screenshot_url(host: "http://x", page: 1)
+    end
+  end
+
+  def test_year_page_renders_portrait_even_when_main_page_is_landscape
+    device = year_page_device(template: "reterminal_landscape")
+    assert_equal 1872, device.display_width
+    assert_equal 1404, device.display_width("year")
+    assert_equal 1872, device.display_height("year")
   end
 
   def test_landscape_template_swaps_display_dimensions

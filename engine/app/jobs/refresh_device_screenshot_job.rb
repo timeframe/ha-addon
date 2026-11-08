@@ -18,6 +18,9 @@ class RefreshDeviceScreenshotJob < ActiveJob::Base
     return unless device
 
     device.refresh_screenshot!
+    # Keep the Year page warm so a button press can show it without waiting on
+    # a fresh capture (unchanged pages are skipped by the content hash).
+    device.refresh_year_page_screenshot! if device.year_page_enabled?
   end
 
   # True when the device already has a due-now or running screenshot job.

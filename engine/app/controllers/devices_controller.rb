@@ -18,6 +18,7 @@ class DevicesController < ApplicationController
     "sticky_one_day" => "Devices::StickyOneDayComponent",
     "reterminal" => "Devices::ReterminalComponent",
     "reterminal_landscape" => "Devices::ReterminalLandscapeComponent",
+    "year" => "Devices::YearComponent",
     "boox_mira" => "Devices::BooxMiraComponent",
     "thirteen" => "Devices::ThirteenComponent",
     "mira" => "Devices::MiraComponent"

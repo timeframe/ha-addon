@@ -1,3 +1,10 @@
+## [2.17.0] - 2026-11-08
+
+### Added
+- Year layout for the TRMNL X and reTerminal E1003: the current month and the next 11 as rows with days 1–31 across, showing trips, holidays and other multi-day events as bars. Single-day events show too when their description includes `timeframe-year`. Today is a column of polka dots.
+- "Year view on button press" device setting: pressing the TRMNL X's button flips to the Year layout, and the display returns to its main layout at the next scheduled refresh.
+- The Status page lists how many events each calendar returned for the Year layout, and the latest one.
+
 ## [2.16.1] - 2026-11-07
 
 ### Fixed

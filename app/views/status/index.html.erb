@@ -141,6 +141,37 @@
 </div>
 
 <div class="tf-card mb-4">
+  <h3 class="tf-card-title">Year View Calendars (<%= @api.year_calendar_events.length %> events)</h3>
+  <p class="mb-2 text-sm text-gray-500">
+    Next 12 months, last fetched <%= @api.year_calendars_last_fetched_at&.strftime("%b %-d @ %-l:%M %p") || "never" %>.
+  </p>
+  <% if @api.year_calendar_events.present? %>
+    <div class="overflow-x-auto">
+      <table class="tf-table">
+        <thead>
+          <tr>
+            <th>Calendar</th>
+            <th>Events</th>
+            <th>Shown on Year view</th>
+            <th>Latest event starts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @api.year_calendar_summary.each do |row| %>
+            <tr>
+              <td><%= row[:entity_id] %></td>
+              <td><%= row[:events] %></td>
+              <td><%= row[:year_view_events] %></td>
+              <td><%= row[:last_starts_at].strftime("%b %-d, %Y") %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+</div>
+
+<div class="tf-card mb-4">
   <h3 class="tf-card-title">Calendar Events (<%= @api.calendar_events.length %>)</h3>
   <% if @api.calendar_events.present? %>
     <div class="overflow-x-auto">

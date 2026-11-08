@@ -22,6 +22,10 @@ class HomeAssistantApi
   STATES_DOMAIN = "home_assistant_api"
   CONFIG_DOMAIN = "home_assistant_config_api"
   CALENDAR_DOMAIN = "home_assistant_calendar_api"
+  # A separate, slower-moving copy of the calendars covering the next year, read
+  # by the Year template. Kept apart from CALENDAR_DOMAIN so the every-minute
+  # short-range fetch stays small.
+  YEAR_CALENDAR_DOMAIN = "home_assistant_year_calendar_api"
   WEATHER_DOMAIN = "home_assistant_weather_api"
 
   def initialize(config = TimeframeConfig.new, store: Rails.cache, wind_gust_threshold_mph: 20.0, account: nil)
@@ -232,8 +236,19 @@ class HomeAssistantApi
   # --- Calendars ---
 
   def fetch_calendars
-    start_time = (Time.now - 1.day).utc.iso8601
-    end_time = (Time.now + 5.days).utc.iso8601
+    save_domain(CALENDAR_DOMAIN, fetch_calendar_range(Time.now - 1.day, Time.now + 5.days))
+  end
+
+  # Fetches the current month plus the following 11 (in Home Assistant's time
+  # zone) for the Year template.
+  def fetch_year_calendars(now: Time.now)
+    start = now.in_time_zone(time_zone).beginning_of_month
+    save_domain(YEAR_CALENDAR_DOMAIN, fetch_calendar_range(start, start + 12.months))
+  end
+
+  def fetch_calendar_range(range_start, range_end)
+    start_time = range_start.utc.iso8601
+    end_time = range_end.utc.iso8601
 
     calendars_url = "#{home_assistant_base_url}/api/calendars"
 
@@ -264,7 +279,7 @@ class HomeAssistantApi
       out.concat(res)
     end
 
-    save_domain(CALENDAR_DOMAIN, out.compact)
+    out.compact
   end
 
   def calendars_healthy?
@@ -278,7 +293,32 @@ class HomeAssistantApi
   end
 
   def calendar_events
-    @calendar_events ||= (domain_value(CALENDAR_DOMAIN)[:response] || []).map do |raw|
+    @calendar_events ||= build_calendar_events(domain_value(CALENDAR_DOMAIN)[:response] || [])
+  end
+
+  def year_calendar_events
+    @year_calendar_events ||= build_calendar_events(domain_value(YEAR_CALENDAR_DOMAIN)[:response] || [])
+  end
+
+  def year_calendars_last_fetched_at
+    domain_last_fetched_at(YEAR_CALENDAR_DOMAIN)
+  end
+
+  # Per-calendar counts for the Status page, to see how far ahead Home
+  # Assistant returned events and how many qualify for the Year template.
+  def year_calendar_summary
+    year_calendar_events.group_by(&:entity_id).map do |entity_id, events|
+      {
+        entity_id: entity_id,
+        events: events.length,
+        year_view_events: events.count(&:year_view?),
+        last_starts_at: events.map(&:starts_at).max
+      }
+    end.sort_by { |row| row[:entity_id].to_s }
+  end
+
+  def build_calendar_events(raw_events)
+    raw_events.map do |raw|
       event = raw.symbolize_keys.slice(:id, :starts_at, :ends_at, :summary, :description, :location, :icon, :entity_id)
       event[:description] = customized_description(event)
       DeviceEvent.new(**event, timezone: time_zone)

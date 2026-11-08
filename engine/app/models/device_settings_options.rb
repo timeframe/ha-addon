@@ -76,6 +76,12 @@ class DeviceSettingsOptions
   HIDE_CURRENT_DAY_DESCRIPTION =
     "After the given time, hides the current day if there are no remaining events, making more room to show future days."
 
+  YEAR_PAGE_DESCRIPTION =
+    "Press the button on the device to flip to a year planner showing the " \
+    "next 12 months of multi-day events, like trips and holidays. Add " \
+    "\"timeframe-year\" to a single-day event's description to include it " \
+    "too. The display flips back at its next scheduled refresh."
+
   DAILY_EMAIL_DEFAULT_TIME = "19:00"
 
   def self.call(device)
@@ -91,12 +97,19 @@ class DeviceSettingsOptions
     return [] if @template.blank?
 
     @options = []
-    header_options
-    weather_options
-    account_options
-    template_options
-    hide_current_day_option
-    time_inputs
+    if template == Device::YEAR_TEMPLATE
+      # The Year template is calendars only, so the weather and day-layout
+      # options don't apply to it.
+      account_options
+    else
+      header_options
+      weather_options
+      account_options
+      template_options
+      hide_current_day_option
+      time_inputs
+    end
+    page_options
     @options
   end
 
@@ -213,6 +226,12 @@ class DeviceSettingsOptions
       switch("show_event_times", "Event times", default_on: false, description: EVENT_TIMES_DESCRIPTION)
       switch("one_day_rollover_enabled", "Hide current day if no events after", default_on: true, description: HIDE_CURRENT_DAY_DESCRIPTION)
     end
+  end
+
+  def page_options
+    return unless device.year_page_supported?
+
+    switch("year_page_on_button", "Year view on button press", default_on: false, description: YEAR_PAGE_DESCRIPTION)
   end
 
   def hide_current_day_option

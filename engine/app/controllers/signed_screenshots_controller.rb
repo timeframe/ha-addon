@@ -10,9 +10,14 @@ class SignedScreenshotsController < ApplicationController
       return render plain: "Not authorized", status: :unauthorized
     end
 
-    @device.refresh_screenshot!(request.base_url) if @device.cached_image.blank? || params[:force] == "true"
-    @device.reload
-    image_data = Base64.strict_decode64(@device.cached_image)
+    page = params[:page].to_i
+    if page == Device::YEAR_PAGE
+      @device.refresh_year_page_screenshot!(request.base_url) if @device.page_image(page).blank?
+    else
+      @device.refresh_screenshot!(request.base_url) if @device.cached_image.blank? || params[:force] == "true"
+      @device.reload
+    end
+    image_data = Base64.strict_decode64(@device.page_image(page))
     record_image_request
 
     send_data image_data, type: "image/png", disposition: "inline", filename: "#{@device.id}.png?#{Time.now.to_i}"

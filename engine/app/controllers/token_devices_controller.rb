@@ -18,13 +18,13 @@ class TokenDevicesController < ApplicationController
 
     @device.update_column(:last_connection_at, Time.current) unless params[:at].present? || params[:generation] == "true"
 
-    template = @device.active_template
+    template = @device.template_for_page(params[:page])
     refresh = @device.realtime_display? && params[:refresh] != "false"
     @refresh = refresh
 
     tz = @device.location&.time_zone.presence || "UTC"
     current_time = params[:at].present? ? ActiveSupport::TimeZone[tz].parse(params[:at]) : nil
-    view_object = @device.device_content(current_time: current_time)
+    view_object = @device.device_content(current_time: current_time, template: template)
     view_object[:configuration] = @device.try(:configuration) || {}
 
     if Device.charge_reminder?(view_object) && params[:charge_reminder] != "false"

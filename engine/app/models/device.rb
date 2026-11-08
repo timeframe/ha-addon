@@ -27,7 +27,7 @@ class Device < ActiveRecord::Base
   # Templates that render without the top status bar (the compact day layouts).
   # A low battery can't be shown up top on these, so it's surfaced as a bottom
   # banner instead (see Device.low_battery_banner).
-  NO_STATUS_BAR_TEMPLATES = %w[one_day sticky_one_day two_day two_day_landscape three_day].freeze
+  NO_STATUS_BAR_TEMPLATES = %w[one_day sticky_one_day two_day two_day_landscape three_day year].freeze
 
   SUPPORTED_MODELS = {
     "visionect_13" => {name: "Visionect Place & Play 13\"", template: "thirteen", width: 1200, height: 1600},
@@ -36,8 +36,8 @@ class Device < ActiveRecord::Base
     "trmnl_og" => {name: "TRMNL (OG)", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true},
     "reterminal_e1001" => {name: "reTerminal E1001 7.5\"", template: "trmnl", width: 800, height: 480, templates: [{name: "trmnl", label: "Timeline"}, {name: "three_day", label: "3-Day"}, {name: "two_day", label: "2-Day"}, {name: "one_day", label: "1-Day"}], screenshotted: true, product_slug: "timeframe-7"},
     "reterminal_sticky" => {name: "reTerminal Sticky 3.97\"", template: "sticky_one_day", width: 800, height: 480, templates: [{name: "sticky_one_day", label: "1-Day Portrait"}], screenshotted: true},
-    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1414, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}, {name: "two_day_landscape", label: "2-Day Landscape"}], screenshotted: true, product_slug: "timeframe-10"},
-    "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}, {name: "two_day_landscape", label: "2-Day Landscape"}], screenshotted: true}
+    "reterminal_e1003" => {name: "reTerminal E1003 10.3\"", template: "reterminal", width: 1414, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}, {name: "two_day_landscape", label: "2-Day Landscape"}, {name: "year", label: "Year"}], screenshotted: true, product_slug: "timeframe-10"},
+    "trmnl_x" => {name: "TRMNL (X)", template: "reterminal", width: 1404, height: 1872, templates: [{name: "reterminal", label: "Portrait"}, {name: "reterminal_landscape", label: "Landscape"}, {name: "two_day_landscape", label: "2-Day Landscape"}, {name: "year", label: "Year"}], screenshotted: true}
   }.freeze
 
   REALTIME_MODELS = SUPPORTED_MODELS.select { |_, v| v[:realtime] }.keys.freeze
@@ -83,13 +83,13 @@ class Device < ActiveRecord::Base
     SUPPORTED_MODELS.dig(model, :name)
   end
 
-  def display_width
-    return SUPPORTED_MODELS.dig(model, :height) if landscape_template?
+  def display_width(template = active_template)
+    return SUPPORTED_MODELS.dig(model, :height) if landscape_template?(template)
     portrait? ? SUPPORTED_MODELS.dig(model, :height) : SUPPORTED_MODELS.dig(model, :width)
   end
 
-  def display_height
-    return SUPPORTED_MODELS.dig(model, :width) if landscape_template?
+  def display_height(template = active_template)
+    return SUPPORTED_MODELS.dig(model, :width) if landscape_template?(template)
     portrait? ? SUPPORTED_MODELS.dig(model, :width) : SUPPORTED_MODELS.dig(model, :height)
   end
 
@@ -325,12 +325,89 @@ class Device < ActiveRecord::Base
   # The reTerminal 10" / TRMNL X panels can be mounted landscape. When the
   # landscape template is active the display is rendered at swapped (landscape)
   # dimensions and the previews skip the portrait -90deg rotation.
-  def landscape_template?
-    %w[reterminal_landscape two_day_landscape].include?(active_template)
+  def landscape_template?(template = active_template)
+    %w[reterminal_landscape two_day_landscape].include?(template)
   end
 
   def two_day_template?
     %w[two_day two_day_landscape].include?(active_template)
+  end
+
+  # --- Year page --------------------------------------------------------------
+  #
+  # TRMNL X and reTerminal E1003 devices can carry a second page, the Year view,
+  # that the device's button flips to. The server can't see the button itself,
+  # but a press wakes the device and makes it poll /api/display early, so a poll
+  # arriving well before the scheduled refresh is treated as a press and flips
+  # the page. A regular timed poll always returns to the main page.
+  #
+  # The current page and the Year page's screenshot live in the Rails cache
+  # rather than new columns: losing them only means showing the main page and
+  # capturing the Year page again.
+
+  YEAR_TEMPLATE = "year"
+  YEAR_PAGE = 1
+  YEAR_PAGE_MODELS = %w[trmnl_x reterminal_e1003].freeze
+  # A poll arriving within this fraction of the refresh interval the device was
+  # last given is a button press.
+  BUTTON_PRESS_WINDOW = 0.5
+  # Polls this close together are one wake (a retry, or the image fetch racing a
+  # re-poll), so they keep the current page rather than flipping it back.
+  BUTTON_PRESS_DEBOUNCE_SECONDS = 15
+
+  def year_page_supported?
+    YEAR_PAGE_MODELS.include?(model) && active_template != YEAR_TEMPLATE
+  end
+
+  def year_page_enabled?
+    year_page_supported? && configuration&.dig("year_page_on_button") == "true"
+  end
+
+  def template_for_page(page)
+    (page.to_i == YEAR_PAGE && year_page_enabled?) ? YEAR_TEMPLATE : active_template
+  end
+
+  def current_page
+    year_page_enabled? ? page_store.read(page_cache_key("current")).to_i : 0
+  end
+
+  # Picks the page this /api/display poll should show and remembers it.
+  def select_page_for_poll!(previous_connection_at, now: Time.current)
+    page =
+      if !year_page_enabled? || previous_connection_at.nil?
+        0
+      else
+        elapsed = now - previous_connection_at
+        if elapsed < BUTTON_PRESS_DEBOUNCE_SECONDS
+          current_page
+        elsif elapsed < refresh_rate(at: previous_connection_at) * BUTTON_PRESS_WINDOW
+          YEAR_PAGE - current_page
+        else
+          0
+        end
+      end
+    page_store.write(page_cache_key("current"), page)
+    page
+  end
+
+  def page_image(page)
+    (page.to_i == YEAR_PAGE) ? year_page_cache[:image] : cached_image
+  end
+
+  def page_image_at(page)
+    (page.to_i == YEAR_PAGE) ? year_page_cache[:at] : cached_image_at
+  end
+
+  def year_page_cache
+    page_store.read(page_cache_key("year_image")) || {}
+  end
+
+  def page_store
+    Rails.cache
+  end
+
+  def page_cache_key(name)
+    "devices/#{id}/page/#{name}"
   end
 
   def template_options
@@ -452,9 +529,9 @@ class Device < ActiveRecord::Base
   end
 
   # :nocov:
-  def device_content(timezone: nil, current_time: nil)
+  def device_content(timezone: nil, current_time: nil, template: active_template)
     tz = timezone || location&.time_zone || "UTC"
-    args = content_args(timezone: tz, current_time: current_time)
+    args = content_args(timezone: tz, current_time: current_time, template: template)
     if demo_mode_enabled?
       DemoDeviceContent.new.call(timezone: tz, **args)
     else
@@ -466,7 +543,9 @@ class Device < ActiveRecord::Base
   # active template and configuration. Extracted so the admin templates preview
   # renders through the same per-template rules as real devices instead of a
   # duplicated copy that drifts.
-  def content_args(timezone: nil, current_time: nil)
+  def content_args(timezone: nil, current_time: nil, template: active_template)
+    return year_content_args(current_time: current_time) if template == YEAR_TEMPLATE
+
     compact_view = %w[three_day two_day two_day_landscape one_day sticky_one_day].include?(active_template)
     two_day = two_day_template?
     one_day = %w[one_day sticky_one_day].include?(active_template)
@@ -545,6 +624,25 @@ class Device < ActiveRecord::Base
     args
   end
 
+  # The Year template only needs the calendars: no weather, alerts or day
+  # columns, just the next 12 months of major events.
+  def year_content_args(current_time: nil)
+    args = {
+      days: 0,
+      include_precip: false,
+      include_wind: false,
+      include_weather_alerts: false,
+      include_air_quality: false,
+      include_minutely: false,
+      include_temperature: false,
+      include_daily_weather: false,
+      event_filters: calendar_event_filters,
+      year_events: true
+    }
+    args[:current_time] = current_time if current_time
+    args
+  end
+
   # Unified "hide current day" rollover for every template. The toggle and time
   # live under template-specific config keys (two_day_rollover_*,
   # one_day_rollover_*, hide_current_day_*) but all mean the same thing, and all
@@ -591,14 +689,16 @@ class Device < ActiveRecord::Base
     update!(display_key: SecureRandom.alphanumeric(24))
   end
 
-  def token_device_url(host:, generation: false)
+  def token_device_url(host:, generation: false, page: 0)
     url = "#{host}/d/#{id}?key=#{display_key}"
+    url = "#{url}&page=#{page.to_i}" if page.to_i.positive?
     generation ? "#{url}&generation=true" : url
   end
 
-  def signed_screenshot_url(host:)
+  def signed_screenshot_url(host:, page: 0)
     sgid = to_sgid(expires_in: 1.minute, for: "screenshot").to_s
-    "#{host}/signed_screenshot/#{sgid}"
+    url = "#{host}/signed_screenshot/#{sgid}"
+    page.to_i.positive? ? "#{url}?page=#{page.to_i}" : url
   end
 
   def refresh_screenshot!(base_url = nil, force: false)
@@ -637,6 +737,19 @@ class Device < ActiveRecord::Base
     raise
   end
 
+  # Captures the Year page, skipping the capture when its rendered HTML hasn't
+  # changed since the last one (same short-circuit as refresh_screenshot!).
+  def refresh_year_page_screenshot!(base_url = nil, force: false)
+    base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
+    crc = display_content_crc(template: YEAR_TEMPLATE)
+    cached = year_page_cache
+    return if !force && crc && cached[:crc] == crc && cached[:image].present?
+
+    url = token_device_url(host: base_url, generation: true, page: YEAR_PAGE)
+    image = capture_screenshot(url, template: YEAR_TEMPLATE)
+    page_store.write(page_cache_key("year_image"), {image: image, at: Time.current, crc: crc})
+  end
+
   # Records the screenshot refresh decision (skipped vs regenerated) as an audit
   # log so the content-hash short-circuit is observable in the admin audit view.
   # CreateAuditLogJob/AuditLog only exist in the cloud app, so this is a no-op
@@ -663,8 +776,8 @@ class Device < ActiveRecord::Base
 
   # CRC of the rendered display HTML combined with the deploy id. Returns nil if
   # rendering fails so the caller falls back to capturing a fresh screenshot.
-  def display_content_crc
-    Zlib.crc32("#{rendered_display_html}\n#{DEPLOY_TIME}")
+  def display_content_crc(template: active_template)
+    Zlib.crc32("#{rendered_display_html(template: template)}\n#{DEPLOY_TIME}")
   rescue => e
     Rails.logger.warn("[Screenshot] content hash failed for #{name}: #{e.message}")
     nil
@@ -673,9 +786,8 @@ class Device < ActiveRecord::Base
   # Renders the device display page HTML in-process (no headless browser),
   # matching what the screenshot browser loads. Only ever used for
   # screenshotted (non-realtime) templates.
-  def rendered_display_html(current_time: nil)
-    template = active_template
-    view_object = device_content(current_time: current_time)
+  def rendered_display_html(current_time: nil, template: active_template)
+    view_object = device_content(current_time: current_time, template: template)
     view_object[:configuration] = configuration || {}
     component = DevicesController::TEMPLATE_COMPONENTS[template].constantize.new(view_object: view_object)
     ApplicationController.render(
@@ -699,7 +811,7 @@ class Device < ActiveRecord::Base
     capture_screenshot(url)
   end
 
-  def capture_screenshot(url)
+  def capture_screenshot(url, template: active_template)
     if visionect?
       ScreenshotService.capture(
         url,
@@ -709,9 +821,9 @@ class Device < ActiveRecord::Base
     elsif reterminal_e1003? || trmnl_x?
       ScreenshotService.capture(
         url,
-        width: display_width, height: display_height,
+        width: display_width(template), height: display_height(template),
         grayscale_only: true,
-        rotate: !landscape_template?
+        rotate: !landscape_template?(template)
       )
     elsif trmnl? || reterminal_e1001? || reterminal_sticky?
       ScreenshotService.capture(url, width: display_width, height: display_height, rotate: portrait?)

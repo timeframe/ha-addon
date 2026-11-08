@@ -1,0 +1,253 @@
+<style>
+  body { padding: 0; margin: 0; background: #fff; }
+  /* Bar widths are computed to fit their day columns, so padding and borders must sit inside them. */
+  #year-view, #year-view * { box-sizing: border-box; }
+  #year-view { position: fixed; inset: 0; background: #fff; color: #000; font-family: 'Lato', sans-serif;
+               padding: 34px 30px 26px; display: flex; flex-direction: column; overflow: hidden; }
+  #year-view .yv-title { font-weight: 700; font-size: 48px; line-height: 1; }
+  #year-view .yv-rule { height: 3px; background: #000; margin: 16px 0 6px; }
+
+  /* One shared row of dates: columns are day-of-month, so they line up for every month. */
+  #year-view .yv-dayhead { display: grid; grid-template-columns: 92px 1fr; height: 30px; border-bottom: 2px solid #000; }
+  #year-view .yv-nums { display: grid; grid-template-columns: repeat(31, 1fr); }
+  #year-view .yv-nums div { position: relative; text-align: center; font-size: 19px; font-weight: 700; line-height: 28px; }
+  /* Today's date is inverted by a white "difference" layer. */
+  #year-view .yv-loupe { position: absolute; inset: 0; background: #fff; mix-blend-mode: difference; border-radius: 6px 6px 0 0; }
+
+  #year-view .yv-grid { flex: 1; display: grid; grid-template-rows: repeat(12, 1fr); min-height: 0; }
+  #year-view .yv-month { display: grid; grid-template-columns: 92px 1fr; border-bottom: 2px solid #bbb; min-height: 0; }
+  #year-view .yv-month:last-child { border-bottom: none; }
+  #year-view .yv-month.yv-year-start { border-top: 4px solid #000; }
+  #year-view .yv-mlabel { display: flex; flex-direction: column; justify-content: center; font-weight: 700; line-height: 1; }
+  #year-view .yv-yr { font-weight: 400; margin-top: 4px; }
+
+  #year-view .yv-days { position: relative; }
+  #year-view .yv-cells { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(31, 1fr); }
+  #year-view .yv-cell { border-left: 1px solid #ddd; }
+  #year-view .yv-cell.yv-weekend { background: #e6e6e6; }
+  #year-view .yv-cell.yv-none { background: #fff; border-left-color: transparent; }
+  /* Today: a column of polka dots. */
+  #year-view .yv-cell.yv-today { --r: 7px; --s: 26px;
+    background:
+      radial-gradient(circle, #000 0 var(--r), transparent calc(var(--r) + .6px)) 0 0 / var(--s) var(--s),
+      radial-gradient(circle, #000 0 var(--r), transparent calc(var(--r) + .6px)) calc(var(--s) / 2) calc(var(--s) / 2) / var(--s) var(--s),
+      #fff; }
+  /* One hatch strip across the past days, so the stripes run on without restarting per day. */
+  #year-view .yv-past { position: absolute; top: 0; bottom: 0; left: 0; z-index: 1;
+                        background: repeating-linear-gradient(135deg, #fff 0 6px, #e4e4e4 6px 8px); }
+
+  #year-view .yv-bars { position: absolute; left: 0; right: 0; top: 3px; bottom: 3px; z-index: 2; }
+  #year-view .yv-bar { position: absolute; background: #000; color: #fff; border-radius: 7px; font-weight: 700;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 8px; }
+  #year-view .yv-bar.yv-cont-l { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  #year-view .yv-bar.yv-cont-r { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  #year-view .yv-bar.yv-single { background: #fff; color: #000; border: 3px solid #000; padding: 0; text-align: center; }
+  #year-view .yv-label { position: absolute; font-weight: 700; white-space: nowrap; padding: 0 6px; }
+  #year-view .yv-error { position: absolute; left: 6px; bottom: 4px; z-index: 5; font-size: 16px; font-weight: 700; background: #fff; padding: 0 4px; }
+  #year-view .yv-more { position: absolute; right: 2px; bottom: 2px; z-index: 4; font-size: 17px; font-weight: 700;
+                        background: #fff; padding: 0 4px; border: 2px solid #000; border-radius: 4px; }
+  /* In today's column the event bars are redrawn inverted and clipped to the column,
+     so names stay readable while the polka dots around them are left alone. */
+  #year-view .yv-bars.yv-inverted { z-index: 3; }
+  #year-view .yv-inverted .yv-bar { background: #fff; color: #000; box-shadow: inset 0 0 0 3px #000; }
+  #year-view .yv-inverted .yv-bar.yv-single { background: #000; color: #fff; }
+  #year-view .yv-inverted .yv-label { visibility: hidden; }
+</style>
+
+<div id="year-view" class="year-view-page" data-today="<%= today.iso8601 %>" data-events="<%= events_json %>"></div>
+
+<script>
+  (function () {
+    var root = document.getElementById("year-view");
+    var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var MAX_LANES = 3, MIN_LANE = 26, MAX_LANE = 42, MAX_FONT = 27, MIN_FONT = 17, GAP = 4;
+
+    function parse(s) { var p = s.split("-").map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+    function daysIn(y, m) { return new Date(y, m + 1, 0).getDate(); }
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+    var ctx = document.createElement("canvas").getContext("2d");
+    function measure(t, px) { ctx.font = "700 " + px + "px Lato, sans-serif"; return ctx.measureText(t).width; }
+    function free(lane, from, to) { return lane.every(function (r) { return to < r[0] || from > r[1]; }); }
+
+    var today = parse(root.dataset.today);
+    var events = JSON.parse(root.dataset.events).map(function (e) {
+      return { title: e.title, s: parse(e.start), t: parse(e.end) };
+    });
+
+    function render() {
+      root.replaceChildren();
+      var first = new Date(today.getFullYear(), today.getMonth(), 1);
+      var last = new Date(first.getFullYear(), first.getMonth() + 11, 1);
+
+      root.append(
+        el("div", "yv-title", MONTHS[first.getMonth()] + " " + first.getFullYear() + " – " + MONTHS[last.getMonth()] + " " + last.getFullYear()),
+        el("div", "yv-rule")
+      );
+
+      var dayhead = el("div", "yv-dayhead"), nums = el("div", "yv-nums");
+      dayhead.append(el("div"));
+      for (var d = 1; d <= 31; d++) {
+        var num = el("div", null, d);
+        if (d === today.getDate()) num.append(el("div", "yv-loupe"));
+        nums.append(num);
+      }
+      dayhead.append(nums);
+      root.append(dayhead);
+
+      var grid = el("div", "yv-grid");
+      root.append(grid);
+
+      // Phase 1: the month rows, so the bar areas have a real size to fit into.
+      var rows = [];
+      for (var i = 0; i < 12; i++) {
+        var y = first.getFullYear() + Math.floor((first.getMonth() + i) / 12);
+        var m = (first.getMonth() + i) % 12;
+        var n = daysIn(y, m);
+        var row = el("div", "yv-month" + (m === 0 && i > 0 ? " yv-year-start" : ""));
+        var label = el("div", "yv-mlabel", MONTHS[m]);
+        if (m === 0 || i === 0) label.append(el("span", "yv-yr", y));
+        var days = el("div", "yv-days"), cells = el("div", "yv-cells");
+        for (var day = 1; day <= 31; day++) {
+          if (day > n) { cells.append(el("div", "yv-cell yv-none")); continue; }
+          var date = new Date(y, m, day), wd = date.getDay();
+          cells.append(el("div", "yv-cell" + (wd === 0 || wd === 6 ? " yv-weekend" : "") + (+date === +today ? " yv-today" : "")));
+        }
+        var bars = el("div", "yv-bars");
+        days.append(cells, bars);
+        row.append(label, days);
+        grid.append(row);
+        rows.push({ y: y, m: m, n: n, days: days, bars: bars, label: label });
+      }
+
+      // Phase 2: each month's events. A month that fails to lay out must not
+      // blank the months after it, so each is drawn on its own and a failure is
+      // written on that month's row.
+      rows.forEach(function (r) {
+        try {
+          layoutMonth(r);
+        } catch (err) {
+          if (window.console) console.error("Year view: " + MONTHS[r.m] + " " + r.y, err);
+          r.days.append(el("div", "yv-error", "Couldn't draw this month: " + (err && err.message)));
+        }
+      });
+    }
+
+    function layoutMonth(r) {
+      var y = r.y, m = r.m, n = r.n, days = r.days, bars = r.bars;
+      var W = bars.clientWidth, H = bars.clientHeight, colPx = W / 31;
+      var rowH = days.clientHeight;
+      r.label.style.fontSize = Math.min(38, Math.round(rowH * 0.36)) + "px";
+      var yr = r.label.querySelector(".yv-yr");
+      if (yr) yr.style.fontSize = Math.min(22, Math.round(rowH * 0.24)) + "px";
+
+      var laneCap = Math.max(1, Math.min(MAX_LANES, Math.floor((H + GAP) / (MIN_LANE + GAP))));
+      var mStart = new Date(y, m, 1), mEnd = new Date(y, m, n);
+      var segs = events
+        .filter(function (x) { return x.t >= mStart && x.s <= mEnd; })
+        .map(function (x) {
+          return { title: x.title, a: x.s < mStart ? 1 : x.s.getDate(), b: x.t > mEnd ? n : x.t.getDate(),
+                   contL: x.s < mStart, contR: x.t > mEnd };
+        })
+        .sort(function (p, q) { return p.a - q.a || (q.b - q.a) - (p.b - p.a); });
+
+      // Pack into lanes; single-day events reserve room for the name beside them.
+      var lanes = [], hidden = 0;
+      segs.forEach(function (g) {
+        var from = g.a, to = g.b;
+        if (g.a === g.b) {
+          var need = Math.ceil((measure(g.title, MIN_FONT) + 14) / colPx);
+          if (g.b + need <= n) to = g.b + need; else from = Math.max(1, g.a - need);
+        }
+        var li = lanes.findIndex(function (l) { return free(l, from, to); });
+        if (li === -1) {
+          if (lanes.length >= laneCap) { hidden++; return; }
+          li = lanes.push([]) - 1;
+        }
+        lanes[li].push([from, to]);
+        g.lane = li;
+      });
+
+      var laneH = Math.min(MAX_LANE, Math.floor((H - GAP * (lanes.length - 1)) / Math.max(1, lanes.length)));
+      var base = Math.max(MIN_FONT, Math.min(MAX_FONT, Math.round(laneH * 0.66)));
+      var used = lanes.length * laneH + (lanes.length - 1) * GAP;
+      var offset = Math.max(0, Math.floor((H - used) / 2));
+
+      segs.forEach(function (g) {
+        if (g.lane === undefined) return;
+        var top = offset + g.lane * (laneH + GAP);
+        var single = g.a === g.b;
+        var barCols = g.b - g.a + 1;
+        var inner = barCols * colPx - 6 - 16;
+        var text = (g.contL ? "‹ " : "") + g.title + (g.contR ? " ›" : "");
+
+        // Name placement: inside at full size, inside shrunk, beside the bar, or truncated.
+        var mode = "ellipsis", font = base, side = null;
+        if (!single && measure(text, base) <= inner) {
+          mode = "inside";
+        } else if (!single && measure(text, MIN_FONT) <= inner) {
+          mode = "inside";
+          while (font > MIN_FONT && measure(text, font) > inner) font--;
+        } else if (!single) {
+          var lf = Math.min(base, 24);
+          var lw = Math.ceil((measure(g.title, lf) + 12) / colPx);
+          var lane = lanes[g.lane];
+          if (g.b + lw <= n && free(lane, g.b + 1, g.b + lw)) { side = "right"; lane.push([g.b + 1, g.b + lw]); }
+          else if (g.a - lw >= 1 && free(lane, g.a - lw, g.a - 1)) { side = "left"; lane.push([g.a - lw, g.a - 1]); }
+          if (side) { mode = "beside"; font = lf; }
+        }
+
+        var bar = el("div", "yv-bar" + (single ? " yv-single" : "") + (g.contL ? " yv-cont-l" : "") + (g.contR ? " yv-cont-r" : ""));
+        bar.style.left = ((g.a - 1) * colPx + 3) + "px";
+        bar.style.width = (barCols * colPx - 6) + "px";
+        bar.style.top = top + "px";
+        bar.style.height = laneH + "px";
+        bar.style.lineHeight = (laneH - (single ? 6 : 0)) + "px";
+        bar.style.fontSize = (single ? Math.min(20, laneH - 10) : font) + "px";
+        bar.textContent = single ? g.a : (mode === "beside" ? (g.contL ? "‹" : "") + (g.contR ? "›" : "") : text);
+        bars.append(bar);
+
+        if (single || mode === "beside") {
+          var labelFont = single ? Math.min(base, 24) : font;
+          var lb = el("div", "yv-label", g.title);
+          lb.style.top = top + "px";
+          lb.style.height = laneH + "px";
+          lb.style.lineHeight = laneH + "px";
+          lb.style.fontSize = labelFont + "px";
+          var right = single ? (g.b + Math.ceil((measure(g.title, labelFont) + 12) / colPx) <= n) : side === "right";
+          if (right) lb.style.left = (g.b * colPx) + "px";
+          else lb.style.right = (W - (g.a - 1) * colPx) + "px";
+          bars.append(lb);
+        }
+      });
+
+      if (hidden) days.append(el("div", "yv-more", "+" + hidden + " more"));
+
+      if (y === today.getFullYear() && m === today.getMonth()) {
+        var d = today.getDate();
+        if (d > 1) {
+          var past = el("div", "yv-past");
+          past.style.width = ((d - 1) * colPx) + "px";
+          days.append(past);
+        }
+        var inverted = bars.cloneNode(true);
+        inverted.classList.add("yv-inverted");
+        inverted.style.clipPath = "inset(-10px " + (W - d * colPx) + "px -10px " + ((d - 1) * colPx) + "px)";
+        days.append(inverted);
+      }
+    }
+
+    render();
+    // Positions are measured in pixels, so lay out again if the viewport changes
+    // size (the settings preview resizes its frame after loading).
+    window.addEventListener("resize", render);
+    // Re-lay out once Lato has loaded, since fitting names depends on its widths.
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load("700 27px Lato").then(render).catch(function () {});
+    }
+  })();
+</script>

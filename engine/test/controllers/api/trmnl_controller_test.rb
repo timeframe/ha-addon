@@ -6,7 +6,7 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
   def setup
     PendingDevice.destroy_all
     DeviceMetricBucket.delete_all
-    Device.where(model: %w[trmnl_og reterminal_e1003]).destroy_all
+    Device.where(model: %w[trmnl_og reterminal_e1003 trmnl_x]).destroy_all
   end
 
   # --- /api/setup ---
@@ -240,6 +240,45 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, bucket.poll_no_update_count
   end
 
+  test "display flips to the year page when the button wakes the device early" do
+    device = create_year_page_device!
+    store = ActiveSupport::Cache::MemoryStore.new
+
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 12, 0, 0) do
+      device.update!(last_connection_at: 2.minutes.ago)
+      Rails.stub(:cache, store) do
+        ScreenshotService.stub :capture, "yearimage" do
+          get "/api/display", headers: {"ID" => device.mac_address, "ACCESS_TOKEN" => device.api_key}
+        end
+      end
+    end
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_match(/\Adisplay-year-\d+\.png\z/, json["filename"])
+    assert json["image_url"].end_with?("?page=1")
+    assert_equal "yearimage", store.read(device.page_cache_key("year_image"))[:image]
+  end
+
+  test "display returns to the main page on a scheduled poll" do
+    device = create_year_page_device!
+    store = ActiveSupport::Cache::MemoryStore.new
+    store.write(device.page_cache_key("current"), 1)
+
+    travel_to ActiveSupport::TimeZone["America/Chicago"].local(2026, 7, 17, 12, 0, 0) do
+      device.update!(last_connection_at: 15.minutes.ago)
+      Rails.stub(:cache, store) do
+        get "/api/display", headers: {"ID" => device.mac_address, "ACCESS_TOKEN" => device.api_key}
+      end
+    end
+
+    assert_response :success
+    json = JSON.parse(response.body)
+    assert_equal "display-#{device.reload.cached_image_at}.png", json["filename"]
+    refute_includes json["image_url"], "page="
+    assert_equal 0, store.read(device.page_cache_key("current"))
+  end
+
   test "display succeeds when poll metrics cannot be recorded" do
     device = create_trmnl_device!
     device.update!(cached_image: "existingbase64", cached_image_at: Time.current)
@@ -426,6 +465,12 @@ class Api::TrmnlControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def create_year_page_device!
+    device = create_trmnl_device!(mac: "11:22:33:44:55:77", model: "trmnl_x")
+    device.update!(cached_image: "mainimage", cached_image_at: 1.hour.ago, configuration: {"year_page_on_button" => "true"})
+    device
+  end
 
   def create_trmnl_device!(mac: "11:22:33:44:55:66", model: "trmnl_og")
     Device.create!(location: test_location,

@@ -248,6 +248,49 @@ class DeviceContenttTest < Minitest::Test
     end
   end
 
+  def test_year_events_lists_major_events_for_the_next_twelve_months
+    device = test_location.devices.create!(
+      name: "year-#{SecureRandom.hex(4)}",
+      model: "visionect_13",
+      excluded_calendar_identifiers: ["calendar.skip"]
+    )
+    tz = "America/Chicago"
+    event = ->(summary, starts_at, ends_at, entity_id: "calendar.family", description: nil) {
+      DeviceEvent.new(starts_at: starts_at, ends_at: ends_at, summary: summary, description: description, entity_id: entity_id, timezone: tz)
+    }
+    year_events = [
+      event.call("Vancouver", "2026-12-27", "2027-01-06"),
+      event.call("Japan", "2026-11-12", "2026-11-22"),
+      event.call("Mom's 70th", "2027-04-17", "2027-04-18", description: "timeframe-year"),
+      event.call("Dentist", "2027-04-20", "2027-04-21"),
+      event.call("Excluded trip", "2027-02-01", "2027-02-05", entity_id: "calendar.skip"),
+      event.call("Unmatched trip", "2027-03-01", "2027-03-05", entity_id: "calendar.filtered"),
+      event.call("Too far out", "2028-01-10", "2028-01-15")
+    ]
+
+    travel_to DateTime.new(2026, 11, 7, 10, 0, 0, "-0600") do
+      api = new_test_api
+      api.stub :year_calendar_events, year_events do
+        result = DeviceContent.new.call(
+          home_assistant_api: api, device: device, days: 0, year_events: true,
+          event_filters: {"calendar.filtered" => "Soccer"}
+        )
+
+        assert_equal [
+          {title: "Japan", start: "2026-11-12", end: "2026-11-21"},
+          {title: "Vancouver", start: "2026-12-27", end: "2027-01-05"},
+          {title: "Mom's 70th", start: "2027-04-17", end: "2027-04-17"}
+        ], result[:year_events]
+      end
+    end
+  end
+
+  def test_year_events_omitted_unless_requested
+    travel_to DateTime.new(2026, 11, 7, 10, 0, 0, "-0600") do
+      refute DeviceContent.new.call(home_assistant_api: new_test_api).key?(:year_events)
+    end
+  end
+
   def test_excluded_calendar_identifiers_filter_calendar_events
     device = test_location.devices.create!(
       name: "excl-#{SecureRandom.hex(4)}",

@@ -14,6 +14,26 @@ class DeviceEventTest < Minitest::Test
     assert_equal("6 - 7p", event.time)
   end
 
+  def test_year_view_includes_multi_day_and_tagged_events
+    trip = DeviceEvent.new(starts_at: "2026-11-12", ends_at: "2026-11-22", summary: "Japan", timezone: "UTC")
+    tagged = DeviceEvent.new(starts_at: "2026-04-17", ends_at: "2026-04-18", summary: "Mom's 70th", description: "timeframe-year", timezone: "UTC")
+    plain = DeviceEvent.new(starts_at: "2026-04-17", ends_at: "2026-04-18", summary: "Dentist", timezone: "UTC")
+    assert trip.year_view?
+    assert tagged.year_view?
+    refute plain.year_view?
+  end
+
+  def test_year_view_json_uses_inclusive_dates
+    all_day = DeviceEvent.new(starts_at: "2026-11-12", ends_at: "2026-11-22", summary: "Japan", timezone: "UTC")
+    assert_equal({title: "Japan", start: "2026-11-12", end: "2026-11-21"}, all_day.year_view_json)
+
+    timed = DeviceEvent.new(starts_at: "2026-11-12T09:00:00Z", ends_at: "2026-11-14T17:00:00Z", summary: "Conference", timezone: "UTC")
+    assert_equal({title: "Conference", start: "2026-11-12", end: "2026-11-14"}, timed.year_view_json)
+
+    instant = DeviceEvent.new(starts_at: "2026-11-12T09:00:00Z", ends_at: "2026-11-12T09:00:00Z", summary: "Launch", timezone: "UTC")
+    assert_equal({title: "Launch", start: "2026-11-12", end: "2026-11-12"}, instant.year_view_json)
+  end
+
   def visible_event(starts_at, ends_at)
     DeviceEvent.new(starts_at: starts_at, ends_at: ends_at, summary: "X", timezone: "UTC")
   end

@@ -139,6 +139,24 @@ class DeviceEvent
     end
   end
 
+  YEAR_VIEW_TAG = "timeframe-year"
+
+  # Whether this event belongs on the Year template: anything spanning more
+  # than a day (trips, holidays), plus single-day events whose description is
+  # tagged "timeframe-year" (birthdays, the first day of school).
+  def year_view?
+    multi_day? || @description.to_s.include?(YEAR_VIEW_TAG)
+  end
+
+  # The Year template's view of this event: its title and the inclusive local
+  # dates it covers. An all-day event's end is the following midnight, which
+  # doesn't count as a day of the event.
+  def year_view_json
+    start_date = @starts_at.to_date
+    last = daily? ? (@ends_at - 1.second) : @ends_at
+    {title: summary, start: start_date.iso8601, end: [last.to_date, start_date].max.iso8601}
+  end
+
   def weather?
     @weather_flag
   end

@@ -5,6 +5,21 @@ require "test_helper"
 class DemoDeviceContentTest < Minitest::Test
   include ActiveSupport::Testing::TimeHelpers
 
+  def test_year_events_are_spread_across_the_next_year
+    travel_to DateTime.new(2026, 11, 7, 8, 0, 0, "-0600") do
+      result = DemoDeviceContent.new.call(timezone: "America/Chicago", days: 0, year_events: true)
+
+      assert_equal 10, result[:year_events].length
+      first = result[:year_events].first
+      assert_equal({title: "Long weekend away", start: "2026-11-16", end: "2026-11-18"}, first)
+      assert result[:year_events].all? { |e| e[:end] >= e[:start] }
+    end
+  end
+
+  def test_year_events_omitted_by_default
+    refute DemoDeviceContent.new.call(timezone: "UTC").key?(:year_events)
+  end
+
   def test_returns_all_required_keys
     travel_to DateTime.new(2026, 3, 19, 8, 0, 0, "-0500") do
       result = DemoDeviceContent.new.call(timezone: "America/Chicago")

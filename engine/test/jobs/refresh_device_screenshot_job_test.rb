@@ -28,6 +28,20 @@ class RefreshDeviceScreenshotJobTest < ActiveJob::TestCase
 
   # --- perform ---
 
+  def test_perform_refreshes_the_year_page_when_enabled
+    refreshed = []
+    @device.stub(:refresh_screenshot!, -> { refreshed << :main }) do
+      @device.stub(:year_page_enabled?, true) do
+        @device.stub(:refresh_year_page_screenshot!, -> { refreshed << :year }) do
+          Device.stub(:find_by, @device) do
+            RefreshDeviceScreenshotJob.new.perform(@device.id)
+          end
+        end
+      end
+    end
+    assert_equal [:main, :year], refreshed
+  end
+
   def test_perform_refreshes_the_device_screenshot
     refreshed = false
     @device.stub(:refresh_screenshot!, -> { refreshed = true }) do
