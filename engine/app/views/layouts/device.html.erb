@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>Timeframe</title>
-    <link rel="stylesheet" href="/css/mdi/materialdesignicons.css">
-    <link rel="stylesheet" href="/css/device.css">
+    <link rel="stylesheet" href="<%= asset_path("/css/mdi/materialdesignicons.css") %>">
+    <link rel="stylesheet" href="<%= asset_path("/css/device.css") %>">
     <% if @refresh %>
       <%= javascript_include_tag "actioncable" %>
       <script>

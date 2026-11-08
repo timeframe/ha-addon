@@ -1,9 +1,9 @@
 {
   "name": "Timeframe",
-  "version": "2.15.0",
+  "version": "2.15.1",
   "slug": "timeframe",
   "description": "An e-paper calendar, weather, and smart home family dashboard",
-  "url": "https://github.com/timeframe/ha-addon",
+  "url": "https://github.com/pudgeball/ha-addon",
   "arch": [
     "aarch64",
     "amd64"

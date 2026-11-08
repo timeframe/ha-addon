@@ -10,8 +10,14 @@
 %>
 
 <style>
-  .uptime-bar { display: flex; gap: 2px; height: 36px; align-items: stretch; }
-  .uptime-bar .seg { flex: 1 1 0; min-width: 2px; border-radius: 2px; }
+  /* 90 segments have to fit narrow Home Assistant panels and phones, so let
+     them shrink to nothing and only use the wider gap when there's room. */
+  .uptime-bar { display: flex; gap: 1px; height: 36px; align-items: stretch; }
+  .uptime-bar .seg { flex: 1 1 0; min-width: 0; border-radius: 1px; }
+  @media (min-width: 640px) {
+    .uptime-bar { gap: 2px; }
+    .uptime-bar .seg { border-radius: 2px; }
+  }
   .uptime-bar .seg-up, .uptime-legend .seg-up { background: #16a34a; }
   .uptime-bar .seg-degraded, .uptime-legend .seg-degraded { background: #f59e0b; }
   .uptime-bar .seg-down, .uptime-legend .seg-down { background: #dc2626; }

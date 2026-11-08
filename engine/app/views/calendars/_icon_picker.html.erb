@@ -303,7 +303,7 @@
       }
       suggestBtn.disabled = true;
       suggestBtn.innerHTML = '<span class="mdi mdi-loading mdi-spin"></span> Finding an icon\u2026';
-      fetch('/icon_suggestion?kind=' + encodeURIComponent(suggestKind) + '&text=' + encodeURIComponent(text), {
+      fetch('<%= j icon_suggestion_path %>?kind=' + encodeURIComponent(suggestKind) + '&text=' + encodeURIComponent(text), {
         headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
         signal: controller ? controller.signal : undefined
@@ -339,7 +339,7 @@
         var text = suggestText();
         var seq = ++suggestSeq;
         if (!text.trim()) { resetSuggestLabel(); return; }
-        fetch('/icon_suggestion?kind=event&text=' + encodeURIComponent(text), {
+        fetch('<%= j icon_suggestion_path %>?kind=event&text=' + encodeURIComponent(text), {
           headers: { 'Accept': 'application/json' }, credentials: 'same-origin'
         })
           .then(function (r) { return r.ok ? r.json() : null; })

@@ -1,5 +1,5 @@
 {
-  "name": "Timeframe Add-ons",
-  "url": "https://github.com/timeframe/ha-addon",
-  "maintainer": "Joel Hawksley"
+  "name": "Timeframe (pudgeball fork)",
+  "url": "https://github.com/pudgeball/ha-addon",
+  "maintainer": "Nick McGuire (fork of Joel Hawksley's Timeframe)"
 }

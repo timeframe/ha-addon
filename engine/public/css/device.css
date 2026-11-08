@@ -3,7 +3,7 @@
   font-family: 'Pixelify Sans';
   font-style: normal;
   font-weight: 400;
-  src: url('/fonts/pixelifysans-latin-400-normal.woff2') format('woff2');
+  src: url('../fonts/pixelifysans-latin-400-normal.woff2') format('woff2');
 }
 
 /* lato-regular - latin */
@@ -11,7 +11,7 @@
   font-family: 'Lato';
   font-style: normal;
   font-weight: 400;
-  src: url('/fonts/lato-latin-400-normal.woff2') format('woff2');
+  src: url('../fonts/lato-latin-400-normal.woff2') format('woff2');
 }
 
 /* lato-700 - latin */
@@ -19,7 +19,7 @@
   font-family: 'Lato';
   font-style: normal;
   font-weight: 700;
-  src: url('/fonts/lato-latin-700-normal.woff2') format('woff2');
+  src: url('../fonts/lato-latin-700-normal.woff2') format('woff2');
 }
 
 * {

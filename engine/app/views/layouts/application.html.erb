@@ -4,19 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><%= safe_join([content_for(:title).presence, "Timeframe"].compact, " · ") %></title>
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="256x256" href="/sun-angle.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="manifest" href="/site.webmanifest">
+    <link rel="icon" href="<%= asset_path("/favicon.ico") %>" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="<%= asset_path("/favicon-16x16.png") %>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<%= asset_path("/favicon-32x32.png") %>">
+    <link rel="icon" type="image/png" sizes="256x256" href="<%= asset_path("/sun-angle.png") %>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<%= asset_path("/apple-touch-icon.png") %>">
+    <link rel="manifest" href="<%= asset_path("/site.webmanifest") %>">
     <meta name="theme-color" content="#f1f3f5">
-    <link rel="stylesheet" href="/css/mdi/materialdesignicons.css">
+    <link rel="stylesheet" href="<%= asset_path("/css/mdi/materialdesignicons.css") %>">
   </head>
   <body class="bg-white text-ink antialiased">
     <nav class="mb-4 bg-surface">
       <div class="mx-auto flex w-full max-w-[1140px] items-center px-3 py-2">
-        <a class="inline-flex items-center gap-1.5 text-xl font-bold leading-none text-black no-underline" href="/">
+        <a class="inline-flex items-center gap-1.5 text-xl font-bold leading-none text-black no-underline" href="<%= root_path %>">
           <i class="mdi mdi-sun-angle text-2xl leading-none" aria-hidden="true"></i>
           <span>timeframe</span>
         </a>

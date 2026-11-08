@@ -1,3 +1,11 @@
+## [2.15.1] - 2026-11-07
+
+Fork of Timeframe maintained at https://github.com/pudgeball/ha-addon.
+
+### Fixed
+- Events, Status and device renders no longer crash with `unknown keyword: :status` when Home Assistant calendar events include fields Timeframe doesn't use
+- Sidebar panel now works through Home Assistant ingress: styles and icons load, and the Events, Settings, and Status links no longer 404
+
 ## [2.15.0] - 2026-08-06
 
 ### Added
