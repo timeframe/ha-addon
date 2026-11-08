@@ -1,3 +1,8 @@
+## [2.16.0] - 2026-11-07
+
+### Changed
+- The dashboard now works on desktop-width screens: wider pages, a top navigation bar in place of the bottom bar, and device cards in a multi-column grid. The mobile layout is unchanged.
+
 ## [2.15.1] - 2026-11-07
 
 Fork of Timeframe maintained at https://github.com/pudgeball/ha-addon.
