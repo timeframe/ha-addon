@@ -250,6 +250,23 @@ class DeviceTest < Minitest::Test
     assert_nil device.last_connection_at
   end
 
+  def test_forced_refresh_screenshot_recaptures_unchanged_content
+    device = Device.create!(location: test_location, name: "test_hash_force_#{SecureRandom.hex(3)}", model: "trmnl_og", mac_address: "CC:#{SecureRandom.hex(5).scan(/../).join(":").upcase}", api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, display_key: SecureRandom.alphanumeric(24))
+    captures = 0
+    capture = ->(_url) {
+      captures += 1
+      "img-#{captures}"
+    }
+    device.stub(:rendered_display_html, "<html>stable</html>") do
+      device.stub(:capture_screenshot, capture) do
+        device.refresh_screenshot!("http://example.test")
+        device.refresh_screenshot!("http://example.test", force: true)
+      end
+    end
+    assert_equal 2, captures, "a forced refresh must capture even when content is unchanged"
+    assert_equal "img-2", device.reload.cached_image
+  end
+
   def test_refresh_screenshot_recaptures_when_content_changes
     device = Device.create!(location: test_location, name: "test_hash_change_#{SecureRandom.hex(3)}", model: "trmnl_og", mac_address: "CB:#{SecureRandom.hex(5).scan(/../).join(":").upcase}", api_key: SecureRandom.hex(16), friendly_id: SecureRandom.alphanumeric(6).upcase, display_key: SecureRandom.alphanumeric(24))
     captures = 0

@@ -447,6 +447,25 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "forced screenshot through ingress captures the app's own address, not Home Assistant's" do
+    thirteen = Device.find_or_create_by!(name: "test-thirteen", model: "visionect_13") { |d| d.location = @location }
+    thirteen.update!(confirmed_at: Time.current, confirmation_code: nil, cached_image: Base64.strict_encode64("old"), cached_image_at: Time.current)
+    captured_url = nil
+    capture = ->(url, **) {
+      captured_url = url
+      Base64.strict_encode64("new png data")
+    }
+
+    ScreenshotService.stub :capture, capture do
+      get "/accounts/#{@account.id}/locations/#{@location.id}/devices/#{thirteen.id}/screenshot?force=true",
+        headers: {"X-Ingress-Path" => "/api/hassio_ingress/abc123", "Host" => "homeassistant.local:8123"}
+    end
+
+    assert_response :success
+    refute_includes captured_url, "homeassistant.local"
+    assert_includes captured_url, "/d/#{thirteen.id}?"
+  end
+
   test "screenshot returns 404 for unknown device" do
     get "/accounts/#{@account.id}/locations/#{@location.id}/devices/nonexistent/screenshot"
     assert_response :not_found

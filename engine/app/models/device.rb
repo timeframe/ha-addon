@@ -601,7 +601,7 @@ class Device < ActiveRecord::Base
     "#{host}/signed_screenshot/#{sgid}"
   end
 
-  def refresh_screenshot!(base_url = nil)
+  def refresh_screenshot!(base_url = nil, force: false)
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     stage = "render"
     base_url ||= ENV.fetch("APP_HOST") { "http://localhost:#{ENV.fetch("PORT", 3000)}" }
@@ -612,9 +612,10 @@ class Device < ActiveRecord::Base
     # cached_image AND cached_image_at means /api/display serves the same
     # filename, so TRMNL devices recognise it as already-drawn and never
     # re-flash the panel for unchanged content. A new deploy changes DEPLOY_TIME
-    # so every device refreshes exactly once after a release.
+    # so every device refreshes exactly once after a release. A forced refresh
+    # (the Regenerate button) always recaptures, so a bad capture can't stick.
     crc = display_content_crc
-    if crc && crc == display_state_crc && cached_image.present?
+    if !force && crc && crc == display_state_crc && cached_image.present?
       log_screenshot_refresh("skipped", crc: crc, duration_ms: elapsed_milliseconds(started_at))
       return
     end

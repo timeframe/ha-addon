@@ -89,9 +89,15 @@ class DevicesController < ApplicationController
   end
 
   def screenshot
-    if @device.cached_image.blank? || params[:force] == "true"
+    force = params[:force] == "true"
+    if @device.cached_image.blank? || force
       begin
-        @device.refresh_screenshot!(request.base_url)
+        # Behind a path prefix (Home Assistant ingress), request.base_url is the
+        # proxy's host, which the headless browser can't reach without the
+        # prefix and the proxy's auth, so it would capture the proxy's 404
+        # page. Fall back to the app's own address in that case.
+        base_url = request.script_name.present? ? nil : request.base_url
+        @device.refresh_screenshot!(base_url, force: force)
       rescue Ferrum::BinaryNotFoundError => e
         Rails.logger.error("[Screenshot] Browser not available: #{e.message}")
         return render plain: "Screenshot service unavailable", status: :service_unavailable if @device.cached_image.blank?

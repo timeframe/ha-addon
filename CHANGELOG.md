@@ -1,3 +1,9 @@
+## [2.16.1] - 2026-11-07
+
+### Fixed
+- Regenerating a device screenshot from the Home Assistant sidebar panel no longer captures a 404 page
+- The Regenerate button always takes a fresh screenshot, even when the display content hasn't changed
+
 ## [2.16.0] - 2026-11-07
 
 ### Changed
