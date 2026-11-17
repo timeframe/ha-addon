@@ -75,6 +75,14 @@ Timeframe imports each Home Assistant calendar event's title, start and end time
 
 ## Configuration
 
+Device settings include an **Alert types** checklist under **Weather alerts** for
+providers that supply official alerts. Types are listed alphabetically, with
+search and **Select all** / **Clear all** controls (both apply to the entire list).
+Turning Weather alerts off preserves your selections. All types are enabled by
+default, including newly added or unrecognized types; existing alert eligibility
+rules still apply. Air quality alerts remain a separate option. Home Assistant
+sensor and calendar events are not filtered by this checklist.
+
 The following entities can be created in Home Assistant to customize behavior. Icon names are from [Material Design Icons](https://pictogrammers.com/library/mdi/) (without the `mdi-` prefix).
 
 | Entity ID | Default behavior | Description |

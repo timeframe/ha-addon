@@ -947,6 +947,18 @@ class DeviceTest < Minitest::Test
     refute Device.new(display_template: "three_day", configuration: {"show_weather_alerts" => "false"}).weather_alerts_enabled?
   end
 
+  def test_weather_alert_type_exclusions_default_to_empty_and_pass_to_content
+    device = Device.new(model: "trmnl_og", display_template: "three_day", configuration: nil)
+    assert_empty device.excluded_weather_alert_types
+    assert_empty device.content_args(timezone: "UTC")[:excluded_weather_alert_types]
+
+    device.configuration = {"excluded_weather_alert_types" => ["high_wind_warning", "invalid"], "show_weather_alerts" => "false"}
+    assert_equal ["high_wind_warning"], device.excluded_weather_alert_types
+    args = device.content_args(timezone: "UTC")
+    assert_equal ["high_wind_warning"], args[:excluded_weather_alert_types]
+    refute args[:include_weather_alerts]
+  end
+
   def test_ha_status_enabled_defaults_on_and_respects_setting
     # Defaults on when unset.
     assert Device.new.ha_status_enabled?
