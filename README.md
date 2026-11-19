@@ -513,13 +513,24 @@ Create `config/timeframe.yml` from `config/timeframe.yml.example` with your sett
 
 ### Setup
 
-1) `bundle install`
-2) `bin/rails s`
-3) Visit [http://localhost:3000](http://localhost:3000)
+Use Ruby 4.0.10 and RubyGems/Bundler 4.1.0. The app and engine lockfiles pin Rails
+8.1.4.1 and the other gem dependencies, including the Linux deployment platforms.
+
+1) `mise install`
+2) `mise exec -- gem update --system 4.1.0`
+3) `mise exec -- bundle install`
+4) `mise exec -- bin/rails s`
+5) Visit [http://localhost:3000](http://localhost:3000)
+
+To update dependencies, run `mise exec -- bundle update --all` from both the
+repository root and `engine/`, and commit both lockfiles.
 
 ### Testing
 
-`bin/rails test`
+`mise exec -- bundle exec rake test` runs the add-on and shared engine tests.
+Run the standalone engine suite with `cd engine && mise exec -- bundle exec rake test`.
+Visual baselines were captured on Linux with RGB subpixel font rendering;
+macOS or Linux environments using grayscale font rendering will produce different screenshots.
 
 ## Releases
 

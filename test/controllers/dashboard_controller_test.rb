@@ -10,9 +10,16 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unauthenticated root auto-signs in and shows dashboard in single tenant mode" do
-    get "/"
+    User.stub(:first, nil) do
+      Account.stub(:first, nil) do
+        get "/"
+      end
+    end
     assert_response :success
     assert_includes response.body, "Timeframe"
+    user = User.find_by!(email: "homeassistant@timeframe.local")
+    assert_equal user.id, request.env["warden"].user(:user).id
+    assert user.accounts.first.locations.exists?
   end
 
   test "authenticated root shows dashboard" do
