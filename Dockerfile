@@ -1,4 +1,4 @@
-FROM ruby:4.0.2-slim
+FROM ruby:4.0.10-slim
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -15,9 +15,11 @@ WORKDIR /app
 
 ENV RAILS_ENV=production
 
-COPY Gemfile ./
+COPY Gemfile Gemfile.lock ./
 COPY engine/timeframe-core.gemspec engine/
-RUN bundle config set --local without 'development test' && \
+RUN gem update --system 4.1.0 --no-document && \
+    bundle config set --local without 'development test' && \
+    bundle config set --local frozen true && \
     bundle install --jobs 4
 
 COPY . .

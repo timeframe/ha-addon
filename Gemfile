@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 source "https://rubygems.org"
-ruby "4.0.2"
+ruby "4.0.10"
 
 gem "timeframe-core", path: "engine", require: "timeframe_core"
 
@@ -17,10 +17,10 @@ gem "propshaft"
 gem "puma"
 gem "puma-rufus-scheduler"
 gem "rack-attack"
-gem "rails", "~> 8"
+gem "rails", "~> 8.1.4"
 gem "rufus-scheduler"
 gem "warden"
-gem "tailwindcss-ruby", "~> 4.0"
+gem "tailwindcss-ruby", "~> 4.3"
 gem "importmap-rails"
 gem "stimulus-rails"
 
