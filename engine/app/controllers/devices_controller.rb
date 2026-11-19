@@ -198,6 +198,11 @@ class DevicesController < ApplicationController
       end
     end
 
+    if params.key?(:weather_alert_types_present)
+      selected_types = Array(params[:weather_alert_types]).map(&:to_s)
+      config["excluded_weather_alert_types"] = WeatherAlertTypes::IDS - selected_types
+    end
+
     if params.key?(:calendar_identifiers_present)
       all_identifiers = available_calendar_identifiers_for(device)
       included = Array(params[:calendar_identifiers]).map(&:to_s)

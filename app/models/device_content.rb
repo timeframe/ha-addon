@@ -9,6 +9,7 @@ class DeviceContent
     include_precip: true,
     include_wind: true,
     include_weather_alerts: true,
+    excluded_weather_alert_types: [],
     include_air_quality: true,
     include_temperature: true,
     temperature_hours: nil,
