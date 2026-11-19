@@ -536,9 +536,9 @@ macOS or Linux environments using grayscale font rendering will produce differen
 
 Enable **Settings > Actions > General > Workflow permissions > Allow GitHub Actions to create and approve pull requests** once. No additional secrets or local development environment are needed.
 
-Run **Actions > Prepare release pull request** on the default branch, choosing `patch` (default), `minor`, or `major`. It reuses `script/release` to bump `config.json` and drafts `CHANGELOG.md` from non-merge commit subjects since the current version's `vVERSION` tag. An existing release pull request or a missing/invalid baseline stops preparation.
+Run **Actions > Release** on the default branch, choosing `patch` (default), `minor`, or `major`. It reuses `script/release` to bump `config.json` and drafts `CHANGELOG.md` from non-merge commit subjects since the current version's `vVERSION` tag. An existing release pull request or a missing/invalid baseline stops preparation.
 
-Review and edit the draft notes before merging; approve the pull request workflows if GitHub requests it. The workflow neither merges nor publishes tags/images. **Merging the version bump makes the update discoverable by Home Assistant.** Tag that merged commit as `vVERSION` before preparing the next release.
+Review and edit the draft notes before merging; approve the pull request workflows if GitHub requests it. **Merging the version bump makes the update discoverable by Home Assistant.** The workflow then automatically pushes `vVERSION` pointing to that exact merged commit. Tag publishing requires an increased version and matching changelog entry; reruns accept an existing tag only when it points to the same commit. Other `config.json` changes do not publish tags. The workflow does not merge pull requests or publish images.
 
 Failed runs can be retried; each attempt uses a new branch without force-pushing. A failed pull request creation may leave a branch to clean up manually. The interactive `mise exec -- script/release` and `script/publish` flow is unchanged; do not run `script/publish` on a clean merged tree, since it expects pending release changes to commit.
 

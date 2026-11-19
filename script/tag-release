@@ -1,0 +1,39 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "open3"
+require "rubygems/version"
+
+def run(*command)
+  stdout, stderr, status = Open3.capture3(*command)
+  abort "#{command.join(" ")} failed:\n#{stderr}#{stdout}" unless status.success?
+  stdout
+end
+
+base = ENV.fetch("RELEASE_DEFAULT_BRANCH")
+abort "Tags must be published from the default branch #{base}" unless ENV.fetch("GITHUB_REF") == "refs/heads/#{base}"
+source = run("git", "rev-parse", "HEAD").strip
+abort "The release checkout must match the pushed commit" unless source == ENV.fetch("GITHUB_SHA")
+abort "The release checkout must be clean" unless run("git", "status", "--porcelain").empty?
+
+version = JSON.parse(File.read("config.json")).fetch("version")
+previous_version = JSON.parse(run("git", "show", "#{ENV.fetch("RELEASE_PREVIOUS_SHA")}:config.json")).fetch("version")
+if version == previous_version
+  puts "Version unchanged; no release tag to publish."
+  exit
+end
+
+abort "Invalid release version: #{version}" unless version.match?(/\A\d+\.\d+\.\d+\z/)
+abort "Release version must increase" unless Gem::Version.new(version) > Gem::Version.new(previous_version)
+abort "No changelog entry found for #{version}" unless File.read("CHANGELOG.md").match?(/^## \[#{Regexp.escape(version)}\]/)
+
+tag = "v#{version}"
+if run("git", "tag", "--list", tag).strip.empty?
+  run("git", "tag", tag, source)
+elsif run("git", "rev-parse", "#{tag}^{commit}").strip != source
+  abort "Release tag #{tag} already points to a different commit"
+end
+run("git", "push", "origin", "refs/tags/#{tag}")
+puts "Published #{tag} at #{source}"
+File.write(ENV.fetch("GITHUB_STEP_SUMMARY"), "Published `#{tag}` at `#{source}`.\n")

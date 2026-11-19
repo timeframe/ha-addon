@@ -10,6 +10,7 @@ require "yaml"
 
 class ReleasePullRequestTest < Minitest::Test
   SCRIPT = File.expand_path("../script/release-pr", __dir__)
+  TAG_SCRIPT = File.expand_path("../script/tag-release", __dir__)
   WORKFLOW = File.expand_path("../.github/workflows/release-pr.yml", __dir__)
   PR_URL = "https://github.com/timeframe/ha-addon/pull/42"
 
@@ -164,14 +165,87 @@ class ReleasePullRequestTest < Minitest::Test
     assert_equal original_changelog, File.read(File.join(@checkout, "CHANGELOG.md"))
   end
 
-  def test_workflow_is_manual_and_uses_one_job_with_the_builtin_actions_token
+  def test_publishes_the_merged_release_commit_and_can_be_retried
+    _, stderr, status = invoke
+    assert status.success?, stderr
+    branch = git("branch", "--show-current").strip
+    git("checkout", "main")
+    git("merge", "--no-ff", branch, "-m", "Merge release pull request")
+    git("push", "origin", "main")
+    source = git("rev-parse", "HEAD").strip
+
+    2.times do
+      stdout, stderr, status = invoke_tag
+      assert status.success?, stderr
+      assert_includes stdout, "Published v2.15.1 at #{source}"
+      assert_equal source, git("ls-remote", "origin", "refs/tags/v2.15.1").split.first
+    end
+    assert_equal source, git("rev-parse", "v2.15.1").strip
+    assert_includes File.read(@environment.fetch("GITHUB_STEP_SUMMARY")), "v2.15.1"
+  end
+
+  def test_does_not_tag_changes_without_a_version_bump
+    stdout, stderr, status = invoke_tag
+    assert status.success?, stderr
+    assert_includes stdout, "Version unchanged"
+    assert_equal ["v2.15.0"], git("ls-remote", "--tags", "origin").lines.map { |line| line.split.last.delete_prefix("refs/tags/") }
+  end
+
+  def test_tags_the_pushed_tip_when_a_version_bump_is_not_the_last_commit
+    _, stderr, status = invoke
+    assert status.success?, stderr
+    File.open(File.join(@checkout, "CHANGELOG.md"), "a") { |file| file.puts "Additional release details." }
+    commit("Follow-up release notes")
+    _, stderr, status = invoke_tag("RELEASE_PREVIOUS_SHA" => @source_sha)
+    assert status.success?, stderr
+    assert_equal git("rev-parse", "HEAD").strip, git("ls-remote", "origin", "refs/tags/v2.15.1").split.first
+  end
+
+  def test_tagging_rejects_nondefault_refs_mismatched_commits_and_dirty_checkouts
+    [
+      [{"GITHUB_REF" => "refs/heads/feature"}, "default branch"],
+      [{"GITHUB_SHA" => "0" * 40}, "match the pushed commit"]
+    ].each do |environment, message|
+      _, stderr, status = invoke_tag(environment)
+      refute status.success?
+      assert_includes stderr, message
+    end
+    File.write(File.join(@checkout, "unexpected.txt"), "not a release")
+    _, stderr, status = invoke_tag
+    refute status.success?
+    assert_includes stderr, "must be clean"
+  end
+
+  def test_tagging_rejects_invalid_versions_missing_notes_and_conflicting_tags
+    [
+      ["not-a-version", true, "Invalid release version"],
+      ["2.14.0", true, "must increase"],
+      ["2.15.1", false, "No changelog entry"],
+      ["2.15.1", true, "already points to a different commit"]
+    ].each do |version, notes, message|
+      git("checkout", "-B", "main", @source_sha)
+      File.write(File.join(@checkout, "config.json"), JSON.pretty_generate(@config.merge("version" => version)))
+      File.write(File.join(@checkout, "CHANGELOG.md"), notes ? "# Changelog\n\n## [#{version}] - 2026-11-19\n" : @changelog)
+      commit("Release #{version}")
+      git("tag", "v2.15.1", @source_sha) if version == "2.15.1" && notes
+      _, stderr, status = invoke_tag
+      refute status.success?
+      assert_includes stderr, message
+      assert_equal "", git("ls-remote", "origin", "refs/tags/v2.15.1")
+    end
+  end
+
+  def test_workflow_prepares_manually_and_tags_version_changes_on_main
     workflow = YAML.load_file(WORKFLOW)
-    assert_equal ["workflow_dispatch"], workflow.fetch("on").keys
+    assert_equal %w[push workflow_dispatch], workflow.fetch("on").keys
+    assert_equal ["main"], workflow.dig("on", "push", "branches")
+    assert_equal ["config.json"], workflow.dig("on", "push", "paths")
     assert_equal "patch", workflow.dig("on", "workflow_dispatch", "inputs", "bump", "default")
     assert_equal %w[patch minor major], workflow.dig("on", "workflow_dispatch", "inputs", "bump", "options")
     assert_equal false, workflow.dig("concurrency", "cancel-in-progress")
     assert_equal({"contents" => "write", "pull-requests" => "write"}, workflow.fetch("permissions"))
     preparation = workflow.fetch("jobs").fetch("prepare")
+    assert_equal "github.event_name == 'workflow_dispatch'", preparation.fetch("if")
     steps = preparation.fetch("steps")
     assert_equal 3, steps.length
     assert steps.fetch(0).dig("with", "fetch-depth").zero?
@@ -179,9 +253,24 @@ class ReleasePullRequestTest < Minitest::Test
     assert_equal "ruby script/release-pr", steps.fetch(2).fetch("run")
     assert_equal "${{ github.token }}", steps.fetch(2).fetch("env").fetch("GH_TOKEN")
     assert_equal "${{ inputs.bump }}", steps.fetch(2).fetch("env").fetch("RELEASE_BUMP")
+    tagging = workflow.fetch("jobs").fetch("tag")
+    assert_equal "github.event_name == 'push'", tagging.fetch("if")
+    tag_steps = tagging.fetch("steps")
+    assert_equal "${{ github.sha }}", tag_steps.fetch(0).dig("with", "ref")
+    assert_equal 0, tag_steps.fetch(0).dig("with", "fetch-depth")
+    assert_equal "ruby script/tag-release", tag_steps.fetch(2).fetch("run")
+    assert_equal "${{ github.event.before }}", tag_steps.fetch(2).dig("env", "RELEASE_PREVIOUS_SHA")
   end
 
   private
+
+  def invoke_tag(extra_environment = {})
+    environment = @environment.merge(
+      "GITHUB_SHA" => git("rev-parse", "HEAD").strip,
+      "RELEASE_PREVIOUS_SHA" => git("rev-parse", "HEAD^").strip
+    ).merge(extra_environment)
+    Open3.capture3(environment, RbConfig.ruby, TAG_SCRIPT, chdir: @checkout)
+  end
 
   def invoke(extra_environment = {})
     Open3.capture3(@environment.merge(extra_environment), RbConfig.ruby, SCRIPT, chdir: @checkout)
