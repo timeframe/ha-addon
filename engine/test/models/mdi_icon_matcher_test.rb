@@ -32,6 +32,12 @@ class MdiIconMatcherTest < Minitest::Test
     assert_equal "slide", MdiIconMatcher.match("Playground")
   end
 
+  def test_match_custom_mapping_playdate
+    assert_equal "teddy-bear", MdiIconMatcher.match("playdate")
+    assert_equal "teddy-bear", MdiIconMatcher.match("Afternoon PLAYDATE with friends")
+    assert_nil MdiIconMatcher.match("playdates")
+  end
+
   def test_match_custom_mapping_school
     assert_equal "bag-personal", MdiIconMatcher.match("School")
   end
