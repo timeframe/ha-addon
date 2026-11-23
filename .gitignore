@@ -13,10 +13,13 @@ config/timeframe.yml
 coverage/*
 timeframe_ha_development*
 /.ruby-lsp
-Gemfile.lock
 vendor/bundle/*
 test_output.txt
 test_full_output.txt
 engine/test/dummy/tmp/
 # Capybara/system test screenshots
 tmp/screenshots/
+# Local Docker state: a ./data bind mount holds the database and the
+# SECRET_KEY_BASE file; the override file holds personal settings/tokens.
+/data/
+docker-compose.override.yml
