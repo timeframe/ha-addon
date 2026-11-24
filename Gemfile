@@ -35,7 +35,7 @@ end
 
 group :test do
   gem "capybara"
-  gem "cuprite"
+  gem "cuprite", "~> 0.20.1"
   gem "simplecov", require: false
   gem "vcr"
   gem "webmock"

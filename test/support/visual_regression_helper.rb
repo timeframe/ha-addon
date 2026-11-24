@@ -4,7 +4,9 @@ require "fileutils"
 require "mini_magick"
 
 module VisualRegressionHelper
-  FIXTURE_ROOT = Pathname.new(__dir__).join("..", "fixtures", "visual").expand_path
+  FIXTURE_ROOT = Pathname.new(__dir__).join("..", "fixtures", "visual").expand_path.then do |root|
+    RUBY_PLATFORM.include?("darwin") ? root.join("macos") : root
+  end
   ARTIFACT_ROOT = Pathname.new(__dir__).join("..", "..", "tmp", "visual_regression").expand_path
 
   def assert_visual_match(name, max_changed_ratio: 0.006, channel_tolerance: 18)
@@ -18,10 +20,12 @@ module VisualRegressionHelper
     wait_for_web_fonts
     Capybara.current_session.save_screenshot(actual_path.to_s, full: false)
 
-    if ENV["UPDATE_VISUALS"] == "1" || !baseline_path.exist?
+    if ENV["UPDATE_VISUALS"] == "1"
       FileUtils.cp(actual_path, baseline_path)
       return
     end
+
+    assert baseline_path.exist?, "Missing visual baseline #{baseline_path}; regenerate with UPDATE_VISUALS=1"
 
     changed_ratio = changed_pixel_ratio(
       baseline_path,

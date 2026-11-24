@@ -10,6 +10,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unauthenticated root auto-signs in and shows dashboard in single tenant mode" do
+    User.where(email: "homeassistant@timeframe.local").destroy_all
     User.stub(:first, nil) do
       Account.stub(:first, nil) do
         get "/"

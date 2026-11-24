@@ -529,8 +529,14 @@ repository root and `engine/`, and commit both lockfiles.
 
 `mise exec -- bundle exec rake test` runs the add-on and shared engine tests.
 Run the standalone engine suite with `cd engine && mise exec -- bundle exec rake test`.
-Visual baselines were captured on Linux with RGB subpixel font rendering;
-macOS or Linux environments using grayscale font rendering will produce different screenshots.
+System tests use headless Chrome through Cuprite. Set `BROWSER_PATH` to the Chrome
+executable to override automatic discovery, and set
+`TIMEFRAME_HOME_ASSISTANT_TOKEN=ci-test-token` to use the recorded Home Assistant fixtures.
+Visual baselines use separate macOS (`test/fixtures/visual/macos`) and Linux
+(`test/fixtures/visual`) screenshots because font rendering differs between platforms.
+Regenerate the current platform's baselines with
+`UPDATE_VISUALS=1 TIMEFRAME_HOME_ASSISTANT_TOKEN=ci-test-token mise exec -- bundle exec rake test`.
+Missing baselines fail the test rather than being created automatically.
 
 ## Releases
 
