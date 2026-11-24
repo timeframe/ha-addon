@@ -412,7 +412,7 @@ DEPENDENCIES
   anyway_config
   capybara
   csv
-  cuprite
+  cuprite (~> 0.20.1)
   extlz4
   ferrum
   good_job

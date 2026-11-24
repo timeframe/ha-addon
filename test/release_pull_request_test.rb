@@ -57,6 +57,15 @@ class ReleasePullRequestTest < Minitest::Test
     FileUtils.remove_entry(@temporary)
   end
 
+  def test_fixture_git_ignores_the_parent_repository_environment
+    previous_git_dir = ENV["GIT_DIR"]
+    ENV["GIT_DIR"] = @origin
+
+    assert_equal File.realpath(File.join(@checkout, ".git")), git("rev-parse", "--absolute-git-dir").strip
+  ensure
+    ENV["GIT_DIR"] = previous_git_dir
+  end
+
   def test_all_bumps_change_only_release_files_and_preserve_existing_content
     {"patch" => "2.15.1", "minor" => "2.16.0", "major" => "3.0.0"}.each do |bump, version|
       stdout, stderr, status = invoke("RELEASE_BUMP" => bump)
@@ -184,7 +193,7 @@ class ReleasePullRequestTest < Minitest::Test
   private
 
   def invoke(extra_environment = {})
-    Open3.capture3(@environment.merge(extra_environment), RbConfig.ruby, SCRIPT, chdir: @checkout)
+    Open3.capture3(git_environment.merge(@environment).merge(extra_environment), RbConfig.ruby, SCRIPT, chdir: @checkout)
   end
 
   def assert_failure(message, extra_environment = {})
@@ -194,9 +203,13 @@ class ReleasePullRequestTest < Minitest::Test
   end
 
   def git(*arguments)
-    stdout, stderr, status = Open3.capture3("git", *arguments, chdir: @checkout)
+    stdout, stderr, status = Open3.capture3(git_environment, "git", *arguments, chdir: @checkout)
     raise "git #{arguments.join(" ")} failed: #{stderr}" unless status.success?
     stdout
+  end
+
+  def git_environment
+    ENV.keys.grep(/\AGIT_/).to_h { |key| [key, nil] }
   end
 
   def commit(message)
