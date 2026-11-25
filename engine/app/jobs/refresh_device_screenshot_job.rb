@@ -8,9 +8,9 @@ class RefreshDeviceScreenshotJob < ActiveJob::Base
   # jobs that are already due (scheduled_at in the past/unset) or running.
   # Future-scheduled jobs are intentionally NOT counted so a device settings
   # change can still enqueue a sooner refresh while a routine (delayed) job is
-  # pending.
+  # pending. The running job must not block its own retries.
   before_enqueue do |job|
-    throw(:abort) if RefreshDeviceScreenshotJob.ready_job_pending?(job.arguments.first)
+    throw(:abort) if RefreshDeviceScreenshotJob.ready_job_pending?(job.arguments.first, excluding_job_id: job.job_id)
   end
 
   def perform(device_id)
@@ -21,11 +21,12 @@ class RefreshDeviceScreenshotJob < ActiveJob::Base
   end
 
   # True when the device already has a due-now or running screenshot job.
-  def self.ready_job_pending?(device_id)
-    unfinished_jobs
+  def self.ready_job_pending?(device_id, excluding_job_id: nil)
+    jobs = unfinished_jobs
       .where("scheduled_at IS NULL OR scheduled_at <= ?", Time.current)
       .where("serialized_params -> 'arguments' ->> 0 = ?", device_id.to_s)
-      .exists?
+    jobs = jobs.where("active_job_id IS DISTINCT FROM ?", excluding_job_id) if excluding_job_id
+    jobs.exists?
   rescue ActiveRecord::StatementInvalid, NameError
     false
   end

@@ -24,6 +24,18 @@ class MdiIconMatcherTest < Minitest::Test
     assert_equal "waves", MdiIconMatcher.match("Water park")
   end
 
+  def test_match_curated_phrase_blossoms_of_light
+    assert_equal "string-lights", MdiIconMatcher.match("blossoms of light")
+    assert_equal "string-lights", MdiIconMatcher.match("Church outing: BLOSSOMS OF LIGHT")
+    assert_equal "string-lights", MdiIconMatcher.match("Blossoms  of\tLight")
+  end
+
+  def test_match_curated_phrase_blossoms_of_light_requires_whole_words
+    refute_equal "string-lights", MdiIconMatcher.match("Blossoms of lightning")
+    refute_equal "string-lights", MdiIconMatcher.match("Blossoms of lights")
+    refute_equal "string-lights", MdiIconMatcher.match("Unblossoms of light")
+  end
+
   def test_match_custom_mapping_nap
     assert_equal "bed", MdiIconMatcher.match("Nap")
   end

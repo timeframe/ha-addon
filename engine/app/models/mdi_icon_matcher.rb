@@ -12,6 +12,7 @@ class MdiIconMatcher
   # tokenized matching) for holidays/phrases that don't map to a single token.
   CURATED_PHRASES = [
     [/\b(independence day|fourth of july|4th of july)\b/, "firework"],
+    [/\bblossoms\s+of\s+light\b/, "string-lights"],
     [/\bwater[\s-]?park\b/, "waves"]
   ].freeze
 
