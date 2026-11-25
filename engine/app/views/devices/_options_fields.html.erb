@@ -42,7 +42,9 @@
         <div class="mt-0.5 w-full text-sm text-gray-500"><%= opt[:description] %></div>
       <% end %>
     </div>
-    <% if opt[:key] == "show_temperature_events" %>
+    <% if opt[:key] == "show_weather_alerts" %>
+      <%= render "devices/weather_alert_types", device: device %>
+    <% elsif opt[:key] == "show_temperature_events" %>
         <% selected_hours = device.temperature_event_hours %>
         <div class="mb-2 ml-4" data-depends-on="show_temperature_events">
           <input type="hidden" name="temperature_hours_present" value="1">

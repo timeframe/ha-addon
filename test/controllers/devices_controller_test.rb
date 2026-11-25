@@ -30,6 +30,42 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
 
   # --- create ---
 
+  test "weather alert types render alphabetically with legacy defaults and saved exclusions" do
+    device = @location.devices.create!(name: "Alert settings", model: "visionect_13", display_template: "three_day")
+    get settings_account_location_device_path(@account, @location, device)
+    assert_response :success
+    rows = css_select("[data-weather-alert-types] [data-alert-type]")
+    labels = rows.map { |row| row.at_css("span").text }
+    assert_equal labels.sort, labels
+    assert_includes labels, "High Wind Warning"
+    assert_includes labels, "Winter Storm Watch"
+    assert_equal rows.size, css_select('input[name="weather_alert_types[]"][checked]').size
+
+    device.update!(configuration: {"excluded_weather_alert_types" => ["high_wind_warning"]})
+    get settings_account_location_device_path(@account, @location, device)
+    assert_select "#weather-alert-high_wind_warning:not([checked])"
+    assert_select "#weather-alert-winter_storm_watch[checked]"
+  end
+
+  test "weather alert selection saves all none and preserves choices across master toggle and legacy forms" do
+    device = @location.devices.create!(name: "Alert selection", model: "visionect_13", display_template: "three_day")
+    path = update_options_account_location_device_path(@account, @location, device)
+    patch path, params: {weather_alert_types_present: "1", weather_alert_types: WeatherAlertTypes::IDS - ["high_wind_warning"]}
+    assert_redirected_to settings_account_location_device_path(@account, @location, device)
+    assert_equal ["high_wind_warning"], device.reload.excluded_weather_alert_types
+
+    %w[false true].each do |enabled|
+      patch path, params: {configuration: {show_weather_alerts: enabled}}
+      assert_equal ["high_wind_warning"], device.reload.excluded_weather_alert_types
+      assert_equal enabled == "true", device.weather_alerts_enabled?
+    end
+
+    patch path, params: {weather_alert_types_present: "1"}
+    assert_equal WeatherAlertTypes::IDS, device.reload.excluded_weather_alert_types
+    patch path, params: {weather_alert_types_present: "1", weather_alert_types: WeatherAlertTypes::IDS + ["bogus"]}
+    assert_empty device.reload.excluded_weather_alert_types
+  end
+
   test "create adds a Visionect device directly" do
     name = "My Visionect #{SecureRandom.hex(4)}"
     post account_location_devices_path(@account, @location),

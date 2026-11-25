@@ -372,6 +372,10 @@ class Device < ActiveRecord::Base
     !%w[one_day two_day].include?(active_template)
   end
 
+  def excluded_weather_alert_types
+    Array(configuration&.dig("excluded_weather_alert_types")) & WeatherAlertTypes::IDS
+  end
+
   # Air-quality alerts (US AQI "Unhealthy for Sensitive Groups" or worse) can be
   # toggled on every template. They default ON, except for the compact one-day /
   # two-day layouts which default OFF.
@@ -527,6 +531,7 @@ class Device < ActiveRecord::Base
       include_precip: include_precip_events,
       include_wind: include_wind_events,
       include_weather_alerts: weather_alerts_enabled?,
+      excluded_weather_alert_types: excluded_weather_alert_types,
       include_air_quality: air_quality_alerts_enabled?,
       include_minutely: minutely_precip_enabled?,
       include_temperature: include_temperature_events,

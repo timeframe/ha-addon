@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v7.0.1
     - name: Setup Ruby
@@ -23,7 +23,7 @@ jobs:
         bundle install --jobs 4 --retry 3
         bundle exec standardrb
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:18.6

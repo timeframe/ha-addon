@@ -1,0 +1,47 @@
+<details class="mb-2 ml-4" data-weather-alert-types data-depends-on="show_weather_alerts">
+  <summary class="cursor-pointer">Alert types</summary>
+  <input type="hidden" name="weather_alert_types_present" value="1">
+  <p class="my-2 text-sm text-gray-500">Choose which official alerts to show. New and unrecognized types stay enabled. Air quality alerts are configured separately.</p>
+  <label class="mb-2 block">
+    <span class="sr-only">Search alert types</span>
+    <input type="search" class="tf-input-sm" placeholder="Search alert types" data-alert-search>
+  </label>
+  <div class="mb-2 flex gap-3">
+    <button type="button" class="text-sm underline" data-alert-select="all">Select all</button>
+    <button type="button" class="text-sm underline" data-alert-select="none">Clear all</button>
+  </div>
+  <div class="max-h-64 overflow-y-auto">
+    <% excluded_types = device.excluded_weather_alert_types %>
+    <% WeatherAlertTypes.options.each do |label, id| %>
+      <label class="flex min-h-11 items-center gap-2" data-alert-type="<%= label.downcase %>">
+        <%= check_box_tag "weather_alert_types[]", id, !excluded_types.include?(id), id: "weather-alert-#{id}", class: "tf-check" %>
+        <span><%= label %></span>
+      </label>
+    <% end %>
+  </div>
+  <p class="text-sm text-gray-500" data-alert-empty hidden>No matching alert types.</p>
+</details>
+<script>
+  (function() {
+    var picker = document.currentScript.previousElementSibling;
+    var search = picker.querySelector('[data-alert-search]');
+    search.addEventListener('change', function(event) { event.stopPropagation(); });
+    search.addEventListener('input', function() {
+      var query = search.value.trim().toLowerCase();
+      var matches = 0;
+      picker.querySelectorAll('[data-alert-type]').forEach(function(row) {
+        row.hidden = !row.getAttribute('data-alert-type').includes(query);
+        if (!row.hidden) matches++;
+      });
+      picker.querySelector('[data-alert-empty]').hidden = matches !== 0;
+    });
+    picker.querySelectorAll('[data-alert-select]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        picker.querySelectorAll('input[type="checkbox"]').forEach(function(checkbox) {
+          checkbox.checked = button.getAttribute('data-alert-select') === 'all';
+        });
+        picker.dispatchEvent(new Event('change', {bubbles: true}));
+      });
+    });
+  })();
+</script>
