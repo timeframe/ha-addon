@@ -53,6 +53,40 @@ class RefreshDeviceScreenshotJobTest < ActiveJob::TestCase
     end
   end
 
+  def test_retries_a_timeout_while_its_own_good_job_record_is_running
+    travel_to Time.current do
+      job = RefreshDeviceScreenshotJob.new(@device.id)
+      insert_job(@device.id, scheduled_at: 1.minute.ago, performed_at: Time.current, active_job_id: job.job_id)
+
+      @device.stub(:refresh_screenshot!, -> { raise Timeout::Error, "capture deadline" }) do
+        Device.stub(:find_by, @device) do
+          assert_enqueued_with(job: RefreshDeviceScreenshotJob, args: [@device.id], at: 30.seconds.from_now) do
+            job.perform_now
+          end
+          assert_equal job.job_id, enqueued_jobs.last.fetch("job_id")
+
+          assert_no_enqueued_jobs only: RefreshDeviceScreenshotJob do
+            assert_raises(Timeout::Error) { job.perform_now }
+          end
+        end
+      end
+    end
+  end
+
+  def test_retry_still_skips_enqueue_when_another_due_job_exists
+    job = RefreshDeviceScreenshotJob.new(@device.id)
+    insert_job(@device.id, scheduled_at: 1.minute.ago, performed_at: Time.current, active_job_id: job.job_id)
+    insert_job(@device.id, scheduled_at: 1.minute.ago)
+
+    @device.stub(:refresh_screenshot!, -> { raise Timeout::Error, "capture deadline" }) do
+      Device.stub(:find_by, @device) do
+        assert_no_enqueued_jobs only: RefreshDeviceScreenshotJob do
+          job.perform_now
+        end
+      end
+    end
+  end
+
   # --- before_enqueue dedupe (ignores future-scheduled jobs) ---
 
   def test_skips_enqueue_when_a_due_job_already_exists
@@ -86,6 +120,17 @@ class RefreshDeviceScreenshotJobTest < ActiveJob::TestCase
     refute RefreshDeviceScreenshotJob.ready_job_pending?(@device.id)
   end
 
+  def test_ready_job_pending_ignores_only_the_excluded_job
+    job_id = SecureRandom.uuid
+    insert_job(@device.id, scheduled_at: nil, active_job_id: job_id)
+
+    assert RefreshDeviceScreenshotJob.ready_job_pending?(@device.id)
+    refute RefreshDeviceScreenshotJob.ready_job_pending?(@device.id, excluding_job_id: job_id)
+
+    insert_job(@device.id, scheduled_at: 1.minute.ago)
+    assert RefreshDeviceScreenshotJob.ready_job_pending?(@device.id, excluding_job_id: job_id)
+  end
+
   def test_ready_job_pending_is_false_when_the_lookup_raises
     GoodJob::Job.stub(:where, ->(*) { raise ActiveRecord::StatementInvalid, "boom" }) do
       refute RefreshDeviceScreenshotJob.ready_job_pending?(@device.id)
@@ -110,12 +155,14 @@ class RefreshDeviceScreenshotJobTest < ActiveJob::TestCase
 
   private
 
-  def insert_job(device_id, scheduled_at:, finished_at: nil)
+  def insert_job(device_id, scheduled_at:, finished_at: nil, performed_at: nil, active_job_id: nil)
     GoodJob::Job.create!(
+      active_job_id: active_job_id,
       queue_name: "screenshots",
       job_class: "RefreshDeviceScreenshotJob",
       scheduled_at: scheduled_at,
       finished_at: finished_at,
+      performed_at: performed_at,
       serialized_params: {"job_class" => "RefreshDeviceScreenshotJob", "arguments" => [device_id]}
     )
   end
