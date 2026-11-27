@@ -383,6 +383,38 @@ class HomeAssistantApiTest < Minitest::Test
     end
   end
 
+  def test_unavailable_status_sensors_do_not_create_invisible_icons
+    api = HomeAssistantApi.new({})
+
+    {
+      top_left: "sensor.timeframe_top_left",
+      top_right: "sensor.timeframe_top_right",
+      weather_status: "sensor.timeframe_weather_status"
+    }.each do |method, prefix|
+      data = [
+        {entity_id: "#{prefix}_offline", state: "unavailable"},
+        {entity_id: "#{prefix}_unknown", state: "unknown"},
+        {entity_id: "#{prefix}_active", state: "lock,Front"}
+      ]
+
+      api.stub :data, data do
+        assert_equal [{icon: "lock", label: "Front"}], api.public_send(method)
+      end
+    end
+  end
+
+  def test_unavailable_daily_event_sensors_do_not_create_events
+    data = [
+      {entity_id: "sensor.timeframe_daily_event_offline", state: "unavailable"},
+      {entity_id: "sensor.timeframe_daily_event_unknown", state: "unknown"}
+    ]
+
+    api = HomeAssistantApi.new({})
+    api.stub :data, data do
+      assert_empty api.daily_events
+    end
+  end
+
   def test_top_left_short_parts
     data = [{entity_id: "sensor.timeframe_top_left_x", state: "onlyicon"}]
 

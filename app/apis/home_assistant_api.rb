@@ -687,10 +687,7 @@ class HomeAssistantApi
     data
       .select { it[:entity_id].start_with?(prefix) && it[:state].present? }
       .flat_map do |entity|
-        entity[:state].split("\n").each_with_index.filter_map do |line, line_index|
-          next if line.strip.empty?
-          parts = line.split(",").map(&:strip)
-          next if parts.empty?
+        HaSensorState.parts(entity[:state]).map do |parts, line_index|
           [entity[:entity_id], parts, line_index]
         end
       end
