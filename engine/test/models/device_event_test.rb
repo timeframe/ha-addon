@@ -3,6 +3,30 @@
 require "test_helper"
 
 class DeviceEventTest < Minitest::Test
+  def test_html_description_tokens_and_banner_preserve_neighboring_notes
+    event = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400,
+      summary: "Run", description: "<div>timeframe-title:Run <b>w/ Kevin</b></div>\r\n" \
+        "<div>timeframe-only:Kitchen, 12</div><p>timeframe-icon:mdi-run<br>timeframe-countdown:7</p>" \
+        "<p>timeframe-banner</p><p>Keep <em>these notes</em></p>")
+    assert_equal "Run w/ Kevin", event.summary
+    assert_equal "run", event.icon
+    assert_equal 7, event.countdown_days
+    refute event.hidden_for?("Kitchen")
+    refute event.hidden_for?("Bedroom", device_id: 12)
+    assert event.hidden_for?("Bedroom", device_id: 99)
+    assert event.banner?
+    assert_includes event.banner_description, "<p>Keep <em>these notes</em></p>"
+    refute_includes event.banner_description, "timeframe-"
+  end
+
+  def test_token_like_html_attributes_do_not_hide_or_customize_event
+    event = DeviceEvent.new(starts_at: 1621288800, ends_at: 1621292400,
+      summary: "Run", description: '<a title="timeframe-omit timeframe-banner timeframe-title:Wrong">Notes</a>')
+    assert_equal "Run", event.summary
+    refute event.omit?
+    refute event.banner?
+  end
+
   def test_assigns_time
     event = DeviceEvent.new(
       starts_at: 1675123200,
